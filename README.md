@@ -12,12 +12,12 @@ This tool is designed for developers and system administrators who want to autom
 
 ## Highlights
 
-- **Recover broken sites** — Restore your WordPress site files and database instantly, even when your site won't load.
-- **Extract backups anywhere** — Open and extract `.wpstg` backup files on any computer without needing WordPress installed.
-- **Clean database files** — Automatically prepare your database files so they work with any database tool.
-- **View backup details** — See what's inside your backup files before extracting them.
-- **Create test environments** — Set up isolated WordPress sites for testing using Docker containers.
-
+- **Dockerized Development Environments** — Spin up isolated WordPress environments with Docker Compose, including PHP-FPM, Nginx, MariaDB, and Mailpit.
+- **Offline Backup Restoration** — Restore WordPress sites and databases even when the original installation is broken or inaccessible.
+- **Stream-Based Extraction** — Memory-efficient extraction of large `.wpstg` backup files using chunked processing.
+- **Database Normalization** — Automatically process WP Staging placeholders (`{WPSTG_TMP_PREFIX}`, `{WPSTG_FINAL_PREFIX}`, etc.) for standard SQL import.
+- **Backup Introspection** — Inspect backup headers, metadata, and file indexes without full extraction.
+- **Cross-Platform Support** — Native binaries for Linux, Windows, and macOS with platform-specific optimizations.
 ---
 
 ## Benchmarks
@@ -93,6 +93,33 @@ wpstaging uninstall
 
 This will stop and remove all Docker containers, volumes, and configurations.
 
+#### Quick Uninstall (Recommended)
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/uninstall.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://wp-staging.com/uninstall.ps1 | iex
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cmd && del uninstall.cmd
+```
+
+The uninstaller will:
+- Remove the wpstaging binary and aliases
+- Remove PATH entries
+- Remove license key environment variable
+- Remove cache directories
+
+#### Manual Uninstallation
+
+If you prefer to uninstall manually:
+
 **Linux / macOS:**
 ```bash
 # Remove binary
@@ -140,10 +167,11 @@ These commands help you manage multiple WordPress sites in your Docker environme
 | Command | Description |
 |----------|-------------|
 | `add` | Add a new WordPress site |
-| `list` | List all WordPress sites |
+| `list` | List all sites or show details for a specific site |
 | `del` | Delete a WordPress site |
 | `enable` | Enable a WordPress site |
 | `disable` | Disable a WordPress site |
+| `reset` | Reset a WordPress site |
 
 **Backup Commands:**
 
@@ -151,11 +179,11 @@ These commands help you work with WP Staging backup files to extract, restore, a
 
 | Command | Description |
 |----------|-------------|
-| `extract` | Extract items from a WP STAGING backup file |
+| `extract` | Extract files, database, or metadata from a WP STAGING backup |
 | `restore` | Restore a WordPress site from a WP STAGING backup |
-| `dump-header` | Display backup header information |
-| `dump-metadata` | Display backup metadata information |
-| `dump-index` | Display backup file index |
+| `dump-header` | View backup header details |
+| `dump-metadata` | View metadata from a backup file |
+| `dump-index` | View backup index details |
 
 **Docker Commands:**
 
@@ -163,11 +191,10 @@ These commands help you control Docker containers for your WordPress environment
 
 | Command | Description |
 |----------|-------------|
-| `setup` | Setup Docker containers and install default WordPress site |
-| `start` | Start all Docker containers |
-| `stop` | Stop and remove all containers |
-| `restart` | Restart all containers |
-| `status` | Display current container status |
+| `start` | Start containers for a site or all sites |
+| `stop` | Stop containers for a site or all sites |
+| `restart` | Restart containers for a site or all sites |
+| `status` | Display container status for a site or all sites |
 | `shell` | Open an interactive shell in the PHP container |
 | `uninstall` | Stop containers and remove all Docker data |
 | `update-hosts-file` | Update the local hosts file with site entries |
@@ -266,38 +293,32 @@ wpstaging dump-index --data backupfile.wpstg
 
 Create isolated Docker-based WordPress environments for testing and development.
 
-**Run setup:**
+**Add a new site:**
 
-Initialize your Docker environment with default settings.
-
-```bash
-wpstaging setup
-```
-
-**Setup with custom URL (optional):**
-
-Set up Docker with a specific local domain for your site.
+Create a new WordPress site with a custom local domain.
 
 ```bash
-wpstaging setup https://mysite.local
+wpstaging add https://mysite.local
 ```
 
 **Start containers:**
 
-Start your Docker environment after setup or after stopping it.
+Start your Docker environment after adding sites or after stopping it.
 
 ```bash
 wpstaging start
+wpstaging start mysite.local  # Start a specific site only
 ```
 
 **Manage WordPress sites:**
 
-Add, list, or remove WordPress sites in your Docker environment.
+Add, list, reset, or remove WordPress sites in your Docker environment.
 
 ```bash
 wpstaging add https://newsite.local
 wpstaging list
-wpstaging del https://oldsite.local
+wpstaging reset mysite.local  # Reset site to fresh WordPress
+wpstaging del oldsite.local
 ```
 
 **Access the staging site:**

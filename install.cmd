@@ -177,6 +177,7 @@ REM Parse manifest using PowerShell
 echo %BLUE%Parsing manifest...%NC%
 for /f "delims=" %%i in ('powershell -NoProfile -Command "(Get-Content '%TEMP_DIR%\manifest.json' | ConvertFrom-Json).version"') do set VERSION=%%i
 for /f "delims=" %%i in ('powershell -NoProfile -Command "(Get-Content '%TEMP_DIR%\manifest.json' | ConvertFrom-Json).platforms.'%PLATFORM%'.checksum"') do set CHECKSUM=%%i
+for /f "delims=" %%i in ('powershell -NoProfile -Command "(Get-Content '%TEMP_DIR%\manifest.json' | ConvertFrom-Json).platforms.'%PLATFORM%'.binary"') do set BINARY_PATH=%%i
 
 if "%VERSION%"=="" (
     echo %RED%Error: Failed to parse version from manifest%NC%
@@ -190,11 +191,17 @@ if "%CHECKSUM%"=="" (
     exit /b 1
 )
 
+if "%BINARY_PATH%"=="" (
+    echo %RED%Error: No binary path found for platform: %PLATFORM%%NC%
+    rmdir /s /q "%TEMP_DIR%"
+    exit /b 1
+)
+
 echo %GREEN%Version: %VERSION%%NC%
 echo.
 
-REM Download binary
-set BINARY_URL=!REPO_URL!/build/%PLATFORM%/%BINARY_NAME%
+REM Download binary using path from manifest
+set BINARY_URL=!REPO_URL!/build/%BINARY_PATH%
 echo %BLUE%Downloading binary...%NC%
 curl -fsSL "!BINARY_URL!" -o "%TEMP_DIR%\%BINARY_NAME%" >nul 2>&1
 if errorlevel 1 (

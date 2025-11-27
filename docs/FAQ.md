@@ -68,9 +68,39 @@ The installer will:
 For complete installation details, see the [Installation section in README](../README-RELEASES.md#installation).
 
 <a name="q5"></a>
-**Q6: Can I use it without installing?**  
+**Q6: Can I use it without installing?**
 **A6:**
 Yes, you can run the binary directly from the extracted folder.
+
+<a name="q6a"></a>
+**Q6a: How do I uninstall wpstaging?**
+**A6b:**
+Use the quick uninstall script (recommended):
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/uninstall.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://wp-staging.com/uninstall.ps1 | iex
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cmd && del uninstall.cmd
+```
+
+The uninstaller will remove:
+- The wpstaging binary and aliases
+- PATH entries
+- License key environment variable
+- Cache directories
+
+**Note:** If you've used Docker features, run `wpstaging uninstall` first to remove Docker containers and data before uninstalling the CLI.
+
+For complete uninstallation details, see the [Uninstallation section in README](../README-RELEASES.md#uninstallation).
 
 ## Usage Questions
 
@@ -90,10 +120,11 @@ WP Staging CLI has four main command groups:
 
 **Site Commands:**
 - `add` – Add a new WordPress site
-- `list` – List all WordPress sites
+- `list` – List all sites or show details for a specific site
 - `del` – Delete a WordPress site
 - `enable` – Enable a WordPress site
 - `disable` – Disable a WordPress site
+- `reset` – Reset a WordPress site
 
 **Backup Commands:**
 - `extract` – Extract files, database, or metadata from a WP STAGING backup
@@ -732,7 +763,7 @@ The CLI now has **automatic port conflict detection and resolution**! The tool a
 
 ### Automatic Port Resolution
 
-When you run `setup`, `install`, `start`, or `up` commands, the CLI automatically:
+When you run `add` or `start` commands, the CLI automatically:
 
 1. **Checks if ports are available**
 2. **Tries predefined fallback ports** if the default is in use
@@ -859,7 +890,7 @@ wpstaging dump-header backup.wpstg --outputdir=/tmp/output
 <a name="q46"></a>
 **Q47: When does license validation occur?**  
 **A47:**
-License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, setup, site, etc.). Commands like `help`, `register`, and `clean` skip license validation.
+License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, add, start, etc.). Commands like `help`, `register`, and `clean` skip license validation.
 
 <a name="q47"></a>
 **Q48: Do I need a license to view help messages?**  
@@ -2037,4 +2068,4 @@ The database credentials (CONTAINER_IP, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, 
 
 ---
 
-**Last Updated:** 2025-11-27 19:03:30 UTC
+**Last Updated:** 2025-11-27 21:36:01 UTC

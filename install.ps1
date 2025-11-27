@@ -133,14 +133,14 @@ function Install-Aliases($installDir) {
     # Create wpstg.cmd
     $wpstgContent = @"
 @echo off
-"%~dp0wp-staging-cli.exe" %*
+"%~dp0wpstaging.exe" %*
 "@
     $wpstgPath = Join-Path $installDir "wpstg.cmd"
 
     # Create wp-staging.cmd
     $wpStagingContent = @"
 @echo off
-"%~dp0wp-staging-cli.exe" %*
+"%~dp0wpstaging.exe" %*
 "@
     $wpStagingPath = Join-Path $installDir "wp-staging.cmd"
 
@@ -366,8 +366,13 @@ function Main {
             Exit-WithError "No checksum found for platform: $platform"
         }
 
-        # Download binary
-        $binaryUrl = "$repoUrl/build/$platform/$BinaryName"
+        $binaryPath = $platformData.binary
+        if (-not $binaryPath) {
+            Exit-WithError "No binary path found for platform: $platform"
+        }
+
+        # Download binary using path from manifest
+        $binaryUrl = "$repoUrl/build/$binaryPath"
         $binaryFile = Join-Path $tempDir $BinaryName
         Download-File $binaryUrl $binaryFile
 
