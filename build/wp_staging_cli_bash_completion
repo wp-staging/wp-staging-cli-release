@@ -1,86 +1,177 @@
-# Bash completion script for wp-staging-cli
+# Bash completion script for wpstaging
 #
-# This script provides command-line auto-completion for wp-staging-cli.
+# This script provides command-line auto-completion for wpstaging.
 # To enable completion, copy this file to the /etc/bash_completion.d/ directory.
 #
 # Usage:
-#   source /etc/bash_completion.d/wp-staging-cli
+#   source /etc/bash_completion.d/wpstaging
 #
 # Author: WP Staging <https://wp-staging.com/support/>
 # License: MIT
-
 _wp_staging_cli() {
-    local cur prev commands general_opts restore_opts
+    local cur prev commands general_opts restore_opts dockerize_opts only_opts skip_opts
     COMPREPLY=()
 
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    commands="extract restore help"
+    commands="
+        add
+        clean
+        compose-info
+        deactivate
+        del
+        disable
+        dump-all-help
+        dump-header
+        dump-index
+        dump-metadata
+        enable
+        extract
+        generate-compose-file
+        generate-docker-file
+        help
+        list
+        register
+        reinstall-cert
+        reset
+        restart
+        restore
+        shell
+        start
+        status
+        stop
+        uninstall
+        update-hosts-file
+    "
 
-    # Define options with short (single dash) and long (single or double dash)
+    # Clean subcommands
+    clean_subcommands="
+        all
+        cache
+        license
+    "
+
+    # General options
     general_opts="
-        -l -license --license
-        -o -outputdir --outputdir
-        -n -normalizedb --normalizedb
-        -workingdir --workingdir
-        -siteurl --siteurl
-        -db-prefix --db-prefix
-        -overwrite --overwrite
-        -verify --verify
-        -yes --yes
-        -confirm-timeout --confirm-timeout
-        -skip-extract --skip-extract
-        -or -only-wproot --only-wproot
-        -ow -only-wpcontent --only-wpcontent
-        -op -only-plugins --only-plugins
-        -ot -only-themes --only-themes
-        -om -only-muplugins --only-muplugins
-        -ou -only-uploads --only-uploads
-        -ol -only-languages --only-languages
-        -od -only-dbfile --only-dbfile
-        -oe -only-dropins --only-dropins
-        -of -only-file --only-file
-        -sr -skip-wproot --skip-wproot
-        -sw -skip-wpcontent --skip-wpcontent
-        -sp -skip-plugins --skip-plugins
-        -st -skip-themes --skip-themes
-        -sm -skip-muplugins --skip-muplugins
-        -su -skip-uploads --skip-uploads
-        -sl -skip-languages --skip-languages
-        -sd -skip-dbfile --skip-dbfile
-        -se -skip-dropins --skip-dropins
-        -sf -skip-file --skip-file
-        -dm -dump-metadata --dump-metadata
-        -di -dump-index --dump-index
-        -dh -dump-header --dump-header
-        -do -dump-options --dump-options
-        -d -debug --debug
-        -q -quiet --quiet
-        -v -version --version
-        -h -help --help
+        -l --license
+        -o --outputdir
+        --workingdir
+        --skip-config
+        --config
+        --yes
+        --prompt-timeout
+        -d --debug
+        -q --quiet
+        -v --version
+        --about
+        -h --help
     "
 
-    restore_opts="
-        -p -path --path
-        -wd -overwrite-db --overwrite-db
-        -wr -overwrite-wproot --overwrite-wproot
-        -db-innodb-strict-mode --db-innodb-strict-mode
-        -db-file --db-file
-        -db-insert-batch-size --db-insert-batch-size
-        -db-host --db-host
-        -db-name --db-name
-        -db-user --db-user
-        -db-pass --db-pass
-        -db-socket --db-socket
-        -db-charset --db-charset
-        -db-collate --db-collate
-        -db-ssl-ca-cert --db-ssl-ca-cert
-        -db-ssl-cert --db-ssl-cert
-        -db-ssl-key --db-ssl-key
-        -db-ssl-mode --db-ssl-mode
-        ${general_opts}
+    # Only-Filters options
+    only_opts="
+        -r --only-wproot
+        -w --only-wpcontent
+        -i --only-plugins
+        -t --only-themes
+        -m --only-muplugins
+        -u --only-uploads
+        -g --only-languages
+        -b --only-dbfile
+        -e --only-dropins
+        -f --only-file
     "
+
+    # Skip-Filters options
+    skip_opts="
+        -R --skip-wproot
+        -W --skip-wpcontent
+        -I --skip-plugins
+        -T --skip-themes
+        -M --skip-muplugins
+        -U --skip-uploads
+        -G --skip-languages
+        -B --skip-dbfile
+        -E --skip-dropins
+        -F --skip-file
+    "
+
+    # Extract-specific options
+    extract_opts="
+        -n --normalizedb
+        --site-url
+        --db-prefix
+        --overwrite
+        --verify
+        --skip-extract
+    "
+
+    # Restore-specific options
+    restore_opts="
+        -p --path
+        --site-url
+        --overwrite
+        --overwrite-db
+        --overwrite-wproot
+        --db-prefix
+        --db-innodb-strict-mode
+        --db-file
+        --db-batch-size
+        --db-insert-single
+        --db-timeout
+        --verify
+        --skip-extract
+        --db-host
+        --db-name
+        --db-user
+        --db-password
+        --db-socket
+        --db-charset
+        --db-collate
+        --db-ssl-ca-cert
+        --db-ssl-cert
+        --db-ssl-key
+        --db-ssl-mode
+    "
+
+    # Docker/Site management options (for add, start, stop, restart, etc.)
+    dockerize_opts="
+        --env-path
+        --compose-file
+        --container-ip
+        --skip-macos-auto-ip
+        --php
+        --http-port
+        --https-port
+        --db-port
+        --db-root
+        --mailpit-http-port
+        --disable-mailpit
+        --wp
+        --db-host
+        --db-name
+        --db-user
+        --db-pass
+        --db-prefix
+        --db-ssl
+        --admin-user
+        --admin-pass
+        --admin-email
+        --secure-credentials
+        --multisite
+    "
+
+    # Detect if Only or Skip filter is already used
+    local has_only=false
+    local has_skip=false
+    for word in "${COMP_WORDS[@]}"; do
+        if [[ "$word" == --only-* || "$word" =~ ^-[rwitmubgef]$ ]]; then
+            has_only=true
+        fi
+        if [[ "$word" == --skip-* || "$word" =~ ^-[RWITMUBGEF]$ ]]; then
+            has_skip=true
+        fi
+    done
 
     # Handle top-level command completion
     if [[ ${COMP_CWORD} -eq 1 ]]; then
@@ -88,31 +179,108 @@ _wp_staging_cli() {
         return
     fi
 
+    # Handle clean subcommands
+    if [[ "${COMP_WORDS[1]}" == "clean" && ${COMP_CWORD} -eq 2 ]]; then
+        COMPREPLY=( $(compgen -W "${clean_subcommands}" -- "${cur}") )
+        return
+    fi
+
     case "${COMP_WORDS[1]}" in
-        restore)
-            COMPREPLY=( $(compgen -W "${restore_opts}" -- "${cur}") )
-            ;;
         extract)
+            if [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -f -X '!*.wpstg' -- "${cur}") )
+            else
+                local opts="${general_opts} ${extract_opts}"
+
+                # contextual filters
+                if [[ "$has_only" == true ]]; then
+                    opts="${opts} ${only_opts}"
+                elif [[ "$has_skip" == true ]]; then
+                    opts="${opts} ${skip_opts}"
+                else
+                    opts="${opts} ${only_opts} ${skip_opts}"
+                fi
+
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            fi
+            ;;
+        restore)
+            if [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -f -X '!*.wpstg' -- "${cur}") )
+            else
+                local opts="${general_opts} ${restore_opts}"
+
+                # contextual filters
+                if [[ "$has_only" == true ]]; then
+                    opts="${opts} ${only_opts}"
+                elif [[ "$has_skip" == true ]]; then
+                    opts="${opts} ${skip_opts}"
+                else
+                    opts="${opts} ${only_opts} ${skip_opts}"
+                fi
+
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            fi
+            ;;
+        dump-header|dh|dump-metadata|dm|dump-index|di)
+            if [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -f -X '!*.wpstg' -- "${cur}") )
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${only_opts} ${skip_opts}" -- "${cur}") )
+            fi
+            ;;
+        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|uninstall|compose-info)
+            COMPREPLY=( $(compgen -W "${dockerize_opts}" -- "${cur}") )
+            ;;
+        reinstall-cert)
+            COMPREPLY=( $(compgen -W "--env-path --reinstall-ca ${general_opts}" -- "${cur}") )
+            ;;
+        register)
+            COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
+            ;;
+        deactivate|clean)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
             ;;
         help)
-            COMPREPLY=()
+            COMPREPLY=( $(compgen -W "${commands}" -- "${cur}") )
             ;;
         *)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
             ;;
     esac
 
-    # Handle file path suggestions for specific options
+    # Value suggestions for specific options
     case "${prev}" in
-        -o|-outputdir|--outputdir|-workingdir|--workingdir|-p|-path|--path|-db-file|--db-file|-db-socket|--db-socket|-db-ssl-ca-cert|--db-ssl-ca-cert|-db-ssl-cert|--db-ssl-cert|-db-ssl-key|--db-ssl-key)
-            COMPREPLY=( $(compgen -o filenames -A directory -- "${cur}") )
+        --overwrite|--overwrite-db|--overwrite-wproot)
+            COMPREPLY=( $(compgen -W "yes no" -- "${cur}") )
+            return
+            ;;
+        --php)
+            COMPREPLY=( $(compgen -W "7.4 8.1 8.2 8.3 8.4" -- "${cur}") )
+            return
+            ;;
+        --db-ssl-mode)
+            COMPREPLY=( $(compgen -W "skip-verify preferred" -- "${cur}") )
+            return
+            ;;
+        --wp)
+            COMPREPLY=( $(compgen -W "latest 6.7.1 6.6.2" -- "${cur}") )
             return
             ;;
     esac
 
-    return
+    # File/path suggestions
+    case "${prev}" in
+        -o|--outputdir|--workingdir|-p|--path|--db-file|--db-socket|--db-ssl-ca-cert|--db-ssl-cert|--db-ssl-key|--compose-file|--env-path)
+            COMPREPLY=( $(compgen -o filenames -- "${cur}") )
+            return
+            ;;
+        --config)
+            COMPREPLY=( $(compgen -f -X '!*.conf' -- "${cur}") )
+            return
+            ;;
+    esac
 }
 
-complete -F _wp_staging_cli wp-staging-cli
-complete -F _wp_staging_cli ./wp-staging-cli
+complete -F _wp_staging_cli wpstaging
+complete -F _wp_staging_cli ./wpstaging

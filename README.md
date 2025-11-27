@@ -1,238 +1,398 @@
-# wp-staging-cli
+# WP Staging CLI
 
-**wp-staging-cli** is a high-performance command-line tool for processing WP Staging backup files. This tool allows you to extract, normalize, and inspect the contents of `.wpstg` backup files created by the WP Staging backup plugin.
+**WP Staging CLI** is a high-performance, cross-platform command-line tool for processing **WP Staging** backup files (`.wpstg`).
+It allows you to extract, normalize, inspect, and restore backups created by the [WP Staging Pro](https://wp-staging.com) plugin — even when your WordPress site is broken or inaccessible — and spin up isolated test environments using Docker containers.
 
-This repo contains binary executables that can be used on WinOS, Linux and Mac OS to extract WP Staging backup files. 
+This tool is designed for developers and system administrators who want to automate WordPress site cloning, migration, and environment setup.
 
-**Important:** You can use this cli tool only with a valid [WP Staging Agency or Developer license key](https://wp-staging.com).
+> License Required:  
+> You must have a valid [WP Staging Agency or Developer license key](https://wp-staging.com) to use this tool.
 
-**Benchmarks:** 
-- We extracted a 20GB backup in under 36 seconds on an AMD Ryzen™ 7 PRO 7840U with a fast SSD running Ubuntu 20.04.
+---
 
-## Features
+## Highlights
 
-- **Restore WordPress when its down**: Start this cli tool and instantly restore WordPress files and database, even when the site is unaccessable and broken.
-- **Extract Backup Files and Database**: Access and extract the entire contents of `.wpstg` backup files without using WordPress.
-- **Database Normalization**: Perform normalization on the database files within the backup.
-- **Metadata Dumping**: Extract metadata from the backup file.
-- **Index and Header Dumping**: Retrieve index and header information from the backup file.
+- **Recover broken sites** — Restore your WordPress site files and database instantly, even when your site won't load.
+- **Extract backups anywhere** — Open and extract `.wpstg` backup files on any computer without needing WordPress installed.
+- **Clean database files** — Automatically prepare your database files so they work with any database tool.
+- **View backup details** — See what's inside your backup files before extracting them.
+- **Create test environments** — Set up isolated WordPress sites for testing using Docker containers.
+
+---
+
+## Benchmarks
+
+**Speed:** Extracted a 20 GB backup file in just 36 seconds on a modern computer with SSD storage.
+
+---
 
 ## Installation
 
-### Download Pre-Built Binary
+### Quick Install (Recommended)
 
-1. Download executables for all major operating systems from [here](https://github.com/wp-staging/wp-staging-cli-releases/archive/refs/heads/main.zip).
-2. Extract the zip and get the appropriate binary `wp-staging-cli` for your operating system from inside the `build` folder.
-3. Optional: Move the `wp-staging-cli` binary to a directory in your `PATH` for easy access, e.g. for Linux:
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash
+```
 
+**Windows (PowerShell):**
+```powershell
+irm https://wp-staging.com/install.ps1 | iex
 ```
-mv wp-staging-cli /usr/local/bin/
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd && del install.cmd
 ```
+
+The installer will:
+- Download the latest version for your platform
+- Verify checksums for security
+- Install to `~/.local/bin` (Linux/macOS) or `%LOCALAPPDATA%\Programs\wpstaging` (Windows)
+- Add to your PATH automatically
+- Install bash completion (Linux/macOS)
+
+### Manual Installation
+
+If you prefer to download and install manually:
+
+1. Download the latest release archive from:
+   [GitHub Releases (main.zip)](https://github.com/wp-staging/wp-staging-cli-release/archive/refs/heads/main.zip)
+2. Extract the archive and locate the binary in the `build` folder for your platform:
+   - **Linux**: `build/linux_amd64/wpstaging` (64-bit) or `build/linux_i386/wpstaging` (32-bit)
+   - **macOS**: `build/macos_arm64/wpstaging` (Apple Silicon) or `build/macos_amd64/wpstaging` (Intel)
+   - **Windows**: `build/windows_amd64/wpstaging.exe` (64-bit) or `build/windows_i386/wpstaging.exe` (32-bit)
+3. Make it accessible from anywhere on your computer:
+
+**Linux / macOS:**
+```bash
+# User installation (no sudo required)
+mkdir -p ~/.local/bin
+mv wpstaging ~/.local/bin/
+chmod +x ~/.local/bin/wpstaging
+
+# Or system-wide installation
+sudo mv wpstaging /usr/local/bin/
+sudo chmod +x /usr/local/bin/wpstaging
+```
+
+**Windows:**
+1. Create a directory: `C:\Program Files\wpstaging\`
+2. Move `wpstaging.exe` to that directory
+3. Add `C:\Program Files\wpstaging\` to your PATH environment variable
+
+### Uninstallation
+
+**Remove Docker Environment (Optional):**
+
+If you've used the dockerize features, first remove all Docker containers and data:
+
+```bash
+wpstaging uninstall
+```
+
+This will stop and remove all Docker containers, volumes, and configurations.
+
+**Linux / macOS:**
+```bash
+# Remove binary
+rm ~/.local/bin/wpstaging  # or: sudo rm /usr/local/bin/wpstaging
+
+# Remove bash completion (if installed)
+rm ~/.local/share/bash-completion/completions/wpstaging
+
+# Remove license and cache data
+rm -rf ~/.wpstaging
+```
+
+**Windows (PowerShell):**
+```powershell
+# Remove binary
+Remove-Item "$env:LOCALAPPDATA\Programs\wpstaging" -Recurse -Force
+
+# Remove from PATH (manual step required)
+# Go to System Properties > Environment Variables > User Variables > PATH
+# Remove the wpstaging entry
+
+# Remove license and cache data
+Remove-Item "$env:USERPROFILE\.wpstaging" -Recurse -Force
+```
+
+---
 
 ## Usage
 
-To run wp-staging-cli, use the following command:
-
-```
-wp-staging-cli [commands] [options] <backupfile.wpstg>
+```bash
+wpstaging [command] [flags] <backupfile.wpstg>
 ```
 
-* **Commands** must be in the first order. When not specified, "extract" is used by default.
-* **Options** and **backupfile.wpstg** can be used in any order.
-* **Options** can start with either a single "-" or a double "--".
-* **Options** with values can be set with or without '='.
+- Commands must come first
+- Flags and `<backupfile.wpstg>` can appear in any order
 
-```
-Commands:
-  extract - Extract items from the backup. Default if no command is specified.
-  restore - Restore the backup file.
-  help    - Display all help message.
+### Commands
 
-Arguments:
-  backupfile.wpstg  - Path to the WP Staging backup file that will be processed. This argument is mandatory.
+Below are the available commands you can use. The tool is organized into groups to make it easy to work with backups, manage Docker environments, and handle WordPress sites.
 
-General Options:
-  -l,  --license=<licensekey>       - WP Staging Pro License Key. Required to access the backup file.
-                                      Alternatively, use the `WPSTGPRO_LICENSE` environment variable.
-  -o,  --outputdir=<path>           - Specify the extraction directory path where processed files will be stored. Default: "./wp-staging-cli-output".
-  -n,  --normalizedb                - Normalize database files during the `extract` process.
-                                      This will replace all WP Staging specific placeholders and allows the sql file to be imported by
-                                      any regular db admin tool.
+**Site Commands:**
 
-       --workingdir=<path>          - Specify the working directory path where config-related files will be stored. Default: "~/.wp-staging-cli".
-       --skip-config                - Don't reads command options from the configuration file located at "~/.wp-staging-cli/wp-staging-cli.conf".
-       --siteurl=<siteurl>          - Specify a new Site URL.
-       --db-prefix=<prefix>         - Specify a new database table prefix.
-       --overwrite=<yes|no>         - Overwrite the target directory during `extract` and `restore` operations. Default: "yes".
-       --verify                     - Verify the integrity of the extracted file.
-       --yes                        - Automatically answers "yes" to confirmation prompts.
-       --confirm-timeout=<num>      - Timeout duration (in seconds) for awaiting a "yes" response at confirmation prompts. Default: 30 seconds.
-       --skip-extract               - Don't extract files and use previously extracted and existing files for `restore` process.
-                                      For use case, when restore failed, the process can be continued without first extracting all files again.
+These commands help you manage multiple WordPress sites in your Docker environment.
 
-  -or, --only-wproot                - Process only the 'wp root' item in the backup.
-  -ow, --only-wpcontent             - Process only the 'wp-content' item in the backup.
-  -op, --only-plugins               - Process only the 'plugins' item in the backup.
-  -ot, --only-themes                - Process only the 'themes' item in the backup.
-  -om, --only-muplugins             - Process only the 'mu-plugins' item in the backup.
-  -ou, --only-uploads               - Process only the 'uploads' item in the backup.
-  -ol, --only-languages             - Process only the 'languages' item in the backup.
-  -od, --only-dbfile                - Process only the database file in the backup.
-  -oe, --only-dropins               - Process only the dropins file in the backup.
-  -of, --only-file=<string>         - Process only items that match the specified string.
+| Command | Description |
+|----------|-------------|
+| `add` | Add a new WordPress site |
+| `list` | List all WordPress sites |
+| `del` | Delete a WordPress site |
+| `enable` | Enable a WordPress site |
+| `disable` | Disable a WordPress site |
 
-  -sr, --skip-wproot                - Skip processing the 'wp root' item in the backup.
-  -sw, --skip-wpcontent             - Skip processing the 'wp-content' item in the backup.
-  -sp, --skip-plugins               - Skip processing the 'plugins' item in the backup.
-  -st, --skip-themes                - Skip processing the 'themes' item in the backup.
-  -sm, --skip-muplugins             - Skip processing the 'mu-plugins' item in the backup.
-  -su, --skip-uploads               - Skip processing the 'uploads' item in the backup.
-  -sl, --skip-languages             - Skip processing the 'languages' item in the backup.
-  -sd, --skip-dbfile                - Skip processing the database file in the backup.
-  -se, --skip-dropins               - Skip processing the dropins file in the backup.
-  -sf, --skip-file=<string>         - Skip processing items that match the specified string.
+**Backup Commands:**
 
-  -dm, --dump-metadata              - Display backup metadata from the backup file.
-  -di, --dump-index=<data>          - Display backup index from the backup file. Use 'data' to show additional information.
-  -dh, --dump-header                - Display backup header from the backup file.
-  -do, --dump-options               - Display the command options that have been parsed.
+These commands help you work with WP Staging backup files to extract, restore, and inspect their contents.
 
-  -d,  --debug                      - Display debug message.
-  -q,  --quiet                      - Suppress output of processed backup items.
-  -v,  --version                    - Display version information.
-  -h,  --help                       - Display all help message.
+| Command | Description |
+|----------|-------------|
+| `extract` | Extract items from a WP STAGING backup file |
+| `restore` | Restore a WordPress site from a WP STAGING backup |
+| `dump-header` | Display backup header information |
+| `dump-metadata` | Display backup metadata information |
+| `dump-index` | Display backup file index |
 
-Restore Options:
-  -p,  --path=<path>                - Specify the WordPress root path for restoration. Default: "./".
-  -wd, --overwrite-db=<yes|no>      - Remove database tables not present in the backup. Default: "yes".
-  -wr, --overwrite-wproot=<yes|no>  - Remove files in the WordPress root path that are not in the backup or part of WordPress core. Default: "no".
-       --db-innodb-strict-mode      - Enable InnoDB strict mode if needed. By default, it is turned off during database restoration.
-       --db-file=<file>             - Use the extracted backup SQL file to resume database restoration in case of failure.
-       --db-insert-batch-size=<num> - Number of queries to batch in a single insert operation. Default: 1000.
-       --db-insert-multi=<yes|no>   - Use multi-row INSERT statements per query to improve performance. Default "yes".
+**Docker Commands:**
 
-Restore DB Options:
-  This option overrides the DB-related configuration parsed from the wp-config.php file.
-       --db-host=<string>           - Database Host.
-       --db-name=<string>           - Database Name.
-       --db-user=<string>           - Database User.
-       --db-pass=<string>           - Database Password.
-       --db-socket=<file>           - MySQL socket file path.
-       --db-charset=<string>        - Database charset.
-       --db-collate=<string>        - Database collate.
-       --db-ssl-ca-cert=<file>      - SSL CA file path.
-       --db-ssl-cert=<file>         - SSL certificate file path.
-       --db-ssl-key=<file>          - SSL key file path.
-       --db-ssl-mode=<mode>         - Connects to the database with SSL mode "skip-verify" or "preferred". Default: "skip-verify".
+These commands help you control Docker containers for your WordPress environment.
+
+| Command | Description |
+|----------|-------------|
+| `setup` | Setup Docker containers and install default WordPress site |
+| `start` | Start all Docker containers |
+| `stop` | Stop and remove all containers |
+| `restart` | Restart all containers |
+| `status` | Display current container status |
+| `shell` | Open an interactive shell in the PHP container |
+| `uninstall` | Stop containers and remove all Docker data |
+| `update-hosts-file` | Update the local hosts file with site entries |
+| `generate-compose-file` | Generate a docker-compose.yml file |
+| `generate-docker-file` | Generate Docker configuration files |
+
+**Other Commands:**
+
+These commands help you manage your license and cache.
+
+| Command | Description |
+|----------|-------------|
+| `register` | Activate your WP Staging Pro license |
+| `clean` | Clean up cached data, license info, and temporary files |
+| `help` | Help about any command |
+
+### Your Backup File
+`backupfile.wpstg` — The backup file you want to work with. You'll need this for `extract` and `restore` commands.
+
+### Flags
+See [WP Staging CLI Command Reference](./docs/COMMANDS.md) for a full list of available flags.
+
+---
+
+## Examples
+
+### Extract a Backup
+
+Extract all files and database from your backup to the default output directory.
+
+```bash
+wpstaging extract backupfile.wpstg
 ```
 
-### Examples
+### Extract and Prepare Database for Import
 
-#### Basic usage:
-```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE backupfile.wpstg
-wp-staging-cli restore --license=WPSTGPRO_LICENSE --path=/var/www/site backupfile.wpstg
-```
+Extract your backup and automatically clean up the database file so it's ready to import with standard database tools.
 
-The `--path` options is not required if this program is executed from the WP root directory.
-```
-cd path-to-wp-site
-wp-staging-cli restore --license=WPSTGPRO_LICENSE backupfile.wpstg
+```bash
+wpstaging extract --normalizedb backupfile.wpstg
 ```
 
-You may add the license key by using environment variable.
+### Extract and Replace URL & Prefix
 
-On Unix-based systems:
+Extract your backup while replacing the site URL and database prefix. Perfect for moving your site to a new domain or environment.
 
-```
-export WPSTGPRO_LICENSE=WPSTGPRO_LICENSE_KEY
-```
-
-On Windows command prompt:
-```
-set WPSTGPRO_LICENSE=WPSTGPRO_LICENSE_KEY
+```bash
+wpstaging extract --normalizedb \
+  --siteurl=https://example.local --db-prefix=wpsite backupfile.wpstg
 ```
 
-#### Config File
+---
 
-By default, wp-staging-cli reads command options from the configuration file located at `~/.wp-staging-cli/wp-staging-cli.conf`.
+### Restore to a Specific Directory
 
-```
-# File: ~/.wp-staging-cli/wp-staging-cli.conf
---license=WPSTGPRO_LICENSE
---path=/path-to-restore
-```
+Restore your entire WordPress site (files and database) to a specific directory on your server.
 
-#### Extract with normalize DB file:
-
-```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE --normalizedb backupfile.wpstg
+```bash
+wpstaging restore --path=/var/www/site backupfile.wpstg
 ```
 
-Extract with normalize DB file, set new site URL and DB prefix:
-
+Or, if you're already inside the WordPress root directory:
+```bash
+cd /var/www/site
+wpstaging restore backupfile.wpstg
 ```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE --normalizedb \
-  --siteurl=https://currentsite.tld --db-prefix=wpsite backupfile.wpstg
-```
 
-#### Restore to external DB
+### Restore to External Database
 
-```
-wp-staging-cli restore --license=WPSTGPRO_LICENSE --path=/var/www/site \
+Restore your site while connecting to an external or remote database server. Useful when your database is hosted separately.
+
+```bash
+wpstaging restore --path=/var/www/site \
   --db-name=dbname --db-user=user --db-pass=pass --db-host=host backupfile.wpstg
 ```
 
-Run `wp-staging-cli help` for details.
+---
 
-#### Dumping Backup Index:
+### Dump Backup Index
 
-With raw format:
-```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE --dump-index backupfile.wpstg
-```
+See what's inside your backup file before extracting it. This shows you all the files included in the backup.
 
-With additional information:
-```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE --dump-index=data backupfile.wpstg
+**Basic:**
+```bash
+wpstaging dump-index backupfile.wpstg
 ```
 
-With additional information for specific files:
-```
-wp-staging-cli extract --license=WPSTGPRO_LICENSE --dump-index=data \
-  --only-file=twentytwentyfour/theme.json backupfile.wpstg
+**Detailed output:**
+```bash
+wpstaging dump-index --data backupfile.wpstg
 ```
 
-Example output:
+---
+
+### Dockerize WordPress
+
+Create isolated Docker-based WordPress environments for testing and development.
+
+**Run setup:**
+
+Initialize your Docker environment with default settings.
+
+```bash
+wpstaging setup
 ```
-IndexItem        : 14d300000000ac17fc66c2434c72df0d00000001570000000100190000000a0000000000wpstg_t_twentytwentyfour/theme.json
-PathIdentifier   : wpstg_t_twentytwentyfour/theme.json
-PartIdentifier   : wpstg_t_ (wp-content/themes/)
-FilePath         : wp-content/themes/twentytwentyfour/theme.json
-StartByte        : 54144
-FileSize         : 3551 (3.47 KB)
-Compressed       : Yes
-ItemHeader       : 14d300000000ac17fc66c2434c72df0d00000001570000000100190000000a0000000000
-StartOffset      : 54036
-ModifiedTime     : 1727797164 (10-01-2024 23:39:24)
-CRC32Checksum    : 1917600706
-CompressedSize   : 3551 (3.47 KB)
-UncompressedSize : 22273 (21.75 KB)
-Attributes       : 1
-FilePathLength   : 25
-FileNameLength   : 10
-ExtraFieldLength : 0
+
+**Setup with custom URL (optional):**
+
+Set up Docker with a specific local domain for your site.
+
+```bash
+wpstaging setup https://mysite.local
 ```
+
+**Start containers:**
+
+Start your Docker environment after setup or after stopping it.
+
+```bash
+wpstaging start
+```
+
+**Manage WordPress sites:**
+
+Add, list, or remove WordPress sites in your Docker environment.
+
+```bash
+wpstaging add https://newsite.local
+wpstaging list
+wpstaging del https://oldsite.local
+```
+
+**Access the staging site:**
+
+Once running, visit your site in a browser.
+
+```text
+https://mysite.local
+```
+
+**Important Notes:**
+
+- **Linux/macOS:** Some operations may ask for your password (sudo) to update your hosts file. This is normal and only happens during initial setup.
+- **macOS Users (Passwordless Sudo Recommended):** Automatic IP alias binding is enabled by default for seamless multi-site setups using loopback IP range **127.3.2.1 - 127.3.2.254**. This requires sudo and you'll be prompted for your password in each new terminal session (5-15 minute timeout per session). **Solution:** Set up passwordless sudo for wpstaging — see [FAQ Q76](./docs/FAQ.md#q76-how-do-i-set-up-passwordless-sudo-for-wpstaging-cli) for step-by-step instructions. Alternatively, use `--skip-macos-auto-ip` to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP in the range).
+- **Skip hosts update:** If you prefer to manage your hosts file manually, use `--skip-update-hosts-file` when creating sites.
+
+---
+
+### Register Your License (Recommended)
+
+Run the `register` command once to securely save your license:
+
+```bash
+# Interactive mode (prompts for license key)
+wpstaging register
+
+# Non-interactive mode (useful for scripts/automation)
+wpstaging register --license=YOUR_LICENSE_KEY
+```
+
+Your license key is encrypted and validated. After registration, you can run any command without the `--license` flag.
+
+**Alternative Methods for Automation:**
+
+- **Environment variable** `WPSTGPRO_LICENSE`:
+  - Unix/macOS: `export WPSTGPRO_LICENSE=YOUR_LICENSE_KEY`
+  - Windows CMD: `set WPSTGPRO_LICENSE=YOUR_LICENSE_KEY`
+  - Windows PowerShell: `$env:WPSTGPRO_LICENSE="YOUR_LICENSE_KEY"`
+
+- **Per-command flag**: `--license=YOUR_LICENSE_KEY` (on extract/restore commands)
+
+---
+
+### Use a Config File
+
+You can create a settings file to remember your preferences. This saves you from typing the same options repeatedly.
+
+**Default path:** `~/.wpstaging/wpstaging.conf`
+
+**Example settings:**
+```ini
+--path /var/www/site
+--outputdir /var/www/backups
+```
+
+---
+
+## System Requirements
+
+**Minimum Requirements:**
+- **Extract/Restore:** Any modern system with 512 MB RAM and sufficient disk space
+- **Dockerize:** 2 CPU cores, 4 GB RAM, Docker 20.10.0+, Docker Compose 2.19.0+
+
+**License:** WP Staging Pro (Agency or Developer plan required)
+
+For detailed system requirements, see [System Requirements Documentation](./docs/SYSTEM-REQUIREMENTS.md).
+
+---
+
+## Release Notes
+
+See [CHANGELOG.md](./CHANGELOG.md) for detailed release history and version changes.
+
+---
+
+## FAQ and Troubleshooting
+
+For common issues and troubleshooting guidance, refer to [FAQ.md](./docs/FAQ.md).
+
+---
 
 ## Contributing
-We welcome contributions to wp-staging-cli! Currently, we only accept bug reports and suggestions.
 
-### How to Contribute
-- If you have a bug report or suggestion, please open an [issue on the repository](https://github.com/wp-staging/wp-staging-cli-releases/issues).
-- Pre-built binaries are available, and source contributions are currently not accepted.
-- Review open issues before submitting to avoid duplicates.
+We'd love to hear from you!
+Have a problem or idea? Let us know through our issue tracker.
+
+- Submit an issue: https://github.com/wp-staging/wp-staging-cli-release/issues
+- Check for existing issues before submitting new ones.
+- Prebuilt binaries only — source contributions are not yet open.
+
+---
 
 ## Acknowledgements
-- [WP Staging Pro](https://wp-staging.com/) The Best WordPress Backup and Migration Plugin
-- [Go Programming Language](https://go.dev/) The core language for this tool.
-- [bashunit](https://github.com/TypedDevs/bashunit) A testing framework used for end-to-end testing of this tool.
+
+- [WP Staging Pro](https://wp-staging.com/) — The best backup and migration plugin for WordPress.
+- [Go Programming Language](https://go.dev/) — The core language behind this tool.
+- [Cobra](https://github.com/spf13/cobra) — CLI framework for Go applications.
+- [bashunit](https://github.com/TypedDevs/bashunit) — Used for end-to-end testing.
