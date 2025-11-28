@@ -74,7 +74,7 @@ Yes, you can run the binary directly from the extracted folder.
 
 <a name="q6a"></a>
 **Q6a: How do I uninstall wpstaging?**
-**A6b:**
+**A6a:**
 Use the quick uninstall script (recommended):
 
 **Linux / macOS / WSL:**
