@@ -658,8 +658,15 @@ main() {
         error "No checksum found for platform: $PLATFORM"
     fi
 
-    # Download binary
-    BINARY_URL="${REPO_URL}/build/${PLATFORM}/${BINARY_NAME}"
+    # Parse binary path for this platform
+    BINARY_PATH=$(echo "$MANIFEST" | grep -A 10 "\"${PLATFORM}\"" | grep '"binary"' | head -1 | sed 's/.*"binary"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+
+    if [ -z "$BINARY_PATH" ]; then
+        error "No binary path found for platform: $PLATFORM"
+    fi
+
+    # Download binary using path from manifest
+    BINARY_URL="${REPO_URL}/build/${BINARY_PATH}"
     download "$BINARY_URL" "$TMP_DIR/${BINARY_NAME}"
 
     success "✓ Downloaded binary"

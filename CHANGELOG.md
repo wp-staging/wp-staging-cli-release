@@ -1,9 +1,17 @@
-## v1.4.0
+## v1.4.1
 <!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
 <!-- Use only these prefixes: New: Enh: Fix: Dev: -->
 <!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
 <!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
 <!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
+
+## v1.4.1 (2025-11-27)
+
+- **Fix:** Windows 32-bit installer now downloads from the correct directory path.
+- **Fix:** Installer alias commands now reference the correct binary name (wpstaging.exe).
+- **Enh:** Installers now use the binary path from manifest.json for more reliable downloads.
+
+## v1.4.0 (2025-11-27)
 
 - **New:** Local development environment for WordPress staging sites with isolated Docker containers.
 - **New:** Run multiple WordPress sites simultaneously - each site gets its own containers with unique IPs and ports.
