@@ -24,7 +24,7 @@ Benchmarks show it can extract a 20GB backup in under 36 seconds on an AMD Ryzen
 ## Installation Questions
 
 <a name="q4"></a>
-**Q5: How do I install `wpstaging`?**
+**Q5: How do I install `wpstaging`?**  
 **A5:**
 Use the quick install script (recommended):
 
@@ -65,16 +65,16 @@ The installer will:
    sudo chmod +x /usr/local/bin/wpstaging
    ```
 
-For complete installation details, see the [Installation section in README](../README-RELEASES.md#installation).
+For complete installation details, see the [Installation section in README](../README.md#installation).
 
 <a name="q5"></a>
-**Q6: Can I use it without installing?**
+**Q6: Can I use it without installing?**  
 **A6:**
 Yes, you can run the binary directly from the extracted folder.
 
 <a name="q6a"></a>
-**Q6a: How do I uninstall wpstaging?**
-**A6a:**
+**Q6a: How do I uninstall wpstaging?**  
+**A6b:**
 Use the quick uninstall script (recommended):
 
 **Linux / macOS / WSL:**
@@ -100,7 +100,7 @@ The uninstaller will remove:
 
 **Note:** If you've used Docker features, run `wpstaging uninstall` first to remove Docker containers and data before uninstalling the CLI.
 
-For complete uninstallation details, see the [Uninstallation section in README](../README-RELEASES.md#uninstallation).
+For complete uninstallation details, see the [Uninstallation section in README](../README.md#uninstallation).
 
 ## Usage Questions
 
@@ -412,7 +412,7 @@ wpstaging add mysite.local --wp=6.4
 After creating a site, use `wpstaging list` to see all your sites and their ports.
 
 <a name="q24"></a>
-**Q25: How can I assign a specific IP to my Docker site?**
+**Q25: How can I assign a specific IP to my Docker site?**  
 **A25:**
 Use `--container-ip=<ipv4>` when creating a site. If you don't specify an IP, the CLI automatically assigns the next available IP from the range **127.3.2.1 - 127.3.2.254**:
 
@@ -827,8 +827,8 @@ wpstaging add mysite.local \
 
 **Alternative solution - Disable unused services:**
 ```bash
-# If you don't need MariaDB (using external database)
-wpstaging add mysite.local --disable-mariadb
+# If you're using an external database (disables MariaDB container)
+wpstaging add mysite.local --external-db --db-host=your-db-host --db-name=your-db --db-user=your-user --db-pass=your-pass
 
 # If you don't need Mailpit
 wpstaging add mysite.local --disable-mailpit
@@ -918,7 +918,7 @@ wpstaging extract /full/path/to/backup.wpstg
 No. The CLI uses file-based locking to prevent concurrent operations on the same backup file. If you need parallel operations, use different backup files.
 
 <a name="q51"></a>
-**Q52: What does "This application cannot be run as root" mean?**
+**Q52: What does "This application cannot be run as root" mean?**  
 **A52:**
 On **Linux/macOS**, the CLI blocks root execution by default as a security best practice.
 
@@ -1239,12 +1239,14 @@ If mkcert download or CA installation fails, the CLI automatically falls back to
 <a name="q64"></a>
 **Q65: Can I use external databases with the Docker environment?**  
 **A65:**
-Yes, use `--disable-mariadb` and point to your external database:
+Yes, use `--external-db` flag to disable the MariaDB container and connect to your external database:
 ```bash
-wpstaging add mysite.local --disable-mariadb \
-  --wp-db-host=external-db.example.com \
-  --wp-db-name=mydb --wp-db-user=user --wp-db-pass=pass
+wpstaging add mysite.local --external-db \
+  --db-host=external-db.example.com \
+  --db-name=mydb --db-user=user --db-pass=pass
 ```
+
+This disables the local MariaDB container and configures WordPress to use your external database server.
 
 <a name="q65"></a>
 **Q66: How do I manage multiple WordPress sites in Docker?**  
@@ -1274,7 +1276,7 @@ wpstaging status         # Show status of all sites
 Each site runs in its own isolated set of containers with unique IPs and ports.
 
 <a name="q66"></a>
-**Q67: How can I check the status of my sites?**
+**Q67: How can I check the status of my sites?**  
 **A67:**
 There are two commands for checking site status:
 
@@ -1685,7 +1687,7 @@ sudo systemctl restart docker
 ---
 
 <a name="q88"></a>
-**Q89: I get "`docker` is running in Windows container mode" error on Windows. How do I fix this?**
+**Q89: I get "`docker` is running in Windows container mode" error on Windows. How do I fix this?**  
 **A89:**
 WP Staging CLI requires Docker to run in **Linux container mode** because all the container images (PHP, Nginx, MariaDB, Mailpit) are Linux-based.
 
@@ -1738,7 +1740,7 @@ docker version --format "{{.Server.Os}}"
 ---
 
 <a name="q90"></a>
-**Q90: Browser shows "Your connection is not private" or certificate not trusted. How do I fix this?**
+**Q90: Browser shows "Your connection is not private" or certificate not trusted. How do I fix this?**  
 **A90:**
 This happens when the mkcert Certificate Authority (CA) is not installed in your system trust store. This can occur if you declined the CA installation prompt during site setup.
 
@@ -1798,7 +1800,7 @@ certutil -addstore -f "ROOT" $env:USERPROFILE\wpstaging\stack\mkcert\ca\rootCA.p
 ---
 
 <a name="q91"></a>
-**Q91: How do I check if the mkcert CA is installed correctly?**
+**Q91: How do I check if the mkcert CA is installed correctly?**  
 **A91:**
 Use these commands to verify CA installation:
 
@@ -1828,7 +1830,7 @@ openssl verify -CAfile ~/wpstaging/stack/mkcert/ca/rootCA.pem \
 ---
 
 <a name="q92"></a>
-**Q92: I get "mkcert binary not found" error. How do I fix it?**
+**Q92: I get "mkcert binary not found" error. How do I fix it?**  
 **A92:**
 This happens if the mkcert binary wasn't downloaded or was deleted.
 
@@ -1867,7 +1869,7 @@ After installing system-wide, WP Staging CLI will copy it automatically when you
 ---
 
 <a name="q93"></a>
-**Q93: I get NET::ERR_CERT_DATE_INVALID or certificate expired error. How do I fix it?**
+**Q93: I get NET::ERR_CERT_DATE_INVALID or certificate expired error. How do I fix it?**  
 **A93:**
 This is usually caused by incorrect system clock or corrupted certificate files.
 
@@ -1891,7 +1893,7 @@ wpstaging restart <hostname>
 ---
 
 <a name="q94"></a>
-**Q94: How do I regenerate SSL certificates for a site?**
+**Q94: How do I regenerate SSL certificates for a site?**  
 **A94:**
 Use the `reinstall-cert` command (requires `--show-all` flag to see in help):
 
@@ -1921,7 +1923,7 @@ wpstaging restart <hostname>
 ---
 
 <a name="q95"></a>
-**Q95: Certificate works for hostname but not for IP access. Why?**
+**Q95: Certificate works for hostname but not for IP access. Why?**  
 **A95:**
 The certificate must include the container IP in its Subject Alternative Names (SAN).
 
@@ -1973,19 +1975,32 @@ WP Staging CLI requires:
 - Docker >= 20.10.0
 - Docker Compose >= 2.19.0
 
-**Linux:**
-```bash
-# Reinstall latest Docker
-curl -fsSL https://get.docker.com | sh
+**To update Docker:**
 
-# Update docker-compose-plugin
-sudo apt-get update && sudo apt-get install docker-compose-plugin  # Debian/Ubuntu
-sudo dnf install docker-compose-plugin                              # Fedora/RHEL
-```
+- **Linux:**
+  ```bash
+  curl -fsSL https://get.docker.com | sh
+  ```
 
-**macOS/Windows:**
-- Open Docker Desktop and check for updates
-- Or download and reinstall the latest version from Docker's website
+- **macOS:**
+  - Open Docker Desktop and check for updates
+  - Or reinstall from: https://docs.docker.com/desktop/setup/install/mac-install/
+
+- **Windows:**
+  - Open Docker Desktop and check for updates
+  - Or reinstall from: https://docs.docker.com/desktop/setup/install/windows-install/
+
+**To update Docker Compose:**
+
+- **Linux:**
+  ```bash
+  sudo apt-get update && sudo apt-get install docker-compose-plugin  # Debian/Ubuntu
+  sudo dnf install docker-compose-plugin                              # Fedora/RHEL
+  ```
+  Or see: https://docs.docker.com/compose/install/linux/
+
+- **macOS/Windows:**
+  - Update Docker Desktop to get the latest Docker Compose
 
 **Verify versions:**
 ```bash
@@ -2056,7 +2071,9 @@ wpstaging restore \
   backup.wpstg
 ```
 
-**Note:** The `--site-url` flag is optional — the CLI automatically reads the site URL from the existing `wp-config.php` when `--path` points to a WordPress root directory. If you do specify `--site-url` and `--path` points to a dockerized site (e.g., `~/wpstaging/sites/mysite.local/www`), the hostname in `--site-url` must match the `SITE_URL` configured in the site's `.env` file. The CLI will show an error if there's a mismatch:
+**Note:** The `--site-url` flag is optional — the CLI automatically reads the site URL from the database using credentials in the existing `wp-config.php`.
+
+For dockerized sites, if you specify `--site-url`, the hostname must match the `SITE_URL` in the site's `.env` file. The CLI will show an error if there's a mismatch:
 
 ```
 error: Site URL hostname 'different.local' does not match the dockerize site URL hostname 'mysite.local' from .env file.
@@ -2064,8 +2081,161 @@ When restoring to a dockerize site, the --site-url hostname must match the site'
 Either use --site-url=https://mysite.local or remove the --site-url flag to auto-detect.
 ```
 
-The database credentials (CONTAINER_IP, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_PREFIX) are stored in `~/wpstaging/sites/<hostname>/.env` and are automatically generated when you run `wpstaging add`.
+Database credentials are stored in `~/wpstaging/sites/<hostname>/.env` (auto-generated by `wpstaging add`).
 
 ---
 
-**Last Updated:** 2025-11-27 21:36:01 UTC
+<a name="q99"></a>
+**Q99: What happens if an external service is using the same IP range as wpstaging?**  
+**A99:**
+The CLI uses the IP range `127.3.2.1 - 127.3.2.254` for Docker containers. If an external service (like Apache, nginx, or MySQL) is using an IP in this range:
+
+**For new sites (`wpstaging add`):**
+The CLI automatically detects the conflict and switches to the next available IP:
+```
+Container IP 127.3.2.1 is in use by external service, switching to 127.3.2.2
+```
+
+**For existing sites (`wpstaging start` or `wpstaging restart`):**
+The CLI cannot auto-switch (the IP is already configured in `.env`). Instead, it shows an error with details:
+```
+Cannot start site. External services are using IP 127.3.2.1:
+  - HTTP (port 80): external service
+  - HTTPS (port 443): external service
+
+Please stop these services or delete the site and recreate it to assign a new IP.
+```
+
+**Solutions:**
+1. Stop the conflicting external service
+2. Delete and recreate the site: `wpstaging del mysite.local && wpstaging add mysite.local`
+3. Use a specific IP: `wpstaging add mysite.local --container-ip=127.3.2.50`
+
+---
+
+<a name="q100"></a>
+**Q100: Why does my site fail to start on macOS with "can't assign requested address"?**  
+**A100:**
+On macOS, loopback IP addresses other than `127.0.0.1` require explicit aliases. If you see an error like:
+```
+bind: can't assign requested address
+```
+
+The CLI now provides a clear message:
+```
+Container IP address 127.3.2.1 is not configured on macOS.
+
+macOS requires explicit loopback IP aliases. Please run:
+  sudo ifconfig lo0 alias 127.3.2.1 netmask 255.255.255.255
+
+Or use --skip-macos-auto-ip flag to use port-based separation instead.
+```
+
+**Solutions:**
+1. Run the suggested `sudo ifconfig` command
+2. Use `--skip-macos-auto-ip` flag when adding sites (uses port-based separation instead of IP-based)
+
+**Note:** Loopback IP aliases on macOS don't persist across reboots. You'll need to re-add them after restarting your Mac.
+
+---
+
+<a name="q101"></a>
+**Q101: What happens when I start or restart all sites and some have conflicts?**  
+**A101:**
+When running `wpstaging start` or `wpstaging restart` without specifying a hostname (to affect all sites), the CLI:
+
+1. Pre-scans all sites for external service conflicts
+2. Skips sites with conflicts and continues starting others
+3. Shows a summary at the end with diagnostic commands
+
+**Example output:**
+```
+All containers started successfully
+--------------------------------------------------------------------------------
+The following sites could not start due to conflict with external services:
+  - site1.local: HTTP (port 80) used by external service
+
+Please stop these services or delete the affected sites and recreate them
+to assign new IPs.
+
+To check which service is using a port:
+  sudo lsof -i :80
+  or: sudo ss -tlnp | grep 80
+--------------------------------------------------------------------------------
+```
+
+This ensures that one conflicting site doesn't prevent other sites from starting.
+
+---
+
+## Environment Variables
+
+<a name="q102"></a>
+**Q102: What environment variables does wpstaging CLI support?**  
+**A102:**
+The CLI supports several environment variables for configuration:
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `WPSTGPRO_LICENSE` | Provide license key | `export WPSTGPRO_LICENSE=abc123...` |
+| `WPSTGCLI_DEBUG` | Enable debug output (`1` = enabled) | `export WPSTGCLI_DEBUG=1` |
+| `WPSTGCLI_QUIET` | Suppress informational output (`1` = enabled) | `export WPSTGCLI_QUIET=1` |
+| `WPSTGCLI_ALLOW_ROOT` | Allow running as root user | `export WPSTGCLI_ALLOW_ROOT=1` |
+
+---
+
+<a name="q103"></a>
+**Q103: How do I enable debug output?**  
+**A103:**
+Use either the `--debug` flag or the environment variable:
+
+```bash
+# Using flag
+wpstaging extract --debug backup.wpstg
+
+# Using environment variable
+export WPSTGCLI_DEBUG=1
+wpstaging extract backup.wpstg
+```
+
+Debug output shows detailed execution traces to stderr prefixed with `[DEBUG]`.
+
+---
+
+<a name="q104"></a>
+**Q104: How do I suppress all informational output?**  
+**A104:**
+Use the `--quiet` flag or environment variable for silent operation:
+
+```bash
+# Using flag
+wpstaging extract --quiet backup.wpstg
+
+# Using environment variable
+export WPSTGCLI_QUIET=1
+wpstaging extract backup.wpstg
+```
+
+This is useful for scripting and CI/CD pipelines.
+
+---
+
+<a name="q105"></a>
+**Q105: How do I run wpstaging as root user?**  
+**A105:**
+By default, running as root is blocked for security. To allow it:
+
+```bash
+# Using flag
+sudo wpstaging extract --allow-root backup.wpstg
+
+# Using environment variable
+export WPSTGCLI_ALLOW_ROOT=1
+sudo wpstaging extract backup.wpstg
+```
+
+**Important:** Don't use this on your regular system. Only use it when you're already in a sandboxed/isolated environment where running as root is expected and safe (e.g., Docker containers, CI/CD pipelines, virtual machines).
+
+---
+
+**Last Updated:** 2025-11-29 10:35:00 UTC

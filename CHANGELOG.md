@@ -1,9 +1,21 @@
-## v1.4.1
+## v1.4.2 (2025-11-30)
 <!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
 <!-- Use only these prefixes: New: Enh: Fix: Dev: -->
 <!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
 <!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
 <!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
+
+- **Enh:** Use temporary redirect (302) for HTTP-to-HTTPS in local development - prevents browser caching issues when changing ports or configurations.
+- **Fix:** Confirmation prompts now work correctly on macOS Terminal - countdown no longer prints on new lines.
+- **Fix:** Windows install scripts had a parsing error and could not install the binaries.
+- **Enh:** Timeout duration now displays in human-readable format (e.g., "3m" instead of "180s").
+- **New:** External service conflict detection - CLI now detects when other services (Apache, nginx, MySQL) are using the wpstaging IP range.
+- **Enh:** Smarter IP allocation for new sites - automatically rotates to next available IP when conflicts with external services are detected.
+- **Enh:** Clear error messages when external services block site startup - shows which ports are in use and how to diagnose.
+- **Enh:** Start/restart all sites now continues starting other sites when some have conflicts, with summary at the end.
+- **Enh:** macOS now shows clear instructions when loopback IP alias is not configured, instead of cryptic Docker errors.
+- **Enh:** OS-specific diagnostic commands provided when port conflicts are detected (lsof, ss, netstat).
+- **Dev:** Test install scripts on all major OS by using CI GitHub actions.
 
 ## v1.4.1 (2025-11-27)
 

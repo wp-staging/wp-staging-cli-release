@@ -43,30 +43,32 @@ $GitHubRawUrl = "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-rel
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
 
-# Colors for output
-function Write-ColorOutput($ForegroundColor) {
+# Colors for output - Uses Write-Host for colored console output
+# Note: Write-Host is intentional here as we need console coloring,
+# not pipeline-compatible output
+function Write-ColoredHost($ForegroundColor) {
     $fc = $host.UI.RawUI.ForegroundColor
     $host.UI.RawUI.ForegroundColor = $ForegroundColor
     if ($args) {
-        Write-Output $args
+        Write-Host $args
     }
     $host.UI.RawUI.ForegroundColor = $fc
 }
 
 function Write-Info($Message) {
-    Write-ColorOutput Cyan $Message
+    Write-ColoredHost Cyan $Message
 }
 
 function Write-Success($Message) {
-    Write-ColorOutput Green $Message
+    Write-ColoredHost Green $Message
 }
 
 function Write-Warning($Message) {
-    Write-ColorOutput Yellow $Message
+    Write-ColoredHost Yellow $Message
 }
 
 function Write-Error($Message) {
-    Write-ColorOutput Red "Error: $Message"
+    Write-ColoredHost Red "Error: $Message"
 }
 
 function Exit-WithError($Message) {

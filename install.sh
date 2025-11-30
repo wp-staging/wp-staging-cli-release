@@ -650,16 +650,21 @@ main() {
     # Get checksum and download URL from manifest
     info "\nDownloading wpstaging..."
 
-    # Parse checksum for this platform
-    # Using -A 10 to handle formatted JSON with additional fields between platform and checksum
-    CHECKSUM=$(echo "$MANIFEST" | grep -A 10 "\"${PLATFORM}\"" | grep '"checksum"' | head -1 | sed 's/.*"checksum"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    # Parse checksum and binary path for this platform
+    # Prefer jq for reliable JSON parsing, fallback to grep/sed
+    if command_exists jq; then
+        CHECKSUM=$(echo "$MANIFEST" | jq -r ".platforms[\"${PLATFORM}\"].checksum // empty")
+        BINARY_PATH=$(echo "$MANIFEST" | jq -r ".platforms[\"${PLATFORM}\"].binary // empty")
+    else
+        # Fallback: Using grep -A to handle formatted JSON with additional fields
+        # This approach is fragile but works for our specific manifest format
+        CHECKSUM=$(echo "$MANIFEST" | grep -A 10 "\"${PLATFORM}\"" | grep '"checksum"' | head -1 | sed 's/.*"checksum"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+        BINARY_PATH=$(echo "$MANIFEST" | grep -A 10 "\"${PLATFORM}\"" | grep '"binary"' | head -1 | sed 's/.*"binary"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+    fi
 
     if [ -z "$CHECKSUM" ]; then
         error "No checksum found for platform: $PLATFORM"
     fi
-
-    # Parse binary path for this platform
-    BINARY_PATH=$(echo "$MANIFEST" | grep -A 10 "\"${PLATFORM}\"" | grep '"binary"' | head -1 | sed 's/.*"binary"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
 
     if [ -z "$BINARY_PATH" ]; then
         error "No binary path found for platform: $PLATFORM"

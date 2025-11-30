@@ -333,6 +333,7 @@ https://mysite.local
 
 - **Linux/macOS:** Some operations may ask for your password (sudo) to update your hosts file. This is normal and only happens during initial setup.
 - **macOS Users (Passwordless Sudo Recommended):** Automatic IP alias binding is enabled by default for seamless multi-site setups using loopback IP range **127.3.2.1 - 127.3.2.254**. This requires sudo and you'll be prompted for your password in each new terminal session (5-15 minute timeout per session). **Solution:** Set up passwordless sudo for wpstaging — see [FAQ Q76](./docs/FAQ.md#q76-how-do-i-set-up-passwordless-sudo-for-wpstaging-cli) for step-by-step instructions. Alternatively, use `--skip-macos-auto-ip` to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP in the range).
+- **External Service Conflicts:** If other services (Apache, nginx, MySQL) are using ports on the wpstaging IP range, the CLI detects this and either auto-switches to the next available IP (for new sites) or shows clear error messages with diagnostic commands.
 - **Skip hosts update:** If you prefer to manage your hosts file manually, use `--skip-update-hosts-file` when creating sites.
 
 ---
@@ -359,6 +360,15 @@ Your license key is encrypted and validated. After registration, you can run any
   - Windows PowerShell: `$env:WPSTGPRO_LICENSE="YOUR_LICENSE_KEY"`
 
 - **Per-command flag**: `--license=YOUR_LICENSE_KEY` (on extract/restore commands)
+
+### Environment Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `WPSTGPRO_LICENSE` | License key | `export WPSTGPRO_LICENSE=abc123...` |
+| `WPSTGCLI_DEBUG` | Enable debug output | `export WPSTGCLI_DEBUG=1` |
+| `WPSTGCLI_QUIET` | Suppress informational output | `export WPSTGCLI_QUIET=1` |
+| `WPSTGCLI_ALLOW_ROOT` | Allow running as root user | `export WPSTGCLI_ALLOW_ROOT=1` |
 
 ---
 
