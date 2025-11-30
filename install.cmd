@@ -130,8 +130,15 @@ if defined REQUESTED_VERSION (
         set VERSION_REF=main
     ) else (
         REM Use PowerShell to parse JSON and filter out beta/alpha/rc
-        for /f "delims=" %%i in ('powershell -NoProfile -Command "$tags = Get-Content '%TEMP%\tags.json' | ConvertFrom-Json; $stableTags = $tags ^| Where-Object { $_.name -notmatch 'beta^|alpha^|rc^|Beta^|Alpha^|RC' }; if ($stableTags) { $stableTags[0].name } else { 'main' }"') do set VERSION_REF=%%i
+        REM Note: Using (?i) for case-insensitive matching to avoid pipe escaping issues in CMD
+        for /f "delims=" %%i in ('powershell -NoProfile -Command "$tags = Get-Content -Raw '%TEMP%\tags.json' | ConvertFrom-Json; $stableTags = @($tags | Where-Object { $_.name -notmatch '(?i)(beta|alpha|rc)' }); if ($stableTags.Count -gt 0) { $stableTags[0].name } else { 'main' }"') do set VERSION_REF=%%i
         del "%TEMP%\tags.json" >nul 2>&1
+
+        REM Validate that we got a version
+        if "!VERSION_REF!"=="" (
+            echo %YELLOW%Warning: Failed to parse version from GitHub API, falling back to 'main'%NC%
+            set VERSION_REF=main
+        )
     )
 
     if "!VERSION_REF!"=="main" (
@@ -267,10 +274,10 @@ set INSTALL_DIR=%LOCALAPPDATA%\Programs\%APP_NAME%
 set ALREADY_IN_PATH=0
 
 :install_dir_chosen
-if %ALREADY_IN_PATH%==1 (
-    echo %BLUE%Installing to: %INSTALL_DIR% (already in PATH - works immediately)%NC%
+if "!ALREADY_IN_PATH!"=="1" (
+    echo %BLUE%Installing to: !INSTALL_DIR! ^(already in PATH - works immediately^)%NC%
 ) else (
-    echo %BLUE%Installing to: %INSTALL_DIR% (will add to PATH)%NC%
+    echo %BLUE%Installing to: !INSTALL_DIR! ^(will add to PATH^)%NC%
 )
 
 REM Create installation directory
@@ -287,13 +294,30 @@ if errorlevel 1 (
 echo %GREEN%Binary installed successfully%NC%
 echo.
 
+REM Create aliases (wpstg and wp-staging)
+echo %BLUE%Creating aliases...%NC%
+
+REM Check if we're in WindowsApps - need to copy exe, otherwise create .cmd wrappers
+echo !INSTALL_DIR! | findstr /i /c:"WindowsApps" >nul
+if not errorlevel 1 (
+    REM WindowsApps directory - copy binary as aliases
+    copy /y "!INSTALL_DIR!\!BINARY_NAME!" "!INSTALL_DIR!\wpstg.exe" >nul 2>&1
+    copy /y "!INSTALL_DIR!\!BINARY_NAME!" "!INSTALL_DIR!\wp-staging.exe" >nul 2>&1
+) else (
+    REM Regular directory - create .cmd wrapper scripts
+    echo @"%%~dp0!BINARY_NAME!" %%*> "!INSTALL_DIR!\wpstg.cmd"
+    echo @"%%~dp0!BINARY_NAME!" %%*> "!INSTALL_DIR!\wp-staging.cmd"
+)
+echo %GREEN%Aliases created: wpstg, wp-staging%NC%
+echo.
+
 REM Add to PATH if not already present
-if %ALREADY_IN_PATH%==0 (
+if "!ALREADY_IN_PATH!"=="0" (
     echo %BLUE%Updating PATH...%NC%
-    setx PATH "%PATH%;%INSTALL_DIR%" >nul 2>&1
+    setx PATH "%PATH%;!INSTALL_DIR!" >nul 2>&1
     if errorlevel 1 (
         echo %YELLOW%Warning: Failed to update PATH automatically%NC%
-        echo %YELLOW%Please add this directory to your PATH manually: %INSTALL_DIR%%NC%
+        echo %YELLOW%Please add this directory to your PATH manually: !INSTALL_DIR!%NC%
     ) else (
         echo %GREEN%PATH updated successfully%NC%
         echo %YELLOW%Note: Restart your command prompt for PATH changes to take effect%NC%
@@ -337,38 +361,38 @@ echo %GREEN%==============================%NC%
 echo %GREEN%   Installation Complete!%NC%
 echo %GREEN%==============================%NC%
 echo.
-echo %BLUE%Installed: wpstaging v%VERSION%%NC%
-echo %BLUE%Location:  %INSTALL_DIR%\%BINARY_NAME%%NC%
+echo %BLUE%Installed: wpstaging v!VERSION!%NC%
+echo %BLUE%Location:  !INSTALL_DIR!\!BINARY_NAME!%NC%
 echo.
-if %ALREADY_IN_PATH%==1 (
+if "!ALREADY_IN_PATH!"=="1" (
     REM Directory was already in PATH - works immediately
     echo %BLUE%Run wpstaging now:%NC%
     if defined LICENSE_KEY (
-        echo   %APP_NAME% add mysite.local --license !LICENSE_KEY!
+        echo   !APP_NAME! add mysite.local --license !LICENSE_KEY!
         echo.
         echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
         echo       After activation, you can use wpstaging without the --license flag.
     ) else (
-        echo   %APP_NAME% add mysite.local
+        echo   !APP_NAME! add mysite.local
     )
 ) else (
     REM Directory was added to PATH - needs restart
-    echo %BLUE%Run wpstaging immediately (copy ^& paste):%NC%
+    echo %BLUE%Run wpstaging immediately ^(copy and paste^):%NC%
     if defined LICENSE_KEY (
-        echo   %INSTALL_DIR%\%BINARY_NAME% add mysite.local --license !LICENSE_KEY!
+        echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local --license !LICENSE_KEY!
         echo.
         echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
         echo       After activation, you can use wpstaging without the --license flag.
     ) else (
-        echo   %INSTALL_DIR%\%BINARY_NAME% add mysite.local
+        echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local
     )
     echo.
     echo %YELLOW%Or restart your command prompt, then use:%NC%
-    echo   %APP_NAME% add mysite.local
+    echo   !APP_NAME! add mysite.local
 )
 echo.
 echo %BLUE%Get help:%NC%
-echo   %APP_NAME% --help
+echo   !APP_NAME! --help
 echo.
 echo %BLUE%Documentation:%NC%
 echo   https://github.com/wp-staging/wp-staging-cli-release

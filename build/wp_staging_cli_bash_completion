@@ -154,6 +154,7 @@ _wp_staging_cli() {
         --db-pass
         --db-prefix
         --db-ssl
+        --external-db
         --admin-user
         --admin-pass
         --admin-email
