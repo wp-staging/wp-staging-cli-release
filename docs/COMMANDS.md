@@ -17,7 +17,7 @@
 - [restart](#command-restart)
 - [status](#command-status)
 - [shell](#command-shell)
-- [uninstall](#command-uninstall)
+- [remove](#command-remove)
 - [update-hosts-file](#command-update-hosts-file)
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
@@ -54,8 +54,8 @@ Usage:
 
 Site Commands:
   add                   Add a new WordPress site
-  list                  List all sites or show details for a specific site
-  del                   Delete a WordPress site
+  list                  List all sites or show details for specific sites
+  del                   Delete one or more sites, or all sites
   enable                Enable a WordPress site
   disable               Disable a WordPress site
   reset                 Reset a WordPress site
@@ -71,9 +71,9 @@ Docker Commands:
   start                 Start containers for a site or all sites
   stop                  Stop containers for a site or all sites
   restart               Restart containers for a site or all sites
-  status                Display container status for a site or all sites
+  status                Display container status for sites
   shell                 Open an interactive shell in the PHP container
-  uninstall             Stop containers and remove all Docker data
+  remove                Stop containers and remove all Docker data
   update-hosts-file     Update the local hosts file with site entries
   generate-compose-file Generate a docker-compose.yml file
   generate-docker-file  Generate Docker configuration files
@@ -148,17 +148,18 @@ WordPress Flags:
 # Command: list
 
 ```
-List all WordPress sites in the Docker environment, or show details for a specific site.
+List WordPress sites in the Docker environment.
 
-If hostname is provided, shows detailed information for that site.
+If hostnames are provided, shows details for those specific sites.
 If no hostname is provided, lists all sites with their status.
 
 Usage:
-  wpstaging list [hostname] [flags]
+  wpstaging list [hostname...] [flags]
 
 Examples:
-  wpstaging list                 # List all sites
-  wpstaging list mysite.local    # Show details for specific site
+  wpstaging list                           # List all sites
+  wpstaging list mysite.local              # Show details for specific site
+  wpstaging list site1.local site2.local   # Show details for multiple sites
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -169,13 +170,18 @@ Env Flags:
 # Command: del
 
 ```
-Delete a WordPress site from the Docker environment.
+Delete WordPress sites from the Docker environment.
+
+If hostnames are provided, deletes those specific sites.
+If no hostname is provided, deletes all sites.
 
 Usage:
-  wpstaging del <hostname> [flags]
+  wpstaging del [hostname...] [flags]
 
 Examples:
-  wpstaging del mysite.local
+  wpstaging del                           # Delete all sites
+  wpstaging del mysite.local              # Delete specific site
+  wpstaging del site1.local site2.local   # Delete multiple sites
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -243,13 +249,17 @@ This command extracts files and database from a .wpstg backup file
 to the specified output directory. You can filter which parts to extract
 using the --only-* and --skip-* flags.
 
+The backup file can be a local path or a remote URL (http/https).
+Use --from flag or pass the backup file directly as an argument.
+
 Usage:
   wpstaging extract [flags] <backupfile.wpstg>
 
 Examples:
   wpstaging extract backup.wpstg
+  wpstaging extract --from=backup.wpstg
+  wpstaging extract --from=https://example.com/backups/backup.wpstg
   wpstaging extract --only-plugins --outputdir=/var/www backup.wpstg
-  wpstaging extract --skip-uploads backup.wpstg
 
 Flags:
   -o, --outputdir string   Directory for extracted files (default: ./wpstaging-output)
@@ -258,6 +268,7 @@ Flags:
       --site-url string    Specify a new WordPress site URL
       --verify             Verify integrity of extracted files
       --db-prefix string   Specify a new WordPress database table prefix
+      --from string        Backup file path or remote URL (http/https)
 
 Only-Filters Flags:
   These flags can only be used once. Pair with `--only-file` to match specific file names.
@@ -297,12 +308,16 @@ This command extracts and restores both files and database from a .wpstg backup 
 to the specified WordPress installation path. It requires a valid WordPress installation
 at the target path.
 
+The backup file can be a local path or a remote URL (http/https).
+Use --from flag or pass the backup file directly as an argument.
+
 Usage:
   wpstaging restore [flags] <backupfile.wpstg>
 
 Examples:
   wpstaging restore --path=/var/www/html backup.wpstg
-  wpstaging restore --skip-extract --path=/var/www/html backup.wpstg
+  wpstaging restore --path=/var/www/html --from=backup.wpstg
+  wpstaging restore --path=/var/www/html --from=https://example.com/backups/backup.wpstg
 
 Flags:
   -o, --outputdir string          Directory for extracted files (default: ./wpstaging-output)
@@ -319,6 +334,7 @@ Flags:
       --db-timeout string         Database connection timeout (default "15s")
       --verify                    Verify integrity of extracted files
       --skip-extract              Skip extraction if files already exist
+      --from string               Backup file path or remote URL (http/https)
 
 Wordpress DB-related Flags:
   This flags overrides the DB-related configuration parsed from the wp-config.php file.
@@ -497,17 +513,18 @@ Env Flags:
 # Command: status
 
 ```
-Display the status of Docker containers for a specific site or all sites.
+Display the status of Docker containers.
 
-If hostname is provided, shows status for that site only.
+If hostnames are provided, shows status for those specific sites.
 If no hostname is provided, shows status for all sites.
 
 Usage:
-  wpstaging status [hostname] [flags]
+  wpstaging status [hostname...] [flags]
 
 Examples:
-  wpstaging status               # Show all sites status
-  wpstaging status mysite.local  # Show specific site status
+  wpstaging status                           # Show all sites status
+  wpstaging status mysite.local              # Show specific site status
+  wpstaging status site1.local site2.local   # Show status for multiple sites
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -531,17 +548,17 @@ Env Flags:
 
 ```
 
-<a name="command-uninstall"></a>
-# Command: uninstall
+<a name="command-remove"></a>
+# Command: remove
 
 ```
 Stop all containers and remove the complete Docker setup including volumes and configuration.
 
 Usage:
-  wpstaging uninstall [flags]
+  wpstaging remove [flags]
 
 Examples:
-  wpstaging uninstall
+  wpstaging remove
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
 
@@ -776,4 +793,4 @@ Other Flags:
 
 ---
 
-*Generated on 2025-11-28 18:05:35 UTC*
+*Generated on 2025-12-13 10:52:53 UTC*

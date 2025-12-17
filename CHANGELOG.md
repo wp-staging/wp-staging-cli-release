@@ -1,21 +1,54 @@
-## v1.4.2 (2025-11-30)
+## v1.4.3-beta.1 (2025-12-17)
 <!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
 <!-- Use only these prefixes: New: Enh: Fix: Dev: -->
 <!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
 <!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
 <!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
 
-- **Enh:** Use temporary redirect (302) for HTTP-to-HTTPS in local development - prevents browser caching issues when changing ports or configurations.
-- **Fix:** Confirmation prompts now work correctly on macOS Terminal - countdown no longer prints on new lines.
-- **Fix:** Windows install scripts had a parsing error and could not install the binaries.
-- **Enh:** Timeout duration now displays in human-readable format (e.g., "3m" instead of "180s").
+- **New:** Remote backup URL support - Extract and restore backups directly from HTTP/HTTPS URLs without downloading first.
+- **New:** `--from` flag for `extract` and `restore` commands - Specify backup file path or remote URL as an alternative to positional argument.
+- **New:** Remote backup preflight check - Validates file size and backup format before downloading with progress display.
+- **New:** Chunked download with resume support - Large backups download in chunks (5MB default, 25MB for files >500MB) and can resume interrupted downloads.
+- **New:** Automatic WP Staging Pro license activation - When creating a new site with `add`, the plugin license is automatically activated in WordPress.
 - **New:** External service conflict detection - CLI now detects when other services (Apache, nginx, MySQL) are using the wpstaging IP range.
+- **New:** Wildcard binding detection - CLI detects when external services are bound to all interfaces (*:PORT) and shows enhanced messages.
+- **New:** Automatic Docker startup prompt - CLI offers to start Docker when it's not running on Windows, macOS, and Linux.
+- **Enh:** Use temporary redirect (302) for HTTP-to-HTTPS in local development - prevents browser caching issues when changing ports or configurations.
+- **Enh:** Timeout duration now displays in human-readable format (e.g., "3m" instead of "180s").
 - **Enh:** Smarter IP allocation for new sites - automatically rotates to next available IP when conflicts with external services are detected.
 - **Enh:** Clear error messages when external services block site startup - shows which ports are in use and how to diagnose.
 - **Enh:** Start/restart all sites now continues starting other sites when some have conflicts, with summary at the end.
 - **Enh:** macOS now shows clear instructions when loopback IP alias is not configured, instead of cryptic Docker errors.
 - **Enh:** OS-specific diagnostic commands provided when port conflicts are detected (lsof, ss, netstat).
+- **Enh:** Changed MariaDB image from `latest` to `11.8` for better stability and consistent behavior.
+- **Enh:** Renamed `uninstall` command to `remove` for clarity - stops containers and removes all Docker data.
+- **Enh:** Remove command no longer requires license validation or image downloads.
+- **Enh:** PHP Docker images now support Apple Silicon (ARM64) - no more platform mismatch warnings on macOS M1/M2/M3.
+- **Enh:** Cleaner output messages - removed "Dockerize:" prefix for better readability.
+- **Enh:** Cleaner error messages for Docker connection issues - URL-encoded paths are now displayed properly.
+- **Enh:** Faster Docker image downloads - images are now pulled in parallel instead of one-by-one.
+- **Enh:** Mkcert download now supports resume - interrupted downloads continue where they left off.
+- **Enh:** WordPress core, WP-CLI, WP Staging plugin, and WP Staging Pro downloads now support resume - interrupted downloads continue where they left off.
+- **Enh:** Downloaded files are cached and reused across multiple site installations for faster setup.
+- **Enh:** Per-site locking prevents conflicts when running multiple commands on the same site simultaneously.
+- **Enh:** `status` and `list` commands no longer require license validation - faster access to site information.
+- **Enh:** Commands `del`, `list`, and `status` now accept multiple hostnames (e.g., `wpstaging del site1.local site2.local`).
+- **Enh:** Running `del` without arguments now deletes all sites (with confirmation prompt).
+- **Enh:** The `del` and `remove` commands now automatically deactivate WP Staging Pro licenses for all sites.
+- **Enh:** Site deletion now shows spinner animation during license deactivation and container stopping.
+- **Enh:** External database setup now checks if user credentials work before using root password - skips unnecessary root-based setup when database and user are pre-configured.
+- **Fix:** `list` and `status` commands now properly prompt to start Docker when it's not running.
+- **Fix:** `start`, `stop`, and `restart` commands now show accurate messages when no action is performed (e.g., "No enabled sites to start" instead of misleading success messages).
+- **Fix:** License key not loading from cache on macOS - hostname normalization now handles `.local` suffix variations.
+- **Fix:** Confirmation prompts now work correctly on macOS Terminal - countdown no longer prints on new lines.
+- **Fix:** Windows install scripts had a parsing error and could not install the binaries.
+- **Fix:** Database connection error on Windows and macOS ("Host 'x.x.x.x' is not allowed to connect") - now uses MariaDB 11.8 image with proper root host configuration.
+- **Fix:** License prompt no longer appears before Docker availability check - Docker status is now verified first.
+- **Fix:** Status command no longer shows unrelated containers - only shows wpstaging-managed containers.
+- **Fix:** Stop all command now properly removes orphaned Docker networks in addition to containers and volumes.
+- **Fix:** Corrupted downloads no longer cause "broken signature" errors - downloads now use atomic temp file pattern to prevent partial/corrupt files.
 - **Dev:** Test install scripts on all major OS by using CI GitHub actions.
+- **Dev:** Multi-arch build support for PHP images (amd64 + arm64) with Docker Build Cloud option.
 
 ## v1.4.1 (2025-11-27)
 
