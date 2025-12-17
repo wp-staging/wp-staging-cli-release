@@ -97,6 +97,7 @@ function Download-File($url, $output) {
         Write-Info "Downloading from $url..."
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
+        $webClient.Headers.Add("User-Agent", "wpstaging-installer")
         $webClient.DownloadFile($url, $output)
     }
     catch {
@@ -121,7 +122,7 @@ function Verify-Checksum($file, $expectedChecksum) {
             Exit-WithError "Checksum verification failed!`n  Expected: $expectedChecksum`n  Got:      $actualChecksum"
         }
 
-        Write-Success "✓ Checksum verified"
+        Write-Success "[OK] Checksum verified"
     }
     catch {
         Exit-WithError "Failed to verify checksum: $_"
@@ -149,7 +150,7 @@ function Install-Aliases($installDir) {
     try {
         Set-Content -Path $wpstgPath -Value $wpstgContent -Force
         Set-Content -Path $wpStagingPath -Value $wpStagingContent -Force
-        Write-Success "✓ Created aliases: wpstg, wp-staging"
+        Write-Success "[OK] Created aliases: wpstg, wp-staging"
     }
     catch {
         Write-Warning "Failed to create aliases: $_"
@@ -202,7 +203,7 @@ function Add-ToPath($directory) {
 
     # Check if already in PATH
     if (Test-InPath $directory) {
-        Write-Info "✓ $directory is already in PATH"
+        Write-Info "[OK] $directory is already in PATH"
         return $true
     }
 
@@ -211,7 +212,7 @@ function Add-ToPath($directory) {
         $newPath = "$currentPath;$directory"
         [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
         $env:PATH = "$env:PATH;$directory"
-        Write-Success "✓ Added $directory to PATH"
+        Write-Success "[OK] Added $directory to PATH"
         Write-Info "  You may need to restart your terminal for PATH changes to take effect"
         return $false
     }
@@ -242,12 +243,13 @@ function Get-LatestStableVersion {
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
+        $webClient.Headers.Add("User-Agent", "wpstaging-installer")
         $tagsJson = $webClient.DownloadString("$GitHubApiUrl/tags")
         $tags = $tagsJson | ConvertFrom-Json
 
-        # Filter out pre-release versions (beta, alpha, rc)
+        # Filter out pre-release versions (beta, alpha, rc) using case-insensitive matching
         $stableTags = $tags | Where-Object {
-            $_.name -notmatch 'beta|alpha|rc|Beta|Alpha|RC'
+            $_.name -notmatch '(?i)(beta|alpha|rc)'
         }
 
         if ($stableTags -and $stableTags.Count -gt 0) {
@@ -280,9 +282,10 @@ function Test-VersionExists($versionRef) {
 
         # Try to access the manifest
         $webClient = New-Object System.Net.WebClient
+        $webClient.Headers.Add("User-Agent", "wpstaging-installer")
         $webClient.DownloadString($manifestUrl) | Out-Null
 
-        Write-Success "✓ Version $versionRef exists"
+        Write-Success "[OK] Version $versionRef exists"
         return $true
     }
     catch {
@@ -352,7 +355,7 @@ function Main {
             Exit-WithError "Failed to parse version from manifest"
         }
 
-        Write-Success "✓ Version: $installedVersion"
+        Write-Success "[OK] Version: $installedVersion"
         Write-Host ""
 
         # Get checksum from manifest
@@ -378,7 +381,7 @@ function Main {
         $binaryFile = Join-Path $tempDir $BinaryName
         Download-File $binaryUrl $binaryFile
 
-        Write-Success "✓ Downloaded binary"
+        Write-Success "[OK] Downloaded binary"
         Write-Host ""
 
         # Verify checksum
@@ -406,7 +409,7 @@ function Main {
         $targetPath = Join-Path $InstallDir $BinaryName
         Copy-Item $binaryFile $targetPath -Force
 
-        Write-Success "✓ Installed binary to $targetPath"
+        Write-Success "[OK] Installed binary to $targetPath"
         Write-Host ""
 
         # Install aliases
@@ -421,6 +424,7 @@ function Main {
         }
 
         # Register license key if provided
+        $licenseRegistered = $false
         if ($LicenseKey) {
             Write-Info "Registering license key..."
 
@@ -431,21 +435,21 @@ function Main {
             }
             else {
                 try {
-                    # Set environment variable temporarily to avoid exposure in process list
-                    $env:WPSTGPRO_LICENSE = $LicenseKey
-                    $registerOutput = & $targetPath register 2>&1
+                    # Use --license flag to pass the key directly (avoids stdin prompt)
+                    $registerOutput = & $targetPath register --license $LicenseKey 2>&1
 
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Success "✓ License registered successfully"
+                        Write-Success "[OK] License registered successfully"
+                        $licenseRegistered = $true
                     }
                     else {
                         Write-Warning "License registration failed: $registerOutput"
                         Write-Warning "You can register later with: wpstaging register"
                     }
                 }
-                finally {
-                    # Always clean up environment variable
-                    Remove-Item Env:\WPSTGPRO_LICENSE -ErrorAction SilentlyContinue
+                catch {
+                    Write-Warning "License registration failed: $_"
+                    Write-Warning "You can register later with: wpstaging register"
                 }
             }
             Write-Host ""
@@ -456,7 +460,7 @@ function Main {
         if (Test-CommandExists "wpstaging") {
             try {
                 $versionOutput = & wpstaging --version 2>&1
-                Write-Success "✓ Installation successful!"
+                Write-Success "[OK] Installation successful!"
                 Write-Host ""
                 Write-Success "Installed: $versionOutput"
             }
@@ -475,26 +479,30 @@ function Main {
         if ($alreadyInPath) {
             # Directory was already in PATH - works immediately
             Write-Info "Run wpstaging now:"
-            if ($LicenseKey) {
+            if ($LicenseKey -and -not $licenseRegistered) {
+                # License registration failed, include it so user can try again
                 Write-Info "  wpstaging add mysite.local --license $LicenseKey"
                 Write-Host ""
                 Write-Info "Note: The license key is only needed once to activate WP Staging CLI."
                 Write-Info "      After activation, you can use wpstaging without the --license flag."
             }
             else {
+                # No license provided, or license was already registered
                 Write-Info "  wpstaging add mysite.local"
             }
         }
         else {
             # Directory was added to PATH - needs restart
             Write-Info "Run wpstaging immediately (copy & paste):"
-            if ($LicenseKey) {
+            if ($LicenseKey -and -not $licenseRegistered) {
+                # License registration failed, include it so user can try again
                 Write-Info "  $targetPath add mysite.local --license $LicenseKey"
                 Write-Host ""
                 Write-Info "Note: The license key is only needed once to activate WP Staging CLI."
                 Write-Info "      After activation, you can use wpstaging without the --license flag."
             }
             else {
+                # No license provided, or license was already registered
                 Write-Info "  $targetPath add mysite.local"
             }
             Write-Host ""

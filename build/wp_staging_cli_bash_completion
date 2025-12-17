@@ -104,6 +104,7 @@ _wp_staging_cli() {
         --overwrite
         --verify
         --skip-extract
+        --from
     "
 
     # Restore-specific options
@@ -121,6 +122,7 @@ _wp_staging_cli() {
         --db-timeout
         --verify
         --skip-extract
+        --from
         --db-host
         --db-name
         --db-user

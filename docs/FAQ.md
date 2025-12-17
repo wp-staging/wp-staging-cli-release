@@ -98,7 +98,7 @@ The uninstaller will remove:
 - License key environment variable
 - Cache directories
 
-**Note:** If you've used Docker features, run `wpstaging uninstall` first to remove Docker containers and data before uninstalling the CLI.
+**Note:** If you've used Docker features, run `wpstaging remove` first to remove Docker containers and data before uninstalling the CLI.
 
 For complete uninstallation details, see the [Uninstallation section in README](../README.md#uninstallation).
 
@@ -120,8 +120,8 @@ WP Staging CLI has four main command groups:
 
 **Site Commands:**
 - `add` – Add a new WordPress site
-- `list` – List all sites or show details for a specific site
-- `del` – Delete a WordPress site
+- `list [hostname...]` – List all sites or show details for specific sites
+- `del [hostname...]` – Delete one or more sites, or all sites
 - `enable` – Enable a WordPress site
 - `disable` – Disable a WordPress site
 - `reset` – Reset a WordPress site
@@ -137,9 +137,9 @@ WP Staging CLI has four main command groups:
 - `start [hostname]` – Start Docker containers (all sites or specific site)
 - `stop [hostname]` – Stop and remove containers (all sites or specific site)
 - `restart [hostname]` – Restart containers (all sites or specific site)
-- `status [hostname]` – Display container status (all sites or specific site)
+- `status [hostname...]` – Display container status (all sites or specific sites)
 - `shell <hostname> [root]` – Open an interactive shell in the PHP container
-- `uninstall` – Stop containers and remove all Docker data
+- `remove` – Stop containers and remove all Docker data
 - `update-hosts-file` – Update the local hosts file with site entries
 - `generate-compose-file` – Generate a docker-compose.yml file
 - `generate-docker-file` – Generate Docker configuration files
@@ -612,9 +612,104 @@ The tool will validate the connection during setup. If validation fails, `EXTERN
 
 **Note:** When using `--external-db`:
 - The MariaDB container is not created
-- `--db-root` flag is ignored (no root user needed)
 - `--db-port` can be used to specify the external database port (default: 3306)
 - The `DB_HOST` value is saved to the `.env` file
+
+<a name="q33b"></a>
+**Q33b: What database permissions are required for external databases?**  
+**A33b:**
+When using an external database, the WordPress installation script uses smart detection to determine the best setup approach.
+
+**How It Works:**
+
+The script follows this logic:
+1. **First**, it checks if the provided user credentials already work:
+   - Can connect to the database server
+   - Database exists
+   - User has access to the database
+   - User has required privileges (CREATE TABLE, DROP TABLE)
+2. **If user credentials work** - proceeds directly with WordPress installation (no root needed)
+3. **If user credentials don't work** - uses root credentials (if provided) to create database/user
+4. **If no root credentials** - falls back to `wp db create` (requires CREATE DATABASE privilege)
+
+**Option 1: Pre-configured Database (Recommended for External DB)**
+
+If your database and user are already set up with proper permissions, you don't need root credentials:
+
+```bash
+wpstaging add mysite.local --external-db \
+  --db-host=192.168.1.100:3306 \
+  --db-name=wordpress_db \
+  --db-user=wpuser \
+  --db-pass=secure_password
+```
+
+The script will verify the credentials work and proceed directly.
+
+**Option 2: With Root Credentials**
+
+If the database or user doesn't exist, provide root credentials to create them:
+
+```bash
+wpstaging add mysite.local --external-db \
+  --db-host=192.168.1.100:3306 \
+  --db-name=wordpress_db \
+  --db-user=wpuser \
+  --db-pass=userpass \
+  --db-root=root_password
+```
+
+The script will:
+1. Check if user credentials work first (skips root setup if they do)
+2. If not, wait for database connection with retry logic (up to 20 seconds)
+3. Create the database if it doesn't exist
+4. Create the database user and grant privileges
+5. Proceed with WordPress installation
+
+**Required Database User Permissions:**
+
+| Privilege | Required | Purpose |
+|-----------|----------|---------|
+| SELECT | Yes | Read data |
+| INSERT | Yes | Add data |
+| UPDATE | Yes | Modify data |
+| DELETE | Yes | Remove data |
+| CREATE | Yes | Create tables |
+| DROP | Yes | Drop/reset tables |
+| ALTER | Yes | Modify table structure |
+| INDEX | Yes | Manage indexes |
+
+**Recommended Setup for External Databases:**
+
+```sql
+-- Run on your external database server (as admin)
+
+-- 1. Create the database
+CREATE DATABASE wordpress_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 2. Create user with full privileges on that database
+CREATE USER 'wpuser'@'%' IDENTIFIED BY 'secure_password';
+GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wpuser'@'%';
+FLUSH PRIVILEGES;
+```
+
+Then use:
+```bash
+wpstaging add mysite.local --external-db \
+  --db-host=your-db-server:3306 \
+  --db-name=wordpress_db \
+  --db-user=wpuser \
+  --db-pass=secure_password
+```
+
+**Common Issues:**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Access denied` | Invalid credentials | Verify username/password |
+| `Unknown database` | Database doesn't exist | Pre-create the database or use `--db-root` |
+| `CREATE command denied` | Missing privilege | Grant CREATE privilege or pre-create DB |
+| `Connection refused` | Network/firewall issue | Ensure DB is accessible from Docker network |
 
 **Q34: How do I connect to SSL-enabled external databases?**  
 **A34:**
@@ -888,9 +983,9 @@ wpstaging dump-header backup.wpstg --outputdir=/tmp/output
 ## License & Authentication Questions
 
 <a name="q46"></a>
-**Q47: When does license validation occur?**  
+**Q47: When does license validation occur?**
 **A47:**
-License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, add, start, etc.). Commands like `help`, `register`, and `clean` skip license validation.
+License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, add, etc.). Commands like `help`, `register`, `clean`, `status`, and `list` skip license validation for faster access.
 
 <a name="q47"></a>
 **Q48: Do I need a license to view help messages?**  
@@ -1123,10 +1218,10 @@ The mkcert CA is designed specifically for local development and is safe to inst
 - Uninstall the CA when you stop using local development (optional)
 - The CLI stores CA in project directory for isolation
 
-**To uninstall (if needed):**
+**To remove Docker environment (if needed):**
 1. Stop and remove Docker environment:
    ```bash
-   wpstaging uninstall
+   wpstaging remove
    ```
 2. Manually remove CA from system (optional):
    - Linux: `sudo rm /usr/local/share/ca-certificates/rootCA.pem && sudo update-ca-certificates`
@@ -1253,27 +1348,61 @@ This disables the local MariaDB container and configures WordPress to use your e
 **A66:**
 Use the site management commands:
 ```bash
-# Add new sites
+# Add new sites (one at a time)
 wpstaging add site1.local
 wpstaging add site2.local
 
-# List all sites
-wpstaging list
+# List sites
+wpstaging list                           # List all sites
+wpstaging list site1.local               # Show details for one site
+wpstaging list site1.local site2.local   # Show details for multiple sites
+
+# Check status
+wpstaging status                           # Show all sites status
+wpstaging status site1.local site2.local   # Show status for specific sites
 
 # Manage individual sites
 wpstaging stop site1.local
 wpstaging start site1.local
 wpstaging shell site1.local
-wpstaging del site2.local
+
+# Delete sites
+wpstaging del site1.local                  # Delete one site
+wpstaging del site1.local site2.local      # Delete multiple sites
+wpstaging del                              # Delete all sites (with confirmation)
 
 # Manage all sites at once
 wpstaging start          # Start all sites
 wpstaging stop           # Stop all sites
 wpstaging restart        # Restart all sites
-wpstaging status         # Show status of all sites
 ```
 
 Each site runs in its own isolated set of containers with unique IPs and ports.
+
+<a name="q65b"></a>
+**Q66b: Why can't I add multiple sites at once with the `add` command?**  
+**A66b:**
+The `add` command only accepts one site URL at a time because each site requires unique configuration:
+
+- Different container IP (auto-assigned from 127.3.2.1-254 range)
+- Different database credentials (especially with `--secure-credentials`)
+- Different ports (if conflicts exist)
+- Site-specific SSL certificates
+
+**To add multiple sites quickly, use a loop:**
+```bash
+# Bash (Linux/macOS)
+for site in site1.local site2.local site3.local; do
+  wpstaging add $site --yes
+done
+
+# PowerShell (Windows)
+@("site1.local", "site2.local", "site3.local") | ForEach-Object {
+  wpstaging add $_ --yes
+}
+```
+
+**Note:** The `--yes` flag auto-confirms prompts for unattended operation.
 
 <a name="q66"></a>
 **Q67: How can I check the status of my sites?**  
@@ -1739,6 +1868,35 @@ docker version --format "{{.Server.Os}}"
 
 ---
 
+<a name="q89b"></a>
+**Q89b: I get "Host 'x.x.x.x' is not allowed to connect to this MariaDB server" error. What's wrong?**  
+**A89b:**
+This error occurs on Windows and macOS when the CLI tries to connect to MariaDB during database setup. The error looks like:
+```
+Failed to set up database: mysite_local: failed to connect to database after 10 attempts:
+Error 1130: Host '172.25.0.1' is not allowed to connect to this MariaDB server
+```
+
+**Cause:**
+Docker Desktop routes host-to-container connections through the bridge network. The connection appears to come from the bridge gateway IP (e.g., `172.25.0.1` or `172.18.0.1`) instead of localhost. MariaDB by default only allows root connections from localhost.
+
+**Solution:**
+This issue was fixed by:
+1. Using MariaDB 11.8 image (`mariadb:11.8`) instead of `latest`
+2. Adding `MARIADB_ROOT_HOST=%` environment variable to allow root connections from any host
+
+If you encounter this error with an older version:
+1. Update to the latest version of WP Staging CLI
+2. Delete the affected site and recreate it:
+   ```bash
+   wpstaging del mysite.local
+   wpstaging add mysite.local
+   ```
+
+The new site will use MariaDB 11.8 with the correct configuration.
+
+---
+
 <a name="q90"></a>
 **Q90: Browser shows "Your connection is not private" or certificate not trusted. How do I fix this?**  
 **A90:**
@@ -2168,6 +2326,37 @@ This ensures that one conflicting site doesn't prevent other sites from starting
 
 ---
 
+<a name="q101b"></a>
+**Q101b: What happens if an external service is bound to all interfaces (wildcard binding)?**  
+**A101b:**
+When an external service (like nginx or Apache) binds to `0.0.0.0:80` or `*:443` (wildcard binding), it listens on ALL IP addresses. This means Docker cannot bind to any specific IP on that port, even in the `127.3.2.x` range.
+
+**How the CLI detects wildcard bindings:**
+- Tests if the port responds on both `127.0.0.1` and another IP (like `127.3.2.1`)
+- If both respond, it's a wildcard binding
+
+**Behavior when wildcard is detected:**
+- Port rotation is triggered (not IP rotation, since IP rotation won't help)
+- Enhanced message indicates the wildcard binding:
+```
+HTTP port 80 is in use by external service bound to all interfaces (*:80).
+Switching to port 8844.
+```
+
+**Common causes:**
+- System nginx configured with `listen 80;` (defaults to all interfaces)
+- Apache with `Listen 80` in httpd.conf
+- Other web servers or proxies
+
+**Solutions:**
+1. Stop the conflicting service: `sudo systemctl stop nginx`
+2. Reconfigure the service to bind to a specific IP: `listen 127.0.0.1:80;`
+3. Let the CLI use alternate ports (automatic)
+
+**Note:** On macOS with `--skip-macos-auto-ip`, external service checks for the IP range are skipped since port-based separation is used instead.
+
+---
+
 ## Environment Variables
 
 <a name="q102"></a>
@@ -2238,4 +2427,38 @@ sudo wpstaging extract backup.wpstg
 
 ---
 
-**Last Updated:** 2025-11-29 10:35:00 UTC
+<a name="q106"></a>
+**Q106: Can I extract or restore a backup directly from a URL?**  
+**A106:**
+Yes, you can extract or restore backups directly from HTTP/HTTPS URLs without downloading them manually first.
+
+**Using `--from` flag:**
+```bash
+# Extract from remote URL
+wpstaging extract --from=https://example.com/backups/backup.wpstg
+
+# Restore from remote URL
+wpstaging restore --path=/var/www/html --from=https://example.com/backups/backup.wpstg
+```
+
+**Or pass URL directly as argument:**
+```bash
+wpstaging extract https://example.com/backups/backup.wpstg
+```
+
+**What happens:**
+1. The CLI validates the URL (must end with `.wpstg`)
+2. Performs a preflight check (file size and backup format validation)
+3. Displays backup information (filename, size, format type)
+4. Asks for confirmation before downloading
+5. Downloads with progress indicator (supports resume for interrupted downloads)
+6. Caches downloaded files for reuse
+
+**Supported backup formats:**
+- WP Staging Backup v1
+- WP Staging Backup v2
+- WP Staging SQL Dump
+
+---
+
+**Last Updated:** 2025-12-13 12:00:00 UTC
