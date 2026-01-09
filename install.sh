@@ -106,16 +106,49 @@ get_source_command() {
     echo "source $rc"
 }
 
+# Show Windows detected error and exit
+# This helper function avoids duplicating the error message
+error_windows_detected() {
+    local context="${1:-}"
+    local msg="Windows detected"
+    [ -n "$context" ] && msg="Windows detected ($context)"
+    error "$msg. Please use the Windows installer instead:\n\n    For PowerShell:\n        irm https://wp-staging.com/install.ps1 | iex\n\n    For CMD:\n        curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd\n\nOr download manually from:\n    https://github.com/wp-staging/wp-staging-cli-release"
+}
+
 # Detect OS
 detect_os() {
+    # Early detection for Windows environments
+    # Check for Windows-specific environment variables (always set on Windows regardless of shell)
+    # Note: Bash is case-sensitive, so check both common casings
+    if [ -n "$WINDIR" ] || [ -n "$windir" ] || [ -n "$SYSTEMROOT" ] || [ -n "$SystemRoot" ]; then
+        error_windows_detected
+    fi
+
+    # Check for Windows paths that indicate we're on Windows (Git Bash uses /c/Windows)
+    # Note: /mnt/c/Windows exists in WSL but WSL is a legitimate Linux environment
+    if [ -d "/c/Windows" ]; then
+        error_windows_detected "Git Bash"
+    fi
+
+    # Check OS environment variable (Windows sets this to "Windows_NT")
+    if [ "$OS" = "Windows_NT" ]; then
+        error_windows_detected
+    fi
+
+    # Note: We don't check for stdin tty here because piped installation (curl | bash)
+    # also results in stdin not being a tty, which is the normal installation method.
+    # WSL users running from Windows CMD/PowerShell will see prompts fail at runtime,
+    # but that's preferable to blocking the standard curl | bash installation.
+
     local os
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
 
     case "$os" in
         linux*)
-            # Check for WSL
+            # Check for WSL - this is a legitimate Linux environment on Windows
+            # Use case-insensitive matching as /proc/version may contain "Microsoft" or "microsoft"
             if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
-                echo "linux"  # WSL is treated as Linux
+                echo "linux"  # WSL is treated as Linux (this is correct)
             else
                 echo "linux"
             fi
@@ -123,8 +156,8 @@ detect_os() {
         darwin*)
             echo "darwin"
             ;;
-        mingw* | msys* | cygwin*)
-            error "Windows detected. Please use PowerShell installer instead:\n\n    irm https://wp-staging.com/install.ps1 | iex\n\nOr download manually from:\n    https://github.com/wp-staging/wp-staging-cli-release"
+        mingw* | msys* | cygwin* | msys_nt* | mingw64_nt* | mingw32_nt*)
+            error_windows_detected "MinGW/MSYS/Cygwin"
             ;;
         *)
             error "Unsupported operating system: $os"
@@ -522,7 +555,8 @@ fetch_latest_stable_version() {
 
     # Parse tags and filter out pre-release versions (beta, alpha, rc)
     # Extract tag names and filter
-    version=$(echo "$tags_json" | grep '"name"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | grep -v -E 'beta|alpha|rc|Alpha|Beta|RC' | head -1)
+    # Filter out pre-release versions using case-insensitive matching
+    version=$(echo "$tags_json" | grep '"name"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | grep -v -i -E 'beta|alpha|rc' | head -1)
 
     if [ -z "$version" ]; then
         warning "No stable version found, falling back to 'main'"
@@ -734,6 +768,7 @@ main() {
     fi
 
     # Register license key if provided
+    local license_registered=false
     if [ -n "$LICENSE_KEY" ]; then
         info "\nRegistering license key..."
         local register_binary="${INSTALL_DIR}/${BINARY_NAME}"
@@ -747,6 +782,7 @@ main() {
             local output
             if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register 2>&1); then
                 success "✓ License registered successfully"
+                license_registered=true
             else
                 warning "License registration failed: $output"
                 warning "You can register later with: wpstaging register"
@@ -772,33 +808,32 @@ main() {
     if in_path "$INSTALL_DIR"; then
         # Works immediately - no reload needed
         info "Get started:"
-        if [ -n "$LICENSE_KEY" ]; then
+        if [ -n "$LICENSE_KEY" ] && [ "$license_registered" = false ]; then
+            # License registration failed, include it so user can try again
             info "  wpstaging add mysite.local --license $LICENSE_KEY"
             echo ""
             info "Note: The license key is only needed once to activate WP Staging CLI."
             info "      After activation, you can use wpstaging without the --license flag."
         else
+            # No license provided, or license was already registered
             info "  wpstaging add mysite.local"
         fi
     else
         # Need to reload shell or use full path
         info "Run wpstaging immediately (copy & paste):"
-        if [ -n "$LICENSE_KEY" ]; then
+        if [ -n "$LICENSE_KEY" ] && [ "$license_registered" = false ]; then
+            # License registration failed, include it so user can try again
             info "  ${INSTALL_DIR}/${BINARY_NAME} add mysite.local --license $LICENSE_KEY"
             echo ""
             info "Note: The license key is only needed once to activate WP Staging CLI."
             info "      After activation, you can use wpstaging without the --license flag."
         else
+            # No license provided, or license was already registered
             info "  ${INSTALL_DIR}/${BINARY_NAME} add mysite.local"
         fi
         echo ""
         info "Or reload your shell first:"
         info "  $(get_source_command)"
-        echo ""
-        if [ -n "$LICENSE_KEY" ]; then
-            info "Then use:"
-            info "  wpstaging add mysite.local"
-        fi
     fi
 
     echo ""

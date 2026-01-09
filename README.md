@@ -52,6 +52,27 @@ The installer will:
 - Add to your PATH automatically
 - Install bash completion (Linux/macOS)
 
+### Install a Specific Version (including Beta/RC)
+
+By default, the installer downloads the latest stable release. To install a specific version (including beta, alpha, or release candidate versions):
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- -v 1.4.3-beta.1
+```
+
+**Windows (PowerShell):**
+```powershell
+& ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -v "1.4.3-beta.1"
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd -v 1.4.3-beta.1 && del install.cmd
+```
+
+**Available versions**: See all releases at [GitHub Releases](https://github.com/wp-staging/wp-staging-cli-release/tags)
+
 ### Manual Installation
 
 If you prefer to download and install manually:
@@ -229,6 +250,24 @@ Extract all files and database from your backup to the default output directory.
 wpstaging extract backupfile.wpstg
 ```
 
+### Extract from Remote URL
+
+Extract a backup directly from a remote URL without downloading it manually first.
+
+```bash
+# Using --from flag
+wpstaging extract --from=https://example.com/backups/backup.wpstg
+
+# Or pass URL directly as argument
+wpstaging extract https://example.com/backups/backup.wpstg
+```
+
+The CLI will:
+1. Validate the remote file (size and format)
+2. Display backup information
+3. Ask for confirmation before downloading
+4. Download with progress indicator (supports resume for interrupted downloads)
+
 ### Extract and Prepare Database for Import
 
 Extract your backup and automatically clean up the database file so it's ready to import with standard database tools.
@@ -260,6 +299,14 @@ Or, if you're already inside the WordPress root directory:
 ```bash
 cd /var/www/site
 wpstaging restore backupfile.wpstg
+```
+
+### Restore from Remote URL
+
+Restore a WordPress site directly from a remote backup URL.
+
+```bash
+wpstaging restore --path=/var/www/site --from=https://example.com/backups/backup.wpstg
 ```
 
 ### Restore to External Database
@@ -317,8 +364,11 @@ Add, list, reset, or remove WordPress sites in your Docker environment.
 ```bash
 wpstaging add https://newsite.local
 wpstaging list
+wpstaging list site1.local site2.local  # Show details for multiple sites
 wpstaging reset mysite.local  # Reset site to fresh WordPress
 wpstaging del oldsite.local
+wpstaging del site1.local site2.local  # Delete multiple sites
+wpstaging del  # Delete all sites (with confirmation)
 ```
 
 **Access the staging site:**

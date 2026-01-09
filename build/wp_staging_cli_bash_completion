@@ -38,6 +38,7 @@ _wp_staging_cli() {
         restart
         restore
         shell
+        shell-db
         start
         status
         stop
@@ -104,6 +105,7 @@ _wp_staging_cli() {
         --overwrite
         --verify
         --skip-extract
+        --from
     "
 
     # Restore-specific options
@@ -121,6 +123,7 @@ _wp_staging_cli() {
         --db-timeout
         --verify
         --skip-extract
+        --from
         --db-host
         --db-name
         --db-user
@@ -230,7 +233,7 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${only_opts} ${skip_opts}" -- "${cur}") )
             fi
             ;;
-        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|uninstall|compose-info)
+        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|uninstall|compose-info)
             COMPREPLY=( $(compgen -W "${dockerize_opts}" -- "${cur}") )
             ;;
         reinstall-cert)

@@ -314,7 +314,9 @@ echo.
 REM Add to PATH if not already present
 if "!ALREADY_IN_PATH!"=="0" (
     echo %BLUE%Updating PATH...%NC%
-    setx PATH "%PATH%;!INSTALL_DIR!" >nul 2>&1
+    REM Use PowerShell to properly update only the user PATH
+    REM This avoids the setx 1024 character limit and prevents mixing system+user PATH
+    powershell -NoProfile -Command "$installDir = '!INSTALL_DIR!'; $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User'); if ([string]::IsNullOrEmpty($userPath)) { $userPath = '' }; if ($userPath -notlike \"*$installDir*\") { $newPath = if ($userPath) { $userPath + ';' + $installDir } else { $installDir }; [Environment]::SetEnvironmentVariable('PATH', $newPath, 'User') }"
     if errorlevel 1 (
         echo %YELLOW%Warning: Failed to update PATH automatically%NC%
         echo %YELLOW%Please add this directory to your PATH manually: !INSTALL_DIR!%NC%
@@ -329,28 +331,35 @@ if "!ALREADY_IN_PATH!"=="0" (
 echo.
 
 REM Register license key if provided
-if defined LICENSE_KEY (
-    echo %BLUE%Registering license key...%NC%
+set "LICENSE_REGISTERED=0"
+if not defined LICENSE_KEY goto :skip_license_registration
 
-    REM Check if binary exists
-    if not exist "%INSTALL_DIR%\%BINARY_NAME%" (
-        echo %YELLOW%Warning: Binary not found. Cannot register license%NC%
-        echo %YELLOW%You can register later with: wpstaging register%NC%
-    ) else (
-        REM Set environment variable temporarily for this command to avoid exposure in process list
-        set "WPSTGPRO_LICENSE=!LICENSE_KEY!"
-        "%INSTALL_DIR%\%BINARY_NAME%" register 2>&1
-        if errorlevel 1 (
-            echo %YELLOW%Warning: License registration failed%NC%
-            echo %YELLOW%You can register later with: wpstaging register%NC%
-        ) else (
-            echo %GREEN%License registered successfully%NC%
-        )
-        REM Clear the temporary variable
-        set "WPSTGPRO_LICENSE="
-    )
-    echo.
+echo %BLUE%Registering license key...%NC%
+
+REM Check if binary exists
+if not exist "%INSTALL_DIR%\%BINARY_NAME%" (
+    echo %YELLOW%Warning: Binary not found. Cannot register license%NC%
+    echo %YELLOW%You can register later with: wpstaging register%NC%
+    goto :license_done
 )
+
+REM Set environment variable temporarily for this command to avoid exposure in process list
+set "WPSTGPRO_LICENSE=!LICENSE_KEY!"
+"%INSTALL_DIR%\%BINARY_NAME%" register 2>&1
+if errorlevel 1 (
+    echo %YELLOW%Warning: License registration failed%NC%
+    echo %YELLOW%You can register later with: wpstaging register%NC%
+) else (
+    echo %GREEN%License registered successfully%NC%
+    set "LICENSE_REGISTERED=1"
+)
+REM Clear the temporary variable
+set "WPSTGPRO_LICENSE="
+
+:license_done
+echo.
+
+:skip_license_registration
 
 REM Cleanup
 rmdir /s /q "%TEMP_DIR%"
@@ -364,32 +373,60 @@ echo.
 echo %BLUE%Installed: wpstaging v!VERSION!%NC%
 echo %BLUE%Location:  !INSTALL_DIR!\!BINARY_NAME!%NC%
 echo.
-if "!ALREADY_IN_PATH!"=="1" (
-    REM Directory was already in PATH - works immediately
-    echo %BLUE%Run wpstaging now:%NC%
-    if defined LICENSE_KEY (
-        echo   !APP_NAME! add mysite.local --license !LICENSE_KEY!
-        echo.
-        echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
-        echo       After activation, you can use wpstaging without the --license flag.
-    ) else (
-        echo   !APP_NAME! add mysite.local
-    )
-) else (
-    REM Directory was added to PATH - needs restart
-    echo %BLUE%Run wpstaging immediately ^(copy and paste^):%NC%
-    if defined LICENSE_KEY (
-        echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local --license !LICENSE_KEY!
-        echo.
-        echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
-        echo       After activation, you can use wpstaging without the --license flag.
-    ) else (
-        echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local
-    )
-    echo.
-    echo %YELLOW%Or restart your command prompt, then use:%NC%
-    echo   !APP_NAME! add mysite.local
-)
+
+REM Determine which command example to show
+REM Use goto to avoid nested if-else parsing issues in CMD
+if "!ALREADY_IN_PATH!"=="1" goto :show_immediate_cmd
+goto :show_full_path_cmd
+
+:show_immediate_cmd
+REM Directory was already in PATH - works immediately
+echo %BLUE%Run wpstaging now:%NC%
+if not defined LICENSE_KEY goto :show_immediate_simple
+if "!LICENSE_REGISTERED!"=="0" goto :show_immediate_with_license
+REM License was just registered, no need to include it in the command
+echo   !APP_NAME! add mysite.local
+goto :show_help
+
+:show_immediate_with_license
+REM License registration failed, include it so user can try again
+echo   !APP_NAME! add mysite.local --license !LICENSE_KEY!
+echo.
+echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
+echo       After activation, you can use wpstaging without the --license flag.
+goto :show_help
+
+:show_immediate_simple
+echo   !APP_NAME! add mysite.local
+goto :show_help
+
+:show_full_path_cmd
+REM Directory was added to PATH - needs restart
+echo %BLUE%Run wpstaging immediately ^(copy and paste^):%NC%
+if not defined LICENSE_KEY goto :show_full_path_simple
+if "!LICENSE_REGISTERED!"=="0" goto :show_full_path_with_license
+REM License was just registered, no need to include it in the command
+echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local
+goto :show_restart_note
+
+:show_full_path_with_license
+REM License registration failed, include it so user can try again
+echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local --license !LICENSE_KEY!
+echo.
+echo %BLUE%Note: The license key is only needed once to activate WP Staging CLI.%NC%
+echo       After activation, you can use wpstaging without the --license flag.
+goto :show_restart_note
+
+:show_full_path_simple
+echo   !INSTALL_DIR!\!BINARY_NAME! add mysite.local
+goto :show_restart_note
+
+:show_restart_note
+echo.
+echo %YELLOW%Or restart your command prompt, then use:%NC%
+echo   !APP_NAME! add mysite.local
+
+:show_help
 echo.
 echo %BLUE%Get help:%NC%
 echo   !APP_NAME! --help

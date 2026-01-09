@@ -164,7 +164,7 @@ The following Docker images will be downloaded automatically:
 |---------|-------|-----------------|--------------|
 | PHP | wpstaging/dockerize | php-8.1 | Yes (`--php`) |
 | Nginx | nginx | stable-alpine-slim | No |
-| MariaDB | mariadb | latest | No |
+| MariaDB | mariadb | 11.8 | No |
 | Mailpit | axllent/mailpit | latest | No |
 
 ### Network Ports
