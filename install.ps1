@@ -168,9 +168,36 @@ function Test-InPath($directory) {
     return $false
 }
 
+# Find existing wpstaging installation in PATH
+# Returns the directory containing the existing binary, or $null if not found
+function Find-ExistingInstallation {
+    $existing = Get-Command $BinaryName -ErrorAction SilentlyContinue
+    if ($existing) {
+        return Split-Path $existing.Source -Parent
+    }
+    return $null
+}
+
 # Pick best installation directory
-# Prefers directories already on PATH to avoid needing terminal restart
+# Prefers existing installation, then directories already on PATH to avoid needing terminal restart
 function Get-InstallDir {
+    # First, check if wpstaging is already installed somewhere
+    $existingDir = Find-ExistingInstallation
+    if ($existingDir) {
+        # Check if writable
+        try {
+            $testFile = Join-Path $existingDir ".wpstaging-write-test-$(Get-Random)"
+            [System.IO.File]::WriteAllText($testFile, "test")
+            Remove-Item $testFile -Force
+            Write-Info "Found existing installation at $existingDir (will update)"
+            return $existingDir
+        }
+        catch {
+            Write-Warning "Found existing installation at $existingDir but it's not writable"
+            Write-Warning "Installing to user directory instead - you may have multiple versions"
+        }
+    }
+
     $candidates = @(
         "$env:LOCALAPPDATA\Programs\wpstaging",
         "$env:LOCALAPPDATA\Microsoft\WindowsApps",
@@ -457,12 +484,33 @@ function Main {
 
         # Verify installation
         Write-Info "Verifying installation..."
-        if (Test-CommandExists "wpstaging") {
+        $installedBinary = Join-Path $InstallDir $BinaryName
+        if (Test-Path $installedBinary) {
             try {
-                $versionOutput = & wpstaging --version 2>&1
+                $versionOutput = & $installedBinary --version 2>&1
                 Write-Success "[OK] Installation successful!"
                 Write-Host ""
                 Write-Success "Installed: $versionOutput"
+
+                # Check for other installations that might shadow this one
+                $otherInstalls = @()
+                $pathDirs = $env:PATH -split ';'
+                foreach ($dir in $pathDirs) {
+                    if ($dir -and $dir -ne $InstallDir) {
+                        $otherBinary = Join-Path $dir $BinaryName
+                        if (Test-Path $otherBinary) {
+                            $otherInstalls += "  - $otherBinary"
+                        }
+                    }
+                }
+
+                if ($otherInstalls.Count -gt 0) {
+                    Write-Host ""
+                    Write-Warning "Other wpstaging installations found:"
+                    $otherInstalls | ForEach-Object { Write-Host $_ }
+                    Write-Warning "These may take precedence over the newly installed version."
+                    Write-Info "Consider removing old installations or adjusting your PATH order."
+                }
             }
             catch {
                 Write-Warning "Installation complete, but verification failed"
@@ -470,7 +518,7 @@ function Main {
             }
         }
         else {
-            Write-Warning "⚠ Installation complete, but 'wpstaging' is not in PATH"
+            Write-Warning "Installation complete, but binary not found at $installedBinary"
             Write-Info "  Please restart your terminal or PowerShell session"
         }
 

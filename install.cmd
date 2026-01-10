@@ -234,10 +234,28 @@ echo %GREEN%Checksum verified%NC%
 echo.
 
 REM Determine installation directory
-REM Prefer directories already in PATH to avoid needing terminal restart
+REM Prefer existing installation, then directories already in PATH
 set INSTALL_DIR=
 set ALREADY_IN_PATH=0
 
+REM First, check if wpstaging is already installed somewhere
+where %BINARY_NAME% >nul 2>&1
+if not errorlevel 1 (
+    for /f "delims=" %%i in ('where %BINARY_NAME%') do (
+        for %%p in ("%%~dpi.") do set EXISTING_DIR=%%~fp
+        goto :check_existing_dir
+    )
+)
+goto :check_candidates
+
+:check_existing_dir
+REM Found existing installation, use that directory
+echo %BLUE%Found existing installation at !EXISTING_DIR! ^(will update^)%NC%
+set INSTALL_DIR=!EXISTING_DIR!
+set ALREADY_IN_PATH=1
+goto :install_dir_chosen
+
+:check_candidates
 REM Check candidates in order of preference
 REM 1) Check %LOCALAPPDATA%\Programs\wpstaging (our default)
 echo %PATH% | findstr /i /c:"%LOCALAPPDATA%\Programs\%APP_NAME%" >nul
@@ -364,13 +382,44 @@ echo.
 REM Cleanup
 rmdir /s /q "%TEMP_DIR%"
 
+REM Verify installation
+echo.
+echo %BLUE%Verifying installation...%NC%
+set INSTALLED_VERSION=
+for /f "delims=" %%v in ('"!INSTALL_DIR!\!BINARY_NAME!" --version 2^>^&1') do set INSTALLED_VERSION=%%v
+if not defined INSTALLED_VERSION (
+    echo %YELLOW%Warning: Could not verify installed binary%NC%
+) else (
+    echo %GREEN%[OK] Installation successful!%NC%
+)
+
+REM Check for other installations
+set OTHER_INSTALLS=
+REM Normalize INSTALL_DIR to have trailing backslash for comparison
+set NORM_INSTALL_DIR=!INSTALL_DIR!
+if not "!NORM_INSTALL_DIR:~-1!"=="\" set NORM_INSTALL_DIR=!NORM_INSTALL_DIR!\
+for /f "tokens=* delims=" %%p in ('where !BINARY_NAME! 2^>nul') do (
+    if /i not "%%~dpp"=="!NORM_INSTALL_DIR!" (
+        if not defined OTHER_INSTALLS (
+            set OTHER_INSTALLS=1
+            echo.
+            echo %YELLOW%Warning: Other wpstaging installations found:%NC%
+        )
+        echo   - %%p
+    )
+)
+if defined OTHER_INSTALLS (
+    echo %YELLOW%These may take precedence over the newly installed version.%NC%
+    echo %BLUE%Consider removing old installations or adjusting your PATH order.%NC%
+)
+
 REM Success message
 echo.
 echo %GREEN%==============================%NC%
 echo %GREEN%   Installation Complete!%NC%
 echo %GREEN%==============================%NC%
 echo.
-echo %BLUE%Installed: wpstaging v!VERSION!%NC%
+echo %BLUE%Installed: !INSTALLED_VERSION!%NC%
 echo %BLUE%Location:  !INSTALL_DIR!\!BINARY_NAME!%NC%
 echo.
 

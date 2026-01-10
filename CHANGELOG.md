@@ -1,15 +1,22 @@
-## v1.4.3 (2026-01-09)
+## v1.4.4 (2026-01-10)
 <!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
 <!-- Use only these prefixes: New: Enh: Fix: Dev: -->
 <!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
 <!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
 <!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
 
+- **Fix:** Show explanation when sudo password is required for updating the hosts file during site setup.
+- **Fix:** Installer now correctly reports version after upgrade and updates existing installation in place
+- **Fix:** Backup restore confirmation no longer auto-cancels - waits indefinitely for user input to prevent accidental cancellation
+
+## v1.4.3 (2026-01-09)
 - **New:** Remote backup URL support - Extract and restore backups directly from URLs with chunked downloads, resume support, and preflight validation.
 - **New:** `--from` flag for `extract` and `restore` commands - Specify backup file path or remote URL as an alternative to positional argument.
 - **New:** Automatic WP Staging Pro license activation - When creating a new site with `add`, the plugin license is automatically activated in WordPress.
 - **New:** External service conflict detection - CLI detects when other services (Apache, nginx, MySQL) are using the wpstaging IP range or wildcard bindings.
 - **New:** Automatic Docker startup prompt - CLI offers to start Docker when it's not running on Windows, macOS, and Linux.
+
+## v1.4.2 (2025-11-30)
 - **Enh:** Use temporary redirect (302) for HTTP-to-HTTPS in local development - prevents browser caching issues.
 - **Enh:** Smarter IP and port conflict handling - automatically rotates to next available IP, shows OS-specific diagnostic commands, and continues starting other sites when some have conflicts.
 - **Enh:** Changed MariaDB image from `latest` to `11.8` for better stability and consistent behavior.
