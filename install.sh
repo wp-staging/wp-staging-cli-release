@@ -425,10 +425,43 @@ prompt_sudo() {
     esac
 }
 
+# Find existing wpstaging installation in PATH
+# Returns the directory containing the existing binary, or empty if not found
+find_existing_installation() {
+    local existing
+    existing=$(command -v "$BINARY_NAME" 2>/dev/null) || true
+    if [ -n "$existing" ] && [ -x "$existing" ]; then
+        # Return the directory containing the existing binary
+        dirname "$existing" 2>/dev/null || true
+    fi
+}
+
 # Pick best installation directory
-# Prefers directories already on PATH to avoid needing shell reload
+# Prefers existing installation, then directories already on PATH to avoid needing shell reload
 # Returns: "directory|use_sudo" (e.g., "/usr/local/bin|true")
 pick_install_dir() {
+    # First, check if wpstaging is already installed somewhere
+    local existing_dir
+    existing_dir=$(find_existing_installation)
+
+    if [ -n "$existing_dir" ]; then
+        # Found existing installation - update it
+        if [ -w "$existing_dir" ]; then
+            info "Found existing installation at $existing_dir (will update)"
+            echo "$existing_dir|false"
+            return 0
+        elif command_exists sudo; then
+            info "Found existing installation at $existing_dir (requires sudo to update)"
+            if prompt_sudo "$existing_dir"; then
+                echo "$existing_dir|true"
+                return 0
+            fi
+            # User declined sudo - warn about potential conflict
+            warning "Cannot update existing installation at $existing_dir without sudo"
+            warning "Installing to user directory instead - you may have multiple versions"
+        fi
+    fi
+
     # Trusted candidates only, do not install into arbitrary PATH entries
     local candidates=(
         "/usr/local/bin"
@@ -792,10 +825,29 @@ main() {
 
     # Verify installation
     info "\nVerifying installation..."
-    if command_exists "$BINARY_NAME"; then
-        VERSION_OUTPUT=$("$BINARY_NAME" --version 2>&1 || echo "")
+    if [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+        VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>&1 || echo "")
         success "✓ Installation successful!"
         success "Installed: $VERSION_OUTPUT"
+
+        # Check for other installations that might shadow this one
+        local other_installs=""
+        local IFS_BACKUP="$IFS"
+        IFS=':'
+        for dir in $PATH; do
+            if [ "$dir" != "$INSTALL_DIR" ] && [ -x "$dir/$BINARY_NAME" ]; then
+                other_installs="$other_installs  - $dir/$BINARY_NAME\n"
+            fi
+        done
+        IFS="$IFS_BACKUP"
+
+        if [ -n "$other_installs" ]; then
+            echo ""
+            warning "⚠ Other wpstaging installations found:"
+            printf "%b" "$other_installs"
+            warning "These may take precedence over the newly installed version."
+            info "Consider removing old installations or adjusting your PATH order."
+        fi
     else
         warning "⚠ Installation complete, but '$BINARY_NAME' is not in PATH"
         info "  Run '$(get_source_command)' or restart your shell to apply changes"
