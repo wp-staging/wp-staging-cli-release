@@ -7,7 +7,7 @@
 #   DEPLOY_TOKEN: PAT with 'repo' scope for repository_dispatch access to wp-staging/wp-staging-cli
 #
 # The commit message must contain a version in format: "Release v1.4.0 ..."
-# Beta/RC versions are automatically marked as prerelease.
+# Alpha/Beta/RC versions are automatically marked as prerelease.
 #
 # Failure Recovery:
 #   If this workflow fails after creating the release in this repo but before
@@ -45,7 +45,7 @@ jobs:
           echo "Commit message: ${COMMIT_MSG}"
 
           # Extract version from "Release v1.4.0 ..." commit message
-          # Supports: v1.4.0, v1.4.0-beta.1, v1.4.0-rc.1
+          # Supports semver with optional prerelease: v1.4.0, v1.4.0-alpha.1, v1.4.0-beta.1, v1.4.0-rc.1
           VERSION=$(echo "${COMMIT_MSG}" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
 
           if [ -z "${VERSION}" ]; then
@@ -58,8 +58,8 @@ jobs:
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "Detected version: ${VERSION}"
 
-          # Determine if this is a prerelease
-          if [[ "${VERSION}" =~ -(beta|rc) ]]; then
+          # Determine if this is a prerelease (alpha, beta, or rc)
+          if [[ "${VERSION}" =~ -(alpha|beta|rc) ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "This is a prerelease version"
           else
@@ -74,10 +74,18 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_NO_V="${VERSION#v}"
 
+          # Check if CHANGELOG.md exists
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "Warning: CHANGELOG.md not found"
+            echo "See repository for details." > /tmp/changelog.txt
+            exit 0
+          fi
+
           # Extract changelog section for this version from CHANGELOG.md
           # The format is: ## v1.4.5 (2026-01-15) followed by entries until next ## header
           # VERSION includes 'v' prefix (e.g., v1.4.5), so we use VERSION_NO_V for matching
-          CHANGELOG=$(awk "/^## v${VERSION_NO_V}/{found=1; next} /^## /{found=0} found" CHANGELOG.md)
+          # Filter out HTML comments (<!-- ... -->)
+          CHANGELOG=$(awk "/^## v${VERSION_NO_V}/{found=1; next} /^## /{found=0} found" CHANGELOG.md | grep -v '^<!--.*-->$')
 
           # Validate changelog was extracted
           if [ -z "${CHANGELOG}" ]; then
@@ -98,6 +106,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
 
           # Get the first versioned header after the current version in CHANGELOG.md
+          # Assumes CHANGELOG.md lists versions in reverse chronological order (newest first)
           # Uses full semver pattern and awk to exclude current version
           PREV=$(awk -v cur="${VERSION}" '/^## v[0-9]+\.[0-9]+\.[0-9]+/{ if ($2 != cur) print $2 }' CHANGELOG.md | head -1)
 
@@ -116,6 +125,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           PREV="${{ steps.prev.outputs.prev_version }}"
 
+          # Note: Full Changelog link points to source repo (wp-staging-cli) intentionally
+          # as that's where the actual development history and commits are maintained
           {
             echo "## ${VERSION}"
             echo ""
