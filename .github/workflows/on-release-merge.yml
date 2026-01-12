@@ -1,0 +1,172 @@
+# This workflow file should be placed in wp-staging-cli-release repo at:
+# .github/workflows/on-release-merge.yml
+#
+# It triggers when a PR is merged to main and creates GitHub releases in both repos.
+#
+# Required secrets:
+#   DEPLOY_TOKEN: PAT with 'repo' scope for repository_dispatch access to wp-staging/wp-staging-cli
+#
+# The commit message must contain a version in format: "Release v1.4.0 ..."
+# Alpha/Beta/RC versions are automatically marked as prerelease.
+#
+# Failure Recovery:
+#   If this workflow fails after creating the release in this repo but before
+#   triggering the source repo release, you can manually trigger the source
+#   repo release by running:
+#     gh api repos/wp-staging/wp-staging-cli/dispatches \
+#       -f event_type=create-release \
+#       -f client_payload='{"version":"vX.Y.Z","prev_version":"vA.B.C","prerelease":false}'
+#   Or manually create the release in wp-staging-cli using the GitHub UI.
+
+name: Create Release on PR Merge
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  create-releases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from commit message
+        id: version
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Commit message: ${COMMIT_MSG}"
+
+          # Extract version from "Release v1.4.0 ..." commit message
+          # Supports semver with optional prerelease: v1.4.0, v1.4.0-alpha.1, v1.4.0-beta.1, v1.4.0-rc.1
+          VERSION=$(echo "${COMMIT_MSG}" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | head -1)
+
+          if [ -z "${VERSION}" ]; then
+            echo "No version found in commit message, skipping release"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "Detected version: ${VERSION}"
+
+          # Determine if this is a prerelease (alpha, beta, or rc)
+          if [[ "${VERSION}" =~ -(alpha|beta|rc) ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a prerelease version"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release"
+          fi
+
+      - name: Extract changelog for current version
+        id: changelog
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_NO_V="${VERSION#v}"
+
+          # Check if CHANGELOG.md exists
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "Warning: CHANGELOG.md not found"
+            echo "See repository for details." > /tmp/changelog.txt
+            exit 0
+          fi
+
+          # Extract changelog section for this version from CHANGELOG.md
+          # The format is: ## v1.4.5 (2026-01-15) followed by entries until next ## header
+          # VERSION includes 'v' prefix (e.g., v1.4.5), so we use VERSION_NO_V for matching
+          # Filter out HTML comments (<!-- ... -->)
+          CHANGELOG=$(awk "/^## v${VERSION_NO_V}/{found=1; next} /^## /{found=0} found" CHANGELOG.md | grep -v '^<!--.*-->$')
+
+          # Validate changelog was extracted
+          if [ -z "${CHANGELOG}" ]; then
+            echo "Warning: No changelog entries found for version ${VERSION}"
+            CHANGELOG="See CHANGELOG.md for details."
+          fi
+
+          # Store in file to preserve newlines
+          echo "${CHANGELOG}" > /tmp/changelog.txt
+
+          echo "Extracted changelog:"
+          cat /tmp/changelog.txt
+
+      - name: Determine previous version
+        id: prev
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Get the previous version (first versioned header that is not the current version)
+          # Assumes CHANGELOG.md lists versions in reverse chronological order (newest first)
+          # Uses full semver pattern and awk to exclude current version
+          PREV=$(awk -v cur="${VERSION}" '/^## v[0-9]+\.[0-9]+\.[0-9]+/{ if ($2 != cur) print $2 }' CHANGELOG.md | head -1)
+
+          if [ -z "${PREV}" ]; then
+            echo "Warning: No previous version found in CHANGELOG.md"
+            PREV="v0.0.0"
+          fi
+
+          echo "prev_version=${PREV}" >> $GITHUB_OUTPUT
+          echo "Previous version: ${PREV}"
+
+      - name: Create release body
+        id: body
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PREV="${{ steps.prev.outputs.prev_version }}"
+
+          # Note: Full Changelog link points to source repo (wp-staging-cli) intentionally
+          # as that's where the actual development history and commits are maintained
+          {
+            echo "## ${VERSION}"
+            echo ""
+            cat /tmp/changelog.txt
+            echo ""
+            echo "**Full Changelog:** https://github.com/wp-staging/wp-staging-cli/compare/${PREV}...${VERSION}"
+          } > /tmp/release_body.txt
+
+          echo "Release body:"
+          cat /tmp/release_body.txt
+
+      # Note: softprops/action-gh-release will create the tag if it doesn't exist.
+      # This is intentional for this release repo - the tag should point to the commit
+      # containing the built binaries, not to the source code commit.
+      - name: Create GitHub Release (release repo)
+        if: steps.version.outputs.skip != 'true'
+        timeout-minutes: 5
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body_path: /tmp/release_body.txt
+          prerelease: ${{ steps.version.outputs.is_prerelease == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # If this step fails after the release above was created, the source repo won't
+      # have a matching release. See "Failure Recovery" in the header comments for
+      # manual recovery steps using gh api to trigger repository_dispatch.
+      - name: Trigger release in source repo
+        if: steps.version.outputs.skip != 'true'
+        timeout-minutes: 5
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          repository: wp-staging/wp-staging-cli
+          event-type: create-release
+          client-payload: |
+            {
+              "version": "${{ steps.version.outputs.version }}",
+              "prev_version": "${{ steps.prev.outputs.prev_version }}",
+              "prerelease": ${{ steps.version.outputs.is_prerelease == 'true' }}
+            }
