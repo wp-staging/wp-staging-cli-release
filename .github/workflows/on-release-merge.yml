@@ -8,6 +8,15 @@
 #
 # The commit message must contain a version in format: "Release v1.4.0 ..."
 # Beta/RC versions are automatically marked as prerelease.
+#
+# Failure Recovery:
+#   If this workflow fails after creating the release in this repo but before
+#   triggering the source repo release, you can manually trigger the source
+#   repo release by running:
+#     gh api repos/wp-staging/wp-staging-cli/dispatches \
+#       -f event_type=create-release \
+#       -f client_payload='{"version":"vX.Y.Z","prev_version":"vA.B.C","prerelease":false}'
+#   Or manually create the release in wp-staging-cli using the GitHub UI.
 
 name: Create Release on PR Merge
 
