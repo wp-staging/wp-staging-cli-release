@@ -67,7 +67,8 @@ jobs:
 
           # Extract changelog section for this version from CHANGELOG.md
           # The format is: ## v1.4.5 (2026-01-15) followed by entries until next ## header
-          CHANGELOG=$(awk "/^## ${VERSION}|^## v${VERSION_NO_V}/{found=1; next} /^## /{found=0} found" CHANGELOG.md)
+          # VERSION includes 'v' prefix (e.g., v1.4.5), so we use VERSION_NO_V for matching
+          CHANGELOG=$(awk "/^## v${VERSION_NO_V}/{found=1; next} /^## /{found=0} found" CHANGELOG.md)
 
           # Validate changelog was extracted
           if [ -z "${CHANGELOG}" ]; then
@@ -88,7 +89,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
 
           # Get the first versioned header after the current version in CHANGELOG.md
-          PREV=$(awk '/^## v[0-9]/{print $2}' CHANGELOG.md | grep -v "${VERSION}" | head -1)
+          # Uses full semver pattern and awk to exclude current version
+          PREV=$(awk -v cur="${VERSION}" '/^## v[0-9]+\.[0-9]+\.[0-9]+/{ if ($2 != cur) print $2 }' CHANGELOG.md | head -1)
 
           if [ -z "${PREV}" ]; then
             echo "Warning: No previous version found in CHANGELOG.md"
@@ -140,5 +142,5 @@ jobs:
             {
               "version": "${{ steps.version.outputs.version }}",
               "prev_version": "${{ steps.prev.outputs.prev_version }}",
-              "prerelease": "${{ steps.version.outputs.is_prerelease }}"
+              "prerelease": ${{ steps.version.outputs.is_prerelease == 'true' }}
             }
