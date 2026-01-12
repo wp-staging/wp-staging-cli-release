@@ -153,6 +153,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # If this step fails after the release above was created, the source repo won't
+      # have a matching release. See "Failure Recovery" in the header comments for
+      # manual recovery steps using gh api to trigger repository_dispatch.
       - name: Trigger release in source repo
         if: steps.version.outputs.skip != 'true'
         timeout-minutes: 5
