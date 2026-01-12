@@ -138,6 +138,9 @@ jobs:
           echo "Release body:"
           cat /tmp/release_body.txt
 
+      # Note: softprops/action-gh-release will create the tag if it doesn't exist.
+      # This is intentional for this release repo - the tag should point to the commit
+      # containing the built binaries, not to the source code commit.
       - name: Create GitHub Release (release repo)
         if: steps.version.outputs.skip != 'true'
         timeout-minutes: 5
