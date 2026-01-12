@@ -1,9 +1,11 @@
+## v1.4.6 (2026-01-12)
+
+- **Enh:** WP Staging Pro plugin downloads are now cached by version - skips re-downloading when the same version is already available.
+- **Fix:** Sites created with older versions no longer fail to start after upgrade due to missing MariaDB configuration directory.
+- **Fix:** Sudo password explanation now displays correctly on macOS when updating the hosts file.
+- **Dev:** Release workflow now removes all HTML comments from CHANGELOG and auto-formats blank lines after version headers.
+
 ## v1.4.5 (2026-01-12)
-<!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
-<!-- Use only these prefixes: New: Enh: Fix: Dev: -->
-<!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
-<!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
-<!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
 
 - **Fix:** macOS SSL certificate now trusted by browsers on first run instead of requiring a second attempt.
 
