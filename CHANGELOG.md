@@ -1,15 +1,20 @@
-## v1.4.4 (2026-01-10)
+## v1.4.5 (2026-01-12)
 <!-- IMPORTANT: Write changelog entries in user-friendly language for non-technical users. -->
 <!-- Use only these prefixes: New: Enh: Fix: Dev: -->
 <!-- Avoid technical jargon, focus on benefits, and explain what users can do with features. -->
 <!-- Example: Instead of "Multi-row INSERT optimization" use "Faster database restoration for large sites" -->
 <!-- This comment will be automatically removed during release by .github/workflows/deploy.yml -->
 
+- **Fix:** macOS SSL certificate now trusted by browsers on first run instead of requiring a second attempt.
+
+## v1.4.4 (2026-01-10)
+
 - **Fix:** Show explanation when sudo password is required for updating the hosts file during site setup.
-- **Fix:** Installer now correctly reports version after upgrade and updates existing installation in place
-- **Fix:** Backup restore confirmation no longer auto-cancels - waits indefinitely for user input to prevent accidental cancellation
+- **Fix:** Installer now correctly reports version after upgrade and updates existing installation in place.
+- **Fix:** Backup restore confirmation no longer auto-cancels - waits indefinitely for user input to prevent accidental cancellation.
 
 ## v1.4.3 (2026-01-09)
+
 - **New:** Remote backup URL support - Extract and restore backups directly from URLs with chunked downloads, resume support, and preflight validation.
 - **New:** `--from` flag for `extract` and `restore` commands - Specify backup file path or remote URL as an alternative to positional argument.
 - **New:** Automatic WP Staging Pro license activation - When creating a new site with `add`, the plugin license is automatically activated in WordPress.
@@ -17,6 +22,7 @@
 - **New:** Automatic Docker startup prompt - CLI offers to start Docker when it's not running on Windows, macOS, and Linux.
 
 ## v1.4.2 (2025-11-30)
+
 - **Enh:** Use temporary redirect (302) for HTTP-to-HTTPS in local development - prevents browser caching issues.
 - **Enh:** Smarter IP and port conflict handling - automatically rotates to next available IP, shows OS-specific diagnostic commands, and continues starting other sites when some have conflicts.
 - **Enh:** Changed MariaDB image from `latest` to `11.8` for better stability and consistent behavior.
@@ -50,7 +56,7 @@
 - **New:** Run multiple WordPress sites simultaneously - each site gets its own containers with unique IPs and ports.
 - **New:** Automatic port and IP address management - no manual configuration needed when running multiple sites.
 - **New:** Per-site configuration files - each site remembers its settings between restarts.
-- **New:** Filter site list by hostname to quickly find specific sites: `wpstaging list mysite.local`
+- **New:** Filter site list by hostname to quickly find specific sites: `wpstaging list mysite.local`.
 - **New:** `reset` command to reinstall WordPress without losing container configuration.
 - **New:** One-click installation with automated installers for Windows, macOS, and Linux.
 - **New:** Unregister command to deactivate your license when switching machines.
