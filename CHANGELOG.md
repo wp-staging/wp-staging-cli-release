@@ -1,3 +1,8 @@
+## v1.5.1-test (2026-01-23)
+
+- **Fix:** User capabilities are now properly restored after database restore (#152).
+- **Dev:** Release PRs now include changelog entries in the description and validate tag format (#154).
+
 ## v1.5.0 (2026-01-23)
 
 - **New:** `add --from` creates a new site and restores from a backup in one step (#68).
