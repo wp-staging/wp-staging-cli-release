@@ -1,3 +1,14 @@
+## v1.5.0 (2026-01-23)
+
+- **New:** `add --from` creates a new site and restores from a backup in one step (#68).
+- **Enh:** After restoring with `add --from`, login credentials and important paths are now displayed for easy reference (#147).
+- **Fix:** License validation no longer fails due to API response format inconsistencies (#145).
+- **Fix:** File-only backups (without database) now restore gracefully instead of showing "is a directory" error (#124).
+- **Dev:** Added tests for license API response parsing and `make gotest-run` target for running single tests (#145).
+- **Dev:** Added bashunit tests for file-only backup restore functionality (#140).
+- **Dev:** Added tests-backup.yml CI workflow for backup operations tests (#140).
+- **Dev:** Renamed CI workflow files for consistency: tests-docker-integration.yml, tests-go-unit.yml (#140).
+
 ## v1.4.6 (2026-01-12)
 
 - **Enh:** WP Staging Pro plugin downloads are now cached by version - skips re-downloading when the same version is already available.
@@ -42,7 +53,7 @@
 - **Fix:** `list`, `status`, `start`, `stop`, and `restart` commands now show accurate messages and properly prompt to start Docker.
 - **Fix:** Stop all command now properly removes orphaned Docker networks in addition to containers and volumes.
 - **Fix:** Site availability check now correctly validates directory existence instead of file existence.
-- **Fix:** Corrupted downloads no longer cause "broken signature" errors - downloads now use atomic temp file pattern.
+- **Fix:** Corrupted downloads no longer cause "broken signature" errors - downloads now use atomic temp file pattern to prevent partial/corrupt files.
 - **Dev:** Test install scripts on all major OS by using CI GitHub actions.
 - **Dev:** Multi-arch build support for PHP images (amd64 + arm64) with Docker Build Cloud option.
 

@@ -110,12 +110,16 @@ Note:
 ```
 Add a new WordPress site to the Docker environment.
 
+Use --from to restore from a WP STAGING backup file after creating the site.
+
 Usage:
   wpstaging add <site-url> [flags]
 
 Examples:
   wpstaging add https://newsite.local
   wpstaging add newsite.local
+  wpstaging add newsite.local --from=backup.wpstg
+  wpstaging add newsite.local --from=https://example.com/backup.wpstg
 
 Env Flags:
       --php string              PHP version to use (default "8.1")
@@ -142,6 +146,9 @@ WordPress Flags:
       --admin-email string      WordPress admin email (default "admin@dev.null")
       --secure-credentials      Use secure random credentials for database and WordPress admin
       --multisite               Enable WordPress Multisite
+
+Other Flags:
+      --from string             Backup file path or remote URL (http/https) to restore after site creation
 
 ```
 
