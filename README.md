@@ -1,12 +1,15 @@
 # WP Staging CLI
 
-**WP Staging CLI** is a high-performance, cross-platform command-line tool for processing **WP Staging** backup files (`.wpstg`).
-It allows you to extract, normalize, inspect, and restore backups created by the [WP Staging Pro](https://wp-staging.com) plugin — even when your WordPress site is broken or inaccessible — and spin up isolated test environments using Docker containers.
+**Run your production WordPress site locally — with one command.**
 
-This tool is designed for developers and system administrators who want to automate WordPress site cloning, migration, and environment setup.
+Turn any WP Staging backup into a fully working local copy of your live site: same content, same plugins, same database. **WP Staging CLI** sets up everything automatically on **Windows, macOS, or Linux** — no Docker expertise needed. Just copy, paste, run.
 
-> License Required:  
-> You must have a valid [WP Staging Agency or Developer license key](https://wp-staging.com) to use this tool.
+Site down? No problem. Extract and restore `.wpstg` backups **without a running WordPress installation** — ideal for disaster recovery or rescuing broken sites.
+
+Built for developers and agencies who value their time.
+
+> **License Required:**
+> A valid [WP Staging Agency or Developer license](https://wp-staging.com) is required.
 
 ---
 
@@ -109,7 +112,7 @@ sudo chmod +x /usr/local/bin/wpstaging
 If you've used the dockerize features, first remove all Docker containers and data:
 
 ```bash
-wpstaging uninstall
+wpstaging remove
 ```
 
 This will stop and remove all Docker containers, volumes, and configurations.
@@ -217,7 +220,7 @@ These commands help you control Docker containers for your WordPress environment
 | `restart` | Restart containers for a site or all sites |
 | `status` | Display container status for a site or all sites |
 | `shell` | Open an interactive shell in the PHP container |
-| `uninstall` | Stop containers and remove all Docker data |
+| `remove` | Stop containers and remove all Docker data |
 | `update-hosts-file` | Update the local hosts file with site entries |
 | `generate-compose-file` | Generate a docker-compose.yml file |
 | `generate-docker-file` | Generate Docker configuration files |
@@ -346,6 +349,15 @@ Create a new WordPress site with a custom local domain.
 
 ```bash
 wpstaging add https://mysite.local
+```
+
+**Add a new site and restore from backup:**
+
+Create a new site and restore from a WP STAGING backup file in one step.
+
+```bash
+wpstaging add https://mysite.local --from=backup.wpstg
+wpstaging add https://mysite.local --from=https://example.com/backup.wpstg
 ```
 
 **Start containers:**
