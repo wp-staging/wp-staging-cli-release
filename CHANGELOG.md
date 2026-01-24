@@ -1,3 +1,7 @@
+## v1.5.2 (2026-01-24)
+
+- **Fix:** MariaDB now starts correctly on Docker Desktop for Mac by disabling native AIO and using fsync flush method (#156).
+
 ## v1.5.1 (2026-01-23)
 
 - **Fix:** User capabilities are now properly restored after database restore (#152).
