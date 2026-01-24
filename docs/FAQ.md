@@ -1966,6 +1966,53 @@ This ensures the database is fully ready before WordPress installation begins.
 
 ---
 
+<a name="q89e"></a>
+**Q89e: MariaDB fails with "InnoDB: Cannot open './ibdata1'" on macOS. What's wrong?**
+**A89e:**
+This error occurs on Docker Desktop for Mac (especially macOS 26+) when InnoDB's native I/O operations are incompatible with the virtualized filesystem.
+
+**Error message:**
+```
+InnoDB: Operating system error number 20 in a file operation.
+InnoDB: Error number 20 means 'Not a directory'
+InnoDB: Cannot open './ibdata1'.
+InnoDB: Database creation was aborted with error Generic error.
+Plugin 'InnoDB' registration as a STORAGE ENGINE failed.
+```
+
+**Cause:**
+Docker Desktop for Mac uses VirtioFS or gRPC-FUSE for filesystem virtualization. InnoDB's Native Asynchronous I/O and default flush methods don't work correctly with this virtualized filesystem layer, particularly on newer macOS versions (26+) and Docker Desktop versions.
+
+**How WP Staging CLI handles this:**
+The CLI includes MariaDB configuration that disables problematic I/O features:
+```ini
+innodb_use_native_aio = 0
+innodb_flush_method = fsync
+```
+
+These settings are safe for all platforms with minimal performance impact for development environments.
+
+**If you encounter this error:**
+1. Update to the latest version of WP Staging CLI
+2. Reset and recreate the site:
+   ```bash
+   wpstaging reset mysite.local
+   wpstaging add mysite.local --from=backup.wpstg
+   ```
+
+**Manual fix for existing sites:**
+Update the MariaDB config file:
+```bash
+# Edit the config file
+echo "innodb_use_native_aio = 0" >> ~/wpstaging/sites/<hostname>/docker/mariadb/config/mysqld.cnf
+echo "innodb_flush_method = fsync" >> ~/wpstaging/sites/<hostname>/docker/mariadb/config/mysqld.cnf
+
+# Reset the site
+wpstaging reset <hostname>
+```
+
+---
+
 <a name="q90"></a>
 **Q90: Browser shows "Your connection is not private" or certificate not trusted. How do I fix this?**  
 **A90:**
@@ -2509,4 +2556,4 @@ wpstaging extract https://example.com/backups/backup.wpstg
 
 ---
 
-**Last Updated:** 2026-01-22 17:15:04 UTC
+**Last Updated:** 2026-01-24 10:30:00 UTC
