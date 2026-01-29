@@ -771,9 +771,9 @@ nano /path/to/sites/mysite.local/.env
 wpstaging reset mysite.local
 ```
 
-**Note:** The `reset` command will reinstall WordPress and erase all site data. If you want to preserve your data, first create a backup using the WP Staging plugin, then use the `restore` command:
+**Note:** The `reset` command will reinstall WordPress and erase all site data. If you have a backup, you can reset and restore in one step:
 ```bash
-wpstaging restore --path=/path/to/sites/mysite.local/www backup.wpstg
+wpstaging reset mysite.local --from=backup.wpstg
 ```
 
 **What happens if I try to start without reset?**
@@ -1994,10 +1994,11 @@ These settings are safe for all platforms with minimal performance impact for de
 
 **If you encounter this error:**
 1. Update to the latest version of WP Staging CLI
-2. Reset and recreate the site:
+2. Reset the site (optionally restore from backup):
    ```bash
    wpstaging reset mysite.local
-   wpstaging add mysite.local --from=backup.wpstg
+   # Or reset and restore in one step:
+   wpstaging reset mysite.local --from=backup.wpstg
    ```
 
 **Manual fix for existing sites:**
@@ -2287,7 +2288,7 @@ docker compose version
 <a name="q98"></a>
 **Q98: How do I restore a remote backup to a dockerized site?**
 **A98:**
-The simplest way is to use `add --from` which creates a new site and restores from a backup in one step:
+The simplest way is to use `add --from` which creates a new site and restores from a backup in one step. For existing sites, database credentials are auto-detected from the site's `.env` file.
 
 **Single command (recommended for new sites):**
 ```bash
@@ -2313,25 +2314,81 @@ Paths:
 * Env File       : ~/wpstaging/sites/mysite.local/.env
 ```
 
+**Reset existing site with backup (recommended for existing sites):**
+
+If the site already exists and you want to reset it with a backup:
+```bash
+# From local backup file
+wpstaging reset mysite.local --from=backup.wpstg
+
+# From remote URL
+wpstaging reset mysite.local --from=https://example.com/backup.wpstg
+
+# Reset with a specific WordPress version
+wpstaging reset mysite.local --wp=6.5
+
+# Combine --wp and --from
+wpstaging reset mysite.local --wp=6.5 --from=backup.wpstg
+```
+
+This reinstalls WordPress and restores from the backup, using the existing site's database credentials from `.env`. The `--wp` flag updates the `WP_VERSION` in the `.env` file for future resets.
+
 **Alternative: Manual restore to existing site**
 
-If the site already exists, you can restore manually:
+If the site already exists and you want to restore manually without reset:
 
 ```bash
 # Make sure site is running
 wpstaging start mysite.local
 
-# Restore using .env credentials
-SITE=mysite.local && \
-export $(grep -E "^(DB_|CONTAINER_IP)" $HOME/wpstaging/sites/$SITE/.env | xargs) && \
-wpstaging restore \
-  --path=$HOME/wpstaging/sites/$SITE/www \
-  --db-host=$CONTAINER_IP:$DB_PORT \
-  --db-name=$DB_NAME \
-  --db-user=$DB_USER \
-  --db-password=$DB_PASSWORD \
-  --db-prefix=$DB_PREFIX \
-  --from=https://example.com/backup.wpstg
+# Restore the backup (simple hostname format)
+wpstaging restore mysite.local backup.wpstg
+
+# Or with remote URL
+wpstaging restore mysite.local --from=https://example.com/backup.wpstg
+```
+
+The CLI automatically detects the site path and reads database credentials from the `.env` file. You'll see:
+```
+Restoring to dockerized site: mysite.local
+Using database credentials from dockerized site: mysite.local
+```
+
+**Alternative: Using --path flag (legacy format)**
+
+You can also specify the full path explicitly:
+```bash
+wpstaging restore --path=$HOME/wpstaging/sites/mysite.local/www backup.wpstg
+wpstaging restore --path=$HOME/wpstaging/sites/mysite.local/www --from=https://example.com/backup.wpstg
+```
+
+**Complete workflow in one script:**
+```bash
+# Set your site hostname and backup URL
+SITE="mysite.local"
+BACKUP_URL="https://mysite.com/wp-content/uploads/wp-staging/backups/backup.wpstg"
+
+# Create site (skip if exists)
+wpstaging add $SITE
+
+# Make sure site is running (database must be accessible)
+wpstaging start $SITE
+
+# Restore - credentials auto-detected from .env
+wpstaging restore $SITE --from="$BACKUP_URL"
+```
+
+**Note:** CLI flags always take priority over auto-detected values. If you need to override a specific credential, just pass the flag:
+```bash
+wpstaging restore mysite.local --db-prefix=custom_ backup.wpstg
+```
+
+For dockerized sites, if you specify `--site-url`, the hostname must match the `SITE_URL` in the site's `.env` file. The CLI will show an error if there's a mismatch:
+
+```
+error: Site URL hostname 'different.local' does not match the dockerize site URL hostname 'mysite.local' from .env file.
+When restoring to a dockerize site, the --site-url hostname must match the site's configured URL.
+Either use --site-url=https://mysite.local or remove the --site-url flag to auto-detect.
 ```
 
 Database credentials are stored in `~/wpstaging/sites/<hostname>/.env` (auto-generated by `wpstaging add`).
@@ -2556,4 +2613,4 @@ wpstaging extract https://example.com/backups/backup.wpstg
 
 ---
 
-**Last Updated:** 2026-01-24 10:30:00 UTC
+**Last Updated:** 2026-01-26 13:19:23 UTC

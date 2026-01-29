@@ -321,6 +321,18 @@ wpstaging restore --path=/var/www/site \
   --db-name=dbname --db-user=user --db-pass=pass --db-host=host backupfile.wpstg
 ```
 
+### Restore to Dockerized Site
+
+Restore directly to an existing dockerized site using its hostname. Database credentials are auto-detected from the site's `.env` file.
+
+```bash
+wpstaging restore mysite.local backup.wpstg
+wpstaging restore mysite.local --from=backup.wpstg
+wpstaging restore mysite.local --from=https://example.com/backup.wpstg
+```
+
+The site must already exist (created with `wpstaging add mysite.local`).
+
 ---
 
 ### Dump Backup Index
@@ -378,6 +390,8 @@ wpstaging add https://newsite.local
 wpstaging list
 wpstaging list site1.local site2.local  # Show details for multiple sites
 wpstaging reset mysite.local  # Reset site to fresh WordPress
+wpstaging reset mysite.local --wp=6.5  # Reset with specific WordPress version
+wpstaging reset mysite.local --from=backup.wpstg  # Reset and restore from backup
 wpstaging del oldsite.local
 wpstaging del site1.local site2.local  # Delete multiple sites
 wpstaging del  # Delete all sites (with confirmation)
