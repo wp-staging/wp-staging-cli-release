@@ -236,14 +236,26 @@ Env Flags:
 ```
 Reset a WordPress site in the Docker environment.
 
+Use --from to restore from a WP STAGING backup file after resetting the site.
+Use --wp to specify a different WordPress version to install.
+
 Usage:
   wpstaging reset <hostname> [flags]
 
 Examples:
   wpstaging reset mysite.local
+  wpstaging reset mysite.local --wp=6.5
+  wpstaging reset mysite.local --from=backup.wpstg
+  wpstaging reset mysite.local --from=https://example.com/backup.wpstg
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+WordPress Flags:
+      --wp string         WordPress version to install (e.g., 6.5, latest)
+
+Other Flags:
+      --from string       Backup file path or remote URL (http/https) to restore after reset
 
 ```
 
@@ -319,13 +331,25 @@ at the target path.
 The backup file can be a local path or a remote URL (http/https).
 Use --from flag or pass the backup file directly as an argument.
 
+For dockerized sites, you can specify the site hostname directly:
+  wpstaging restore site.local backup.wpstg
+  wpstaging restore site.local --from=backup.wpstg
+
+The site must already exist (created with 'wpstaging add site.local').
+Database credentials will be auto-detected from the site's .env file.
+
 Usage:
-  wpstaging restore [flags] <backupfile.wpstg>
+  wpstaging restore [flags] [<site.local>] <backupfile.wpstg>
 
 Examples:
   wpstaging restore --path=/var/www/html backup.wpstg
   wpstaging restore --path=/var/www/html --from=backup.wpstg
   wpstaging restore --path=/var/www/html --from=https://example.com/backups/backup.wpstg
+
+  # Restore directly to a dockerized site:
+  wpstaging restore site.local backup.wpstg
+  wpstaging restore site.local --from=backup.wpstg
+  wpstaging restore site.local --from=https://example.com/backups/backup.wpstg
 
 Flags:
   -o, --outputdir string          Directory for extracted files (default: ./wpstaging-output)
@@ -816,4 +840,4 @@ Env Flags:
 
 ---
 
-*Generated on 2025-12-26 14:18:05 UTC*
+*Generated on 2026-01-26 15:06:27 UTC*

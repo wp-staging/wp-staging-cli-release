@@ -1,3 +1,14 @@
+## v1.6.0 (2026-01-29)
+
+- **Enh:** Docker Compose warning "No services to build" no longer clutters the terminal output (#160).
+- **Enh:** `reset` command now supports `--from` flag to restore from a backup (#158).
+- **Enh:** `reset` command now supports `--wp` flag to specify WordPress version (#162).
+- **Enh:** Restore directly to dockerized sites using hostname: `wpstaging restore site.local backup.wpstg` (#148).
+- **Enh:** Database credentials are auto-detected when restoring to a dockerized site (#148).
+- **Fix:** Stored license is now preserved when validation fails due to network timeout (#165).
+- **Fix:** `reset` command now fails correctly when the site doesn't exist instead of creating a new site (#164).
+- **Fix:** `WP_VERSION` in `.env` file now defaults to "latest" when `--wp` flag is not specified (#162).
+
 ## v1.5.2 (2026-01-24)
 
 - **Fix:** MariaDB now starts correctly on Docker Desktop for Mac by disabling native AIO and using fsync flush method (#156).
