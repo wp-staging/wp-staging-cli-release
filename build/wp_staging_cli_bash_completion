@@ -135,6 +135,9 @@ _wp_staging_cli() {
         --db-ssl-cert
         --db-ssl-key
         --db-ssl-mode
+        --env-path
+        --compose-file
+        --skip-update-hosts-file
     "
 
     # Docker/Site management options (for add, start, stop, restart, etc.)
@@ -163,6 +166,7 @@ _wp_staging_cli() {
         --admin-email
         --secure-credentials
         --multisite
+        --from
     "
 
     # Detect if Only or Skip filter is already used
