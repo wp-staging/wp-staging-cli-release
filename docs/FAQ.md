@@ -993,9 +993,25 @@ License validation happens automatically when you run any backup-related or Dock
 No. Running `wpstaging --help` or `wpstaging extract --help` does not require license validation. You only need a valid license when executing actual operations.
 
 <a name="q48"></a>
-**Q49: How is my license stored and validated?**  
+**Q49: How is my license stored and validated?**
 **A49:**
 After you register your license using `wpstaging register`, the key is encrypted and stored locally. The CLI automatically validates your license when running backup-related or Docker commands, and caches the validation results for 4 hours to minimize API calls.
+
+<a name="q49a"></a>
+**Q49a: What happens when my license expires?**
+**A49a:**
+When your license expires, the CLI displays your license information (licensee name and expiration date) and exits with an error message. The license key is preserved (not deleted) so you can see who the license belongs to and when it expired.
+
+**Example output:**
+```
+WP Staging CLI
+Licensed to John Doe
+Valid through 27.02.2026 | Expired - Extend License https://wp-staging.com/
+
+Error: License expired - Extend License https://wp-staging.com/
+```
+
+**To resolve:** Extend your license at https://wp-staging.com/your-account. Once renewed, the CLI will work automatically on the next command.
 
 ## Troubleshooting Questions
 
@@ -2613,4 +2629,4 @@ wpstaging extract https://example.com/backups/backup.wpstg
 
 ---
 
-**Last Updated:** 2026-01-26 13:19:23 UTC
+**Last Updated:** 2026-02-03 21:20:00 UTC

@@ -1,32 +1,32 @@
 {
   "name": "wpstaging",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "copyright": "Copyright (c) 2025-present WP STAGING -- https://wp-staging.com",
-  "generated": "2026-01-29T12:22:52Z",
+  "generated": "2026-02-03T12:36:55Z",
   "platforms": {
-    "windows_amd64": {
-      "checksum": "ce891ca64d3665151613b6722e6e64ceaa8b41d7f48371192916fd7463a32b5d",
-      "binary": "windows_amd64/wpstaging.exe"
-    },
     "linux_amd64": {
-      "checksum": "2f02d3612251016bf3154049c1cfff68fecc86e6ccb589d7ec67a2f79c466558",
+      "checksum": "d0ddc68e4b1588f705edccab64bdc1b4ebb1501d03aac627e813111b682ae271",
       "binary": "linux_amd64/wpstaging"
     },
-    "windows_386": {
-      "checksum": "5b9094e4b6da0ccd79dbdf9e4c8163d4d1fc98fae81473a02f4b082bf2dd5282",
-      "binary": "windows_i386/wpstaging.exe"
-    },
-    "macos_universal": {
-      "checksum": "9153d1ce24f4b977ac8ab87debc69b9aafca5b7774479cb0264ce7477d44cb06",
-      "binary": "macos_universal/wpstaging"
+    "macos_amd64": {
+      "checksum": "5ea1689f5aa775e8b23292a326605b9557e41b1fceb40d16be0063f6b43a33b7",
+      "binary": "macos_amd64/wpstaging"
     },
     "macos_arm64": {
-      "checksum": "55c1a69aca10c671e9b888694cde3f56452d365ae63869bb5a1775e16db1a4e5",
+      "checksum": "c6c0ae2386f66a7984ee473981f01c1c5daf6af563daaea4da5472d9ce2702a1",
       "binary": "macos_arm64/wpstaging"
     },
-    "macos_amd64": {
-      "checksum": "e058abe8538cd89506cbf5137439ec50d2b0ef6ddc558afddfd7fa823c210be0",
-      "binary": "macos_amd64/wpstaging"
+    "macos_universal": {
+      "checksum": "beb8de212b498f7d9b4f15fd907081fde01fe8a0823bb32cf5ecb8c6ca33a4b9",
+      "binary": "macos_universal/wpstaging"
+    },
+    "windows_amd64": {
+      "checksum": "ee9163d95429c2c82c2637e254456bd68cac4b9e3cabb1976d1a0a7aaaf63341",
+      "binary": "windows_amd64/wpstaging.exe"
+    },
+    "windows_386": {
+      "checksum": "e96f590f07e464e357c9a50c9681138146d2dd23617ee9602e649f5f92c0641f",
+      "binary": "windows_i386/wpstaging.exe"
     }
 
   }
