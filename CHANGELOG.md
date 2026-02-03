@@ -1,3 +1,13 @@
+## v1.6.1 (2026-02-03)
+
+- **Enh:** Expired licenses now display licensee name and expiration date instead of being silently deleted (#171).
+- **Enh:** Installer tests auto-start and stop the local test server, no longer requiring a separate terminal (#170).
+- **Fix:** Manifest generator and installer tests now work on macOS default bash 3.2 (#170).
+- **Fix:** Version verification test now correctly handles pre-release suffixes like beta and RC (#170).
+- **Dev:** Port availability test no longer fails on macOS due to hardcoded port assumption (#174).
+- **Dev:** Optimized dockerize test suite with per-file cleanup, reducing cleanup operations by 87% (#170).
+- **Dev:** Consolidated installer/uninstaller tests into `devtools/tests/installer/` with standardized `tests-*` naming (#170).
+
 ## v1.6.0 (2026-01-29)
 
 - **Enh:** Docker Compose warning "No services to build" no longer clutters the terminal output (#160).
