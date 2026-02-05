@@ -1,3 +1,13 @@
+## v1.6.2-beta.1 (2026-02-05)
+
+
+- **New:** Zsh shell completion support - Tab completion now works in both Bash and Zsh shells (#150).
+- **Enh:** Uninstaller now deactivates license and removes all working directories across platforms (#150).
+- **Enh:** Register command now shows a message when the license key is read from the `WPSTGPRO_LICENSE` environment variable (#188).
+- **Fix:** License registration no longer fails with "Failed to read license key EOF" when installing via `curl | bash` with the `-l` flag (#188).
+- **Fix:** Uninstaller now deactivates the license before removing the binary, ensuring deactivation actually succeeds (#150).
+- **Fix:** Port conflicts from other Docker containers are now detected and resolved automatically (#190).
+
 ## v1.6.1 (2026-02-03)
 
 - **Enh:** Expired licenses now display licensee name and expiration date instead of being silently deleted (#171).
@@ -7,7 +17,6 @@
 - **Dev:** Port availability test no longer fails on macOS due to hardcoded port assumption (#174).
 - **Dev:** Optimized dockerize test suite with per-file cleanup, reducing cleanup operations by 87% (#170).
 - **Dev:** Consolidated installer/uninstaller tests into `devtools/tests/installer/` with standardized `tests-*` naming (#170).
-
 ## v1.6.0 (2026-01-29)
 
 - **Enh:** Docker Compose warning "No services to build" no longer clutters the terminal output (#160).

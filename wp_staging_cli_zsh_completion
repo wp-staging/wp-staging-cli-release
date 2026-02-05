@@ -1,0 +1,287 @@
+#compdef wpstaging
+#
+# Zsh completion script for wpstaging
+#
+# This script provides command-line auto-completion for wpstaging.
+# To enable completion, add this to your ~/.zshrc:
+#   fpath=(~/.zsh/completions $fpath)
+#   autoload -Uz compinit && compinit
+# Then copy this file to ~/.zsh/completions/_wpstaging
+#
+# Author: WP Staging <https://wp-staging.com/support/>
+# License: MIT
+
+_wpstaging() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    local -a commands
+    commands=(
+        'add:Create a new dockerized WordPress site'
+        'clean:Clean cache, license, or all data'
+        'compose-info:Show Docker Compose information'
+        'deactivate:Deactivate license from this machine'
+        'del:Delete a dockerized site'
+        'disable:Disable a site (stop and prevent auto-start)'
+        'dump-all-help:Dump help for all commands'
+        'dump-header:Dump backup file header'
+        'dump-index:Dump backup file index'
+        'dump-metadata:Dump backup file metadata'
+        'enable:Enable a disabled site'
+        'extract:Extract files from a backup'
+        'generate-compose-file:Generate Docker Compose file'
+        'generate-docker-file:Generate Dockerfile'
+        'help:Show help for a command'
+        'list:List all dockerized sites'
+        'register:Register license key'
+        'reinstall-cert:Reinstall SSL certificate'
+        'reset:Reset WordPress installation'
+        'restart:Restart site containers'
+        'restore:Restore WordPress from backup'
+        'shell:Open shell in PHP container'
+        'shell-db:Open shell in database container'
+        'start:Start site containers'
+        'status:Show site status'
+        'stop:Stop site containers'
+        'remove:Stop containers and remove all Docker data'
+        'update-hosts-file:Update /etc/hosts'
+    )
+
+    local -a clean_subcommands
+    clean_subcommands=(
+        'all:Clean all data'
+        'cache:Clean cache only'
+        'license:Clean license cache'
+    )
+
+    local -a general_opts
+    general_opts=(
+        '(-l --license)'{-l,--license}'[License key]:license key:'
+        '(-o --outputdir)'{-o,--outputdir}'[Output directory]:directory:_files -/'
+        '--workingdir[Working directory]:directory:_files -/'
+        '--skip-config[Skip config file]'
+        '--config[Config file]:config file:_files -g "*.conf"'
+        '--yes[Auto-confirm prompts]'
+        '--prompt-timeout[Prompt timeout in seconds]:seconds:'
+        '(-d --debug)'{-d,--debug}'[Enable debug mode]'
+        '(-q --quiet)'{-q,--quiet}'[Quiet mode]'
+        '(-v --version)'{-v,--version}'[Show version]'
+        '--about[Show about information]'
+        '(-h --help)'{-h,--help}'[Show help]'
+    )
+
+    local -a only_opts
+    only_opts=(
+        '(-r --only-wproot)'{-r,--only-wproot}'[Only WordPress root files]'
+        '(-w --only-wpcontent)'{-w,--only-wpcontent}'[Only wp-content directory]'
+        '(-i --only-plugins)'{-i,--only-plugins}'[Only plugins]'
+        '(-t --only-themes)'{-t,--only-themes}'[Only themes]'
+        '(-m --only-muplugins)'{-m,--only-muplugins}'[Only mu-plugins]'
+        '(-u --only-uploads)'{-u,--only-uploads}'[Only uploads]'
+        '(-g --only-languages)'{-g,--only-languages}'[Only languages]'
+        '(-b --only-dbfile)'{-b,--only-dbfile}'[Only database file]'
+        '(-e --only-dropins)'{-e,--only-dropins}'[Only drop-ins]'
+        '(-f --only-file)'{-f,--only-file}'[Only specific file]:file pattern:'
+    )
+
+    local -a skip_opts
+    skip_opts=(
+        '(-R --skip-wproot)'{-R,--skip-wproot}'[Skip WordPress root files]'
+        '(-W --skip-wpcontent)'{-W,--skip-wpcontent}'[Skip wp-content directory]'
+        '(-I --skip-plugins)'{-I,--skip-plugins}'[Skip plugins]'
+        '(-T --skip-themes)'{-T,--skip-themes}'[Skip themes]'
+        '(-M --skip-muplugins)'{-M,--skip-muplugins}'[Skip mu-plugins]'
+        '(-U --skip-uploads)'{-U,--skip-uploads}'[Skip uploads]'
+        '(-G --skip-languages)'{-G,--skip-languages}'[Skip languages]'
+        '(-B --skip-dbfile)'{-B,--skip-dbfile}'[Skip database file]'
+        '(-E --skip-dropins)'{-E,--skip-dropins}'[Skip drop-ins]'
+        '(-F --skip-file)'{-F,--skip-file}'[Skip specific file]:file pattern:'
+    )
+
+    local -a extract_opts
+    extract_opts=(
+        '(-n --normalizedb)'{-n,--normalizedb}'[Normalize database file]'
+        '--site-url[Target site URL]:URL:'
+        '--db-prefix[Database table prefix]:prefix:'
+        '--overwrite[Overwrite existing files]:overwrite:(yes no all)'
+        '--verify[Verify extracted files]'
+        '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
+    )
+
+    local -a restore_opts
+    restore_opts=(
+        '(-p --path)'{-p,--path}'[WordPress installation path]:path:_files -/'
+        '--site-url[Target site URL]:URL:'
+        '--overwrite[Overwrite files]:overwrite:(yes no all)'
+        '--overwrite-db[Overwrite database]:overwrite:(yes no)'
+        '--overwrite-wproot[Overwrite WP root]:overwrite:(yes no)'
+        '--db-prefix[Database table prefix]:prefix:'
+        '--db-innodb-strict-mode[Enable InnoDB strict mode]'
+        '--db-file[Database SQL file]:file:_files -g "*.sql"'
+        '--db-batch-size[Insert batch size]:size:'
+        '--db-insert-single[Use single-row inserts]'
+        '--db-timeout[Database timeout]:timeout:'
+        '--verify[Verify extracted files]'
+        '--skip-extract[Skip extraction]'
+        '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
+        '--db-host[Database host]:host:'
+        '--db-name[Database name]:name:'
+        '--db-user[Database user]:user:'
+        '--db-password[Database password]:password:'
+        '--db-socket[Database socket]:socket:_files'
+        '--db-charset[Database charset]:charset:'
+        '--db-collate[Database collation]:collation:'
+        '--db-ssl-ca-cert[SSL CA certificate]:file:_files'
+        '--db-ssl-cert[SSL client certificate]:file:_files'
+        '--db-ssl-key[SSL client key]:file:_files'
+        '--db-ssl-mode[SSL mode]:mode:(skip-verify preferred)'
+        '--env-path[Environment file path]:path:_files'
+        '--compose-file[Docker Compose file]:file:_files -g "*.yml"'
+        '--skip-update-hosts-file[Skip updating hosts file]'
+    )
+
+    local -a dockerize_opts
+    dockerize_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--compose-file[Docker Compose file]:file:_files -g "*.yml"'
+        '--container-ip[Container IP address]:IP:'
+        '--skip-macos-auto-ip[Skip macOS auto IP allocation]'
+        '--php[PHP version]:version:(7.4 8.1 8.2 8.3 8.4)'
+        '--http-port[HTTP port]:port:'
+        '--https-port[HTTPS port]:port:'
+        '--db-port[Database port]:port:'
+        '--db-root[Database root password]:password:'
+        '--mailpit-http-port[Mailpit HTTP port]:port:'
+        '--disable-mailpit[Disable Mailpit]'
+        '--wp[WordPress version]:version:(latest 6.7.1 6.6.2)'
+        '--db-host[Database host]:host:'
+        '--db-name[Database name]:name:'
+        '--db-user[Database user]:user:'
+        '--db-pass[Database password]:password:'
+        '--db-prefix[Database table prefix]:prefix:'
+        '--db-ssl[Enable database SSL]'
+        '--external-db[Use external database]'
+        '--admin-user[WordPress admin username]:user:'
+        '--admin-pass[WordPress admin password]:password:'
+        '--admin-email[WordPress admin email]:email:'
+        '--secure-credentials[Generate secure random credentials]'
+        '--multisite[Enable WordPress multisite]'
+        '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+    )
+
+    _arguments -C \
+        '1: :->command' \
+        '*:: :->args'
+
+    # Detect if Only or Skip filter is already used
+    local has_only=false has_skip=false
+    local w
+    for w in "${words[@]}"; do
+        case $w in
+            --only-*|-[rwitmubgef]) has_only=true ;;
+            --skip-*|-[RWITMUBGEF]) has_skip=true ;;
+        esac
+    done
+
+    # Build contextual filter options
+    local -a filter_opts
+    if [[ $has_only == true ]]; then
+        filter_opts=($only_opts)
+    elif [[ $has_skip == true ]]; then
+        filter_opts=($skip_opts)
+    else
+        filter_opts=($only_opts $skip_opts)
+    fi
+
+    case $state in
+        command)
+            _describe -t commands 'wpstaging command' commands
+            ;;
+        args)
+            case $words[1] in
+                extract)
+                    _arguments \
+                        '1:backup file:_files -g "*.wpstg"' \
+                        $general_opts \
+                        $extract_opts \
+                        $filter_opts
+                    ;;
+                restore)
+                    _arguments \
+                        '1:backup file:_files -g "*.wpstg"' \
+                        $general_opts \
+                        $restore_opts \
+                        $filter_opts
+                    ;;
+                dump-header|dh|dump-metadata|dm)
+                    _arguments \
+                        '1:backup file:_files -g "*.wpstg"' \
+                        $general_opts \
+                        $filter_opts
+                    ;;
+                dump-index|di)
+                    _arguments \
+                        '1:backup file:_files -g "*.wpstg"' \
+                        '--data[Display detailed index data]' \
+                        $general_opts \
+                        $filter_opts
+                    ;;
+                dump-all-help)
+                    _arguments \
+                        '--html[Output in HTML format]' \
+                        '--markdown[Output in Markdown format]' \
+                        $general_opts
+                    ;;
+                clean)
+                    _arguments \
+                        '1: :->subcommand' \
+                        $general_opts
+                    if [[ $state == subcommand ]]; then
+                        _describe -t subcommands 'clean subcommand' clean_subcommands
+                    fi
+                    ;;
+                add)
+                    _arguments \
+                        '1:site URL:' \
+                        $general_opts \
+                        $dockerize_opts
+                    ;;
+                list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|remove)
+                    _arguments \
+                        '1:hostname:' \
+                        $general_opts \
+                        $dockerize_opts
+                    ;;
+                generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|compose-info)
+                    _arguments \
+                        $general_opts \
+                        $dockerize_opts
+                    ;;
+                reinstall-cert)
+                    _arguments \
+                        '1:hostname:' \
+                        '--env-path[Environment file path]:path:_files' \
+                        '--reinstall-ca[Reinstall CA certificate]' \
+                        $general_opts
+                    ;;
+                register)
+                    _arguments \
+                        '--license[License key]:key:' \
+                        $general_opts
+                    ;;
+                deactivate|unregister)
+                    _arguments $general_opts
+                    ;;
+                help)
+                    _describe -t commands 'wpstaging command' commands
+                    ;;
+                *)
+                    _arguments $general_opts
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+# Register completion - works both when sourced directly and via fpath
+compdef _wpstaging wpstaging

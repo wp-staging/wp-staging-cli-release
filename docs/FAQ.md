@@ -48,7 +48,7 @@ The installer will:
 - Verify checksums for security
 - Install to `~/.local/bin` (Linux/macOS) or `%LOCALAPPDATA%\Programs\wpstaging` (Windows)
 - Add to your PATH automatically
-- Install bash completion (Linux/macOS)
+- Install shell completion (Bash and Zsh on Linux/macOS)
 
 **Manual Installation:**
 1. Download the latest release: [GitHub Releases (main.zip)](https://github.com/wp-staging/wp-staging-cli-release/archive/refs/heads/main.zip)
@@ -92,11 +92,15 @@ irm https://wp-staging.com/uninstall.ps1 | iex
 curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cmd && del uninstall.cmd
 ```
 
-The uninstaller will remove:
-- The wpstaging binary and aliases
-- PATH entries
-- License key environment variable
-- Cache directories
+The uninstaller will:
+- Deactivate your license on the WP Staging server (if registered)
+- Remove the wpstaging binary and aliases
+- Remove PATH entries from shell configuration
+- Remove license key environment variable
+- Remove cache and working directories:
+  - Linux: `~/.config/wpstaging/`
+  - macOS: `~/Library/Application Support/wpstaging/`
+  - Windows: `%APPDATA%\wpstaging\`
 
 **Note:** If you've used Docker features, run `wpstaging remove` first to remove Docker containers and data before uninstalling the CLI.
 
@@ -860,7 +864,7 @@ The CLI now has **automatic port conflict detection and resolution**! The tool a
 
 When you run `add` or `start` commands, the CLI automatically:
 
-1. **Checks if ports are available**
+1. **Checks if ports are available** — including ports claimed by other wpstg sites, ports used by non-wpstg Docker containers (see [Q101c](#q101c)), and OS-level port checks
 2. **Tries predefined fallback ports** if the default is in use
 3. **Generates random ports** if all fallbacks are occupied
 4. **Notifies you** of the port changes
@@ -2525,6 +2529,42 @@ Switching to port 8844.
 
 ---
 
+<a name="q101c"></a>
+**Q101c: A non-wpstg Docker container (e.g., standalone MySQL) is using a port. Will the CLI detect this?**  
+**A101c:**
+Yes. The CLI detects port conflicts from **any** running Docker container, not just wpstg containers. This is important because Docker's internal port allocator may use iptables-based forwarding that doesn't create host-level sockets, so standard OS-level port checks (TCP connect and bind) can miss these conflicts.
+
+**How it works:**
+- The CLI queries all running Docker containers via `docker ps` to get their published port mappings
+- It checks Docker's own conflict rules:
+  - `0.0.0.0:PORT` (wildcard) conflicts with any IP on that port
+  - `:::PORT` (IPv6 wildcard) conflicts with any IP on that port
+  - Exact `IP:PORT` match conflicts
+- Containers managed by wpstg (`wpstg-*`) are excluded (handled separately)
+
+**Example scenario:**
+A standalone MySQL container is running with `docker run -p 3306:3306 mysql`. When you create a wpstg site:
+```bash
+wpstaging add mysite.local
+```
+
+The CLI detects the Docker port conflict and auto-switches:
+```
+MariaDB port 3306 on IP 127.3.2.1 conflicts with Docker container 'mysql'.
+Automatically switching to port 3344.
+```
+
+**What ports are checked:**
+All 4 port types are covered: HTTP, HTTPS, MariaDB, and Mailpit.
+
+**Fallback behavior:**
+The same fallback mechanism as Q43 applies — the CLI tries predefined fallback ports first, then random ports in the 49152-65535 range.
+
+**Why OS-level checks are not enough:**
+When Docker routes traffic using iptables (e.g., a container bound to `0.0.0.0:3306`), no host-level socket may exist on the specific loopback IP (like `127.3.2.1`). A TCP connect test to `127.3.2.1:3306` returns "connection refused" (port appears free), but Docker will reject binding `127.3.2.1:3306` because `0.0.0.0:3306` already claims all IPs. The Docker-level check catches this.
+
+---
+
 ## Environment Variables
 
 <a name="q102"></a>
@@ -2629,4 +2669,4 @@ wpstaging extract https://example.com/backups/backup.wpstg
 
 ---
 
-**Last Updated:** 2026-02-03 21:20:00 UTC
+**Last Updated:** 2026-02-04 12:00:00 UTC

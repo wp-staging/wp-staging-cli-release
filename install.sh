@@ -35,6 +35,8 @@ INSTALL_DIR_USER="${HOME}/.local/bin"
 INSTALL_DIR_SYSTEM="/usr/local/bin"
 COMPLETION_DIR_USER="${HOME}/.local/share/bash-completion/completions"
 COMPLETION_DIR_SYSTEM="/etc/bash_completion.d"
+ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
+ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
 
@@ -384,6 +386,44 @@ install_completion() {
         if command_exists sudo; then
             sudo cp "$completion_script" "$completion_target" || warning "Failed to install bash completion"
             success "✓ Installed bash completion to $completion_target"
+        fi
+    fi
+}
+
+# Install zsh completion
+install_zsh_completion() {
+    local completion_script="$1"
+    local use_sudo="$2"
+
+    # Skip if zsh is not available
+    if ! command_exists zsh; then
+        return 0
+    fi
+
+    local completion_dir
+    local completion_target
+
+    # Try user directory first
+    if [ "$use_sudo" = "false" ]; then
+        completion_dir="$ZSH_COMPLETION_DIR_USER"
+        ensure_dir "$completion_dir" "false" 2>/dev/null || true
+
+        if [ -d "$completion_dir" ] && [ -w "$completion_dir" ]; then
+            completion_target="${completion_dir}/_${COMPLETION_NAME}"
+            cp "$completion_script" "$completion_target" || warning "Failed to install zsh completion"
+            success "✓ Installed zsh completion to $completion_target"
+            info "  Add 'fpath=(${completion_dir} \$fpath)' to ~/.zshrc and run 'autoload -Uz compinit && compinit'"
+            return 0
+        fi
+    else
+        # System-wide installation
+        completion_dir="$ZSH_COMPLETION_DIR_SYSTEM"
+        ensure_dir "$completion_dir" "true" || return 1
+
+        completion_target="${completion_dir}/_${COMPLETION_NAME}"
+        if command_exists sudo; then
+            sudo cp "$completion_script" "$completion_target" || warning "Failed to install zsh completion"
+            success "✓ Installed zsh completion to $completion_target"
         fi
     fi
 }
@@ -750,10 +790,12 @@ main() {
     # Make binary executable
     chmod +x "$TMP_DIR/${BINARY_NAME}"
 
-    # Download bash completion
-    info "\nDownloading bash completion script..."
+    # Download shell completion scripts
+    info "\nDownloading shell completion scripts..."
     COMPLETION_URL="${REPO_URL}/wp_staging_cli_bash_completion"
     download "$COMPLETION_URL" "$TMP_DIR/wp_staging_cli_bash_completion" || warning "Failed to download bash completion (continuing anyway)"
+    ZSH_COMPLETION_URL="${REPO_URL}/wp_staging_cli_zsh_completion"
+    download "$ZSH_COMPLETION_URL" "$TMP_DIR/wp_staging_cli_zsh_completion" || warning "Failed to download zsh completion (continuing anyway)"
 
     # Determine installation directory
     # Prefer directories already on PATH to avoid needing shell reload
@@ -782,10 +824,14 @@ main() {
     info "\nInstalling aliases..."
     install_aliases "$INSTALL_DIR" "$USE_SUDO"
 
-    # Install bash completion
+    # Install shell completions
     if [ -f "$TMP_DIR/wp_staging_cli_bash_completion" ]; then
         info "\nInstalling bash completion..."
         install_completion "$TMP_DIR/wp_staging_cli_bash_completion" "$USE_SUDO"
+    fi
+    if [ -f "$TMP_DIR/wp_staging_cli_zsh_completion" ]; then
+        info "\nInstalling zsh completion..."
+        install_zsh_completion "$TMP_DIR/wp_staging_cli_zsh_completion" "$USE_SUDO"
     fi
 
     # Check and update PATH if needed
