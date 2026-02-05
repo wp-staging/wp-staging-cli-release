@@ -53,7 +53,7 @@ The installer will:
 - Verify checksums for security
 - Install to `~/.local/bin` (Linux/macOS) or `%LOCALAPPDATA%\Programs\wpstaging` (Windows)
 - Add to your PATH automatically
-- Install bash completion (Linux/macOS)
+- Install shell completion (Bash and Zsh on Linux/macOS)
 
 ### Install a Specific Version (including Beta/RC)
 
@@ -135,29 +135,53 @@ curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cm
 ```
 
 The uninstaller will:
+- Deactivate your license on the WP Staging server (if registered)
 - Remove the wpstaging binary and aliases
-- Remove PATH entries
+- Remove PATH entries from shell configuration
 - Remove license key environment variable
-- Remove cache directories
+- Remove cache and working directories
 
 #### Manual Uninstallation
 
 If you prefer to uninstall manually:
 
-**Linux / macOS:**
+**Linux:**
 ```bash
+# Deactivate license first
+wpstaging deactivate --yes
+
 # Remove binary
 rm ~/.local/bin/wpstaging  # or: sudo rm /usr/local/bin/wpstaging
 
-# Remove bash completion (if installed)
+# Remove shell completions (if installed)
 rm ~/.local/share/bash-completion/completions/wpstaging
+rm ~/.local/share/zsh/completions/_wpstaging
 
 # Remove license and cache data
-rm -rf ~/.wpstaging
+rm -rf ~/.config/wpstaging
+```
+
+**macOS:**
+```bash
+# Deactivate license first
+wpstaging deactivate --yes
+
+# Remove binary
+rm ~/.local/bin/wpstaging  # or: sudo rm /usr/local/bin/wpstaging
+
+# Remove shell completions (if installed)
+rm ~/.local/share/bash-completion/completions/wpstaging
+rm ~/.local/share/zsh/completions/_wpstaging
+
+# Remove license and cache data
+rm -rf ~/Library/Application\ Support/wpstaging
 ```
 
 **Windows (PowerShell):**
 ```powershell
+# Deactivate license first
+wpstaging deactivate --yes
+
 # Remove binary
 Remove-Item "$env:LOCALAPPDATA\Programs\wpstaging" -Recurse -Force
 
@@ -166,7 +190,7 @@ Remove-Item "$env:LOCALAPPDATA\Programs\wpstaging" -Recurse -Force
 # Remove the wpstaging entry
 
 # Remove license and cache data
-Remove-Item "$env:USERPROFILE\.wpstaging" -Recurse -Force
+Remove-Item "$env:APPDATA\wpstaging" -Recurse -Force
 ```
 
 ---
@@ -409,7 +433,7 @@ https://mysite.local
 
 - **Linux/macOS:** Some operations may ask for your password (sudo) to update your hosts file. This is normal and only happens during initial setup.
 - **macOS Users (Passwordless Sudo Recommended):** Automatic IP alias binding is enabled by default for seamless multi-site setups using loopback IP range **127.3.2.1 - 127.3.2.254**. This requires sudo and you'll be prompted for your password in each new terminal session (5-15 minute timeout per session). **Solution:** Set up passwordless sudo for wpstaging — see [FAQ Q76](./docs/FAQ.md#q76-how-do-i-set-up-passwordless-sudo-for-wpstaging-cli) for step-by-step instructions. Alternatively, use `--skip-macos-auto-ip` to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP in the range).
-- **External Service Conflicts:** If other services (Apache, nginx, MySQL) are using ports on the wpstaging IP range, the CLI detects this and either auto-switches to the next available IP (for new sites) or shows clear error messages with diagnostic commands.
+- **External Service Conflicts:** If other services (Apache, nginx, MySQL) or other Docker containers are using ports on the wpstaging IP range, the CLI detects this and either auto-switches to the next available IP or port (for new sites) or shows clear error messages with diagnostic commands.
 - **Skip hosts update:** If you prefer to manage your hosts file manually, use `--skip-update-hosts-file` when creating sites.
 
 ---

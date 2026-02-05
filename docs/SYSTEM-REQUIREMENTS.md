@@ -177,7 +177,7 @@ The following Docker images will be downloaded automatically:
 | Mailpit | 8025 | Mail testing UI | `--mailpit-http-port` |
 
 **Port Conflict Handling:**
-- Automatically detects port conflicts
+- Automatically detects port conflicts from OS-level services and other Docker containers
 - Uses 10 predefined fallback ports per service
 - Assigns random ports (49152-65535) if all fallbacks occupied
 
@@ -427,4 +427,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2025-11-27 19:04:15 UTC
+**Last Updated:** 2026-02-04 12:00:00 UTC

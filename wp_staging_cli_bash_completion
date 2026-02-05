@@ -42,7 +42,7 @@ _wp_staging_cli() {
         start
         status
         stop
-        uninstall
+        remove
         update-hosts-file
     "
 
@@ -104,7 +104,6 @@ _wp_staging_cli() {
         --db-prefix
         --overwrite
         --verify
-        --skip-extract
         --from
     "
 
@@ -230,15 +229,25 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             fi
             ;;
-        dump-header|dh|dump-metadata|dm|dump-index|di)
+        dump-header|dh|dump-metadata|dm)
             if [[ ${COMP_CWORD} -eq 2 ]]; then
                 COMPREPLY=( $(compgen -f -X '!*.wpstg' -- "${cur}") )
             else
                 COMPREPLY=( $(compgen -W "${general_opts} ${only_opts} ${skip_opts}" -- "${cur}") )
             fi
             ;;
-        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|uninstall|compose-info)
-            COMPREPLY=( $(compgen -W "${dockerize_opts}" -- "${cur}") )
+        dump-index|di)
+            if [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -f -X '!*.wpstg' -- "${cur}") )
+            else
+                COMPREPLY=( $(compgen -W "--data ${general_opts} ${only_opts} ${skip_opts}" -- "${cur}") )
+            fi
+            ;;
+        dump-all-help)
+            COMPREPLY=( $(compgen -W "--html --markdown ${general_opts}" -- "${cur}") )
+            ;;
+        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|remove|compose-info)
+            COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
             ;;
         reinstall-cert)
             COMPREPLY=( $(compgen -W "--env-path --reinstall-ca ${general_opts}" -- "${cur}") )
@@ -246,7 +255,7 @@ _wp_staging_cli() {
         register)
             COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
             ;;
-        deactivate|clean)
+        deactivate|unregister|clean)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
             ;;
         help)
