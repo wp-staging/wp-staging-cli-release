@@ -1,12 +1,14 @@
-## v1.6.2-beta.1 (2026-02-05)
+## v1.6.2-beta.2 (2026-02-09)
 
 
 - **New:** Zsh shell completion support - Tab completion now works in both Bash and Zsh shells (#150).
 - **Enh:** Uninstaller now deactivates license and removes all working directories across platforms (#150).
+- **Enh:** Added `.dev` as a supported TLD for dockerize site URLs (#194).
 - **Enh:** Register command now shows a message when the license key is read from the `WPSTGPRO_LICENSE` environment variable (#188).
 - **Fix:** License registration no longer fails with "Failed to read license key EOF" when installing via `curl | bash` with the `-l` flag (#188).
 - **Fix:** Uninstaller now deactivates the license before removing the binary, ensuring deactivation actually succeeds (#150).
-- **Fix:** Port conflicts from other Docker containers are now detected and resolved automatically (#190).
+- **Fix:** Port conflicts from other Docker containers (including port ranges) are now detected and resolved automatically (#190).
+- **Fix:** MariaDB data directory clearing no longer fails on Docker Desktop due to permission issues (#190).
 
 ## v1.6.1 (2026-02-03)
 
