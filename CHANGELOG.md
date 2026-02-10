@@ -1,4 +1,4 @@
-## v1.6.2-beta.2 (2026-02-09)
+## v1.6.2 (2026-02-10)
 
 
 - **New:** Zsh shell completion support - Tab completion now works in both Bash and Zsh shells (#150).
