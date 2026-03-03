@@ -22,6 +22,7 @@
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
 - [register](#command-register)
+- [update](#command-update)
 - [clean](#command-clean)
 - [clean all](#command-clean-all)
 - [clean cache](#command-clean-cache)
@@ -30,9 +31,9 @@
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
-- [dump-all-help](#hidden-command-dump-all-help)
 - [reinstall-cert](#hidden-command-reinstall-cert)
 - [compose-info](#hidden-command-compose-info)
+- [dump-all-help](#hidden-command-dump-all-help)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -81,6 +82,7 @@ Docker Commands:
 
 Other Commands:
   register              Activate your WP Staging Pro license
+  update                Update WP Staging CLI to the latest version
   clean                 Clean up cached data, license info, and temporary files
   help                  Help about any command
 
@@ -621,15 +623,17 @@ Env Flags:
 
 ```
 Generate a docker-compose.yml file for the Docker environment.
+If no hostname is given, regenerates compose files for all sites.
 
 Usage:
-  wpstaging generate-compose-file <hostname> [flags]
+  wpstaging generate-compose-file [hostname] [flags]
 
 Aliases:
   generate-compose-file, gcf
 
 Examples:
   wpstaging generate-compose-file mysite.local
+  wpstaging generate-compose-file
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -641,15 +645,17 @@ Env Flags:
 
 ```
 Generate Docker-related configuration files.
+If no hostname is given, regenerates files for all sites.
 
 Usage:
-  wpstaging generate-docker-file <hostname> [flags]
+  wpstaging generate-docker-file [hostname] [flags]
 
 Aliases:
   generate-docker-file, gdf
 
 Examples:
   wpstaging generate-docker-file mysite.local
+  wpstaging generate-docker-file
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -675,6 +681,30 @@ with WP STAGING servers, and register it for this machine.
 
 Flags:
       --license string   License key to register (skips interactive prompt)
+
+```
+
+<a name="command-update"></a>
+# Command: update
+
+```
+Check for and install updates to WP Staging CLI.
+
+By default, downloads and replaces the current binary with the latest version.
+Use --check to only check for updates without installing.
+Use --full to update using the install script from wp-staging.com.
+
+Usage:
+  wpstaging update [flags]
+
+Examples:
+  wpstaging update
+  wpstaging update --check
+  wpstaging update --full
+
+Flags:
+      --check   Only check for updates, don't install
+      --full    Update using install script from wp-staging.com
 
 ```
 
@@ -783,22 +813,6 @@ Examples:
 
 ```
 
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
-
-```
-Display help for all commands and flags
-
-Usage:
-  wpstaging dump-all-help [flags]
-
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
-
-```
-
 <a name="hidden-command-reinstall-cert"></a>
 ## Hidden Command: reinstall-cert
 
@@ -837,7 +851,23 @@ Env Flags:
 
 ```
 
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
+
+```
+Display help for all commands and flags
+
+Usage:
+  wpstaging dump-all-help [flags]
+
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
+
+```
+
 
 ---
 
-*Generated on 2026-01-26 15:06:27 UTC*
+*Generated on 2026-03-03 16:46:55 UTC*

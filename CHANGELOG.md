@@ -1,7 +1,35 @@
+## v1.7.0 (2026-03-03)
+
+- **New:** `update` command to update WP Staging CLI to the latest version directly from the terminal (#67).
+- **New:** Automatic update check notifies when a new version is available (once per day) (#67).
+- **New:** Cross-site communication - Dockerized sites can now send HTTPS requests to each other using a shared Docker network (#196).
+- **New:** Combined CA bundle - PHP and shell tools inside containers now trust both local mkcert certificates and public certificates (#196).
+- **Enh:** Auto-detect multisite from backup in `add --from` and `reset --from` commands (#206).
+- **Enh:** Persist multisite setting in `.env` file so `reset` preserves multisite (#206).
+- **Enh:** Show backup type in restore confirmation and multisite status in `list` command (#206).
+- **Enh:** Show notice when restoring a multisite backup to a single-site target (#206).
+- **Enh:** `generate-docker-file` and `generate-compose-file` commands now support regenerating all sites at once when no hostname is given (#196).
+- **Enh:** Shell prompt now shows the site hostname instead of the container ID (#196).
+- **Enh:** All containers now auto-restart when Docker daemon restarts, and stay stopped when explicitly stopped with `stop` command (#196).
+- **Fix:** Prevent restoring full multisite network backup to single-site WordPress (#206).
+- **Fix:** Multisite detection now only requires `MULTISITE` constant, matching WordPress core behavior (#206).
+- **Fix:** MariaDB no longer shows "unhealthy" on Docker Desktop during first site setup by using longer healthcheck timings (#196).
+- **Fix:** Release workflow now produces correctly formatted CHANGELOG with proper blank line spacing between version sections (#213).
+- **Fix:** CHANGELOG formatting script now works on macOS by replacing GNU sed-only features with portable alternatives (#213).
+- **Fix:** `stop` and `restart` without hostname no longer fail on some Docker versions due to stale network endpoint references (#67).
+- **Dev:** Add tests for multisite backup validation and multisite auto-detection (#206).
+- **Dev:** Docker development environment now auto-detects `HOST_UID` and `HOST_GID` from the current user when running `make` commands (#179).
+- **Dev:** Docker development environment now works on macOS with Docker Desktop (#179).
+- **Dev:** Uses nginx TCP proxy and network aliases to handle macOS container networking limitations (#179).
+- **Dev:** Docker integration tests now use the correct binary architecture on macOS and skip tests that require Linux-only network access (#179).
+- **Dev:** Fix `sed -i` cross-platform compatibility in Docker integration tests (#179).
+
 ## v1.6.2 (2026-02-10)
 
-
 - **New:** Zsh shell completion support - Tab completion now works in both Bash and Zsh shells (#150).
+- **Enh:** Binary download shows progress and automatically resumes interrupted downloads (#67).
+- **Enh:** Update command works natively on Windows using a helper script for binary replacement (#67).
+- **Enh:** `update --full` now also updates the current binary location when running from outside PATH (#67).
 - **Enh:** Uninstaller now deactivates license and removes all working directories across platforms (#150).
 - **Enh:** Added `.dev` as a supported TLD for dockerize site URLs (#194).
 - **Enh:** Register command now shows a message when the license key is read from the `WPSTGPRO_LICENSE` environment variable (#188).
@@ -9,6 +37,7 @@
 - **Fix:** Uninstaller now deactivates the license before removing the binary, ensuring deactivation actually succeeds (#150).
 - **Fix:** Port conflicts from other Docker containers (including port ranges) are now detected and resolved automatically (#190).
 - **Fix:** MariaDB data directory clearing no longer fails on Docker Desktop due to permission issues (#190).
+- **Dev:** License tests use built-in mock server instead of requiring Docker (#67).
 
 ## v1.6.1 (2026-02-03)
 
@@ -19,6 +48,7 @@
 - **Dev:** Port availability test no longer fails on macOS due to hardcoded port assumption (#174).
 - **Dev:** Optimized dockerize test suite with per-file cleanup, reducing cleanup operations by 87% (#170).
 - **Dev:** Consolidated installer/uninstaller tests into `devtools/tests/installer/` with standardized `tests-*` naming (#170).
+
 ## v1.6.0 (2026-01-29)
 
 - **Enh:** Docker Compose warning "No services to build" no longer clutters the terminal output (#160).
