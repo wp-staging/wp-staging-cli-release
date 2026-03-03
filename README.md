@@ -16,6 +16,7 @@ Built for developers and agencies who value their time.
 ## Highlights
 
 - **Dockerized Development Environments** — Spin up isolated WordPress environments with Docker Compose, including PHP-FPM, Nginx, MariaDB, and Mailpit.
+- **Cross-Site Communication** — Dockerized sites can send HTTPS requests to each other for features like WP Staging Remote Sync.
 - **Offline Backup Restoration** — Restore WordPress sites and databases even when the original installation is broken or inaccessible.
 - **Stream-Based Extraction** — Memory-efficient extraction of large `.wpstg` backup files using chunked processing.
 - **Database Normalization** — Automatically process WP Staging placeholders (`{WPSTG_TMP_PREFIX}`, `{WPSTG_FINAL_PREFIX}`, etc.) for standard SQL import.
@@ -246,16 +247,17 @@ These commands help you control Docker containers for your WordPress environment
 | `shell` | Open an interactive shell in the PHP container |
 | `remove` | Stop containers and remove all Docker data |
 | `update-hosts-file` | Update the local hosts file with site entries |
-| `generate-compose-file` | Generate a docker-compose.yml file |
-| `generate-docker-file` | Generate Docker configuration files |
+| `generate-compose-file` | Generate docker-compose.yml (one site or all sites) |
+| `generate-docker-file` | Generate Docker config files (one site or all sites) |
 
 **Other Commands:**
 
-These commands help you manage your license and cache.
+These commands help you manage your license, updates, and cache.
 
 | Command | Description |
 |----------|-------------|
 | `register` | Activate your WP Staging Pro license |
+| `update` | Update WP Staging CLI to the latest version |
 | `clean` | Clean up cached data, license info, and temporary files |
 | `help` | Help about any command |
 
@@ -395,6 +397,16 @@ Create a new site and restore from a WP STAGING backup file in one step.
 wpstaging add https://mysite.local --from=backup.wpstg
 wpstaging add https://mysite.local --from=https://example.com/backup.wpstg
 ```
+
+**Add a multisite WordPress site (subdirectory mode):**
+
+```bash
+wpstaging add https://mysite.local --multisite
+```
+
+When using `--from` with a multisite backup, multisite is auto-detected from the backup file.
+
+> **Note:** Multisite uses subdirectory mode (e.g. `https://mysite.local/subsite/`). Subdomain mode is not yet supported.
 
 **Start containers:**
 

@@ -22,6 +22,7 @@
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
 - [register](#command-register)
+- [update](#command-update)
 - [clean](#command-clean)
 - [clean all](#command-clean-all)
 - [clean cache](#command-clean-cache)
@@ -30,9 +31,9 @@
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
-- [dump-all-help](#hidden-command-dump-all-help)
 - [reinstall-cert](#hidden-command-reinstall-cert)
 - [compose-info](#hidden-command-compose-info)
+- [dump-all-help](#hidden-command-dump-all-help)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -81,6 +82,7 @@ Docker Commands:
 
 Other Commands:
   register              Activate your WP Staging Pro license
+  update                Update WP Staging CLI to the latest version
   clean                 Clean up cached data, license info, and temporary files
   help                  Help about any command
 
@@ -145,7 +147,7 @@ WordPress Flags:
       --admin-pass string       WordPress admin password (default "admin")
       --admin-email string      WordPress admin email (default "admin@dev.null")
       --secure-credentials      Use secure random credentials for database and WordPress admin
-      --multisite               Enable WordPress Multisite
+      --multisite               Enable WordPress Multisite (subdirectory mode)
 
 Other Flags:
       --from string             Backup file path or remote URL (http/https) to restore after site creation
@@ -678,6 +680,30 @@ Flags:
 
 ```
 
+<a name="command-update"></a>
+# Command: update
+
+```
+Check for and install updates to WP Staging CLI.
+
+By default, downloads and replaces the current binary with the latest version.
+Use --check to only check for updates without installing.
+Use --full to update using the install script from wp-staging.com.
+
+Usage:
+  wpstaging update [flags]
+
+Examples:
+  wpstaging update
+  wpstaging update --check
+  wpstaging update --full
+
+Flags:
+      --check   Only check for updates, don't install
+      --full    Update using install script from wp-staging.com
+
+```
+
 <a name="command-clean"></a>
 # Command: clean
 
@@ -783,22 +809,6 @@ Examples:
 
 ```
 
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
-
-```
-Display help for all commands and flags
-
-Usage:
-  wpstaging dump-all-help [flags]
-
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
-
-```
-
 <a name="hidden-command-reinstall-cert"></a>
 ## Hidden Command: reinstall-cert
 
@@ -837,7 +847,23 @@ Env Flags:
 
 ```
 
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
+
+```
+Display help for all commands and flags
+
+Usage:
+  wpstaging dump-all-help [flags]
+
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
+
+```
+
 
 ---
 
-*Generated on 2026-01-26 15:06:27 UTC*
+*Generated on 2026-02-10 13:46:17 UTC*

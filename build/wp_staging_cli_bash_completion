@@ -43,6 +43,7 @@ _wp_staging_cli() {
         status
         stop
         remove
+        update
         update-hosts-file
     "
 
@@ -254,6 +255,9 @@ _wp_staging_cli() {
             ;;
         register)
             COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
+            ;;
+        update)
+            COMPREPLY=( $(compgen -W "--check --full ${general_opts}" -- "${cur}") )
             ;;
         deactivate|unregister|clean)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )

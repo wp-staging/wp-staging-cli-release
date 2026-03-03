@@ -44,6 +44,7 @@ _wpstaging() {
         'status:Show site status'
         'stop:Stop site containers'
         'remove:Stop containers and remove all Docker data'
+        'update:Update WP Staging CLI to latest version'
         'update-hosts-file:Update /etc/hosts'
     )
 
@@ -267,6 +268,12 @@ _wpstaging() {
                 register)
                     _arguments \
                         '--license[License key]:key:' \
+                        $general_opts
+                    ;;
+                update)
+                    _arguments \
+                        '--check[Only check for updates]' \
+                        '--full[Update using install script]' \
                         $general_opts
                     ;;
                 deactivate|unregister)

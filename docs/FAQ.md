@@ -95,6 +95,7 @@ curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cm
 The uninstaller will:
 - Deactivate your license on the WP Staging server (if registered)
 - Remove the wpstaging binary and aliases
+- Remove shell completion scripts for Bash and Zsh (Linux/macOS)
 - Remove PATH entries from shell configuration
 - Remove license key environment variable
 - Remove cache and working directories:
@@ -145,8 +146,8 @@ WP Staging CLI has four main command groups:
 - `shell <hostname> [root]` – Open an interactive shell in the PHP container
 - `remove` – Stop containers and remove all Docker data
 - `update-hosts-file` – Update the local hosts file with site entries
-- `generate-compose-file` – Generate a docker-compose.yml file
-- `generate-docker-file` – Generate Docker configuration files
+- `generate-compose-file [hostname]` – Generate docker-compose.yml (one site or all sites)
+- `generate-docker-file [hostname]` – Generate Docker config files (one site or all sites)
 
 **Other Commands:**
 - `register` – Activate your WP Staging Pro license
@@ -549,7 +550,9 @@ The `add` command supports various WordPress configuration flags:
 
 **WordPress options:**
 - `--wp` - WordPress version to install (default: `latest`)
-- `--multisite` - Install as multisite
+- `--multisite` - Install as multisite (subdirectory mode only, subdomain mode is not yet supported)
+
+**Note:** When using `--from` with a multisite backup, `--multisite` is auto-detected from the backup. You don't need to pass it manually.
 
 Example:
 ```bash
@@ -775,7 +778,7 @@ nano /path/to/sites/mysite.local/.env
 wpstaging reset mysite.local
 ```
 
-**Note:** The `reset` command will reinstall WordPress and erase all site data. If you have a backup, you can reset and restore in one step:
+**Note:** The `reset` command will reinstall WordPress and erase all site data. If the site was multisite, `reset` preserves the multisite setting from the `.env` file. If you have a backup, you can reset and restore in one step:
 ```bash
 wpstaging reset mysite.local --from=backup.wpstg
 ```
@@ -987,7 +990,7 @@ wpstaging dump-header backup.wpstg --outputdir=/tmp/output
 ## License & Authentication Questions
 
 <a name="q46"></a>
-**Q47: When does license validation occur?**
+**Q47: When does license validation occur?**  
 **A47:**
 License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, add, etc.). Commands like `help`, `register`, `clean`, `status`, and `list` skip license validation for faster access.
 
@@ -997,12 +1000,12 @@ License validation happens automatically when you run any backup-related or Dock
 No. Running `wpstaging --help` or `wpstaging extract --help` does not require license validation. You only need a valid license when executing actual operations.
 
 <a name="q48"></a>
-**Q49: How is my license stored and validated?**
+**Q49: How is my license stored and validated?**  
 **A49:**
 After you register your license using `wpstaging register`, the key is encrypted and stored locally. The CLI automatically validates your license when running backup-related or Docker commands, and caches the validation results for 4 hours to minimize API calls.
 
 <a name="q49a"></a>
-**Q49a: What happens when my license expires?**
+**Q49a: What happens when my license expires?**  
 **A49a:**
 When your license expires, the CLI displays your license information (licensee name and expiration date) and exits with an error message. The license key is preserved (not deleted) so you can see who the license belongs to and when it expired.
 
@@ -1643,6 +1646,11 @@ It replaces WP Staging placeholders in the database SQL file with actual values:
 - `{WPSTG_NULL}` → SQL NULL
 - This is required before manually importing the database to MySQL.
 
+<a name="q74a"></a>
+**Q74a: Can I restore a multisite backup to a single-site WordPress?**  
+**A74a:**
+A full multisite network backup (`multi`) cannot be restored to a single-site WordPress. The restore command will stop with an error. Network subsite and main-site backups can be restored to a single-site.
+
 <a name="q74"></a>
 **Q75: Can I restore only the database without files?**  
 **A75:**
@@ -1743,7 +1751,44 @@ wpstaging extract --outputdir=/custom/path backup.wpstg
 <a name="q84"></a>
 **Q85: How do I update the CLI to the latest version?**  
 **A85:**
-Download the latest binary from the [releases repository](https://github.com/wp-staging/wp-staging-cli-release) and replace your existing binary.
+Use the built-in update command:
+
+```bash
+# Update to latest binary
+wpstaging update
+
+# Only check for available updates
+wpstaging update --check
+
+# Update using install script (also updates current binary location)
+wpstaging update --full
+```
+
+The CLI also checks for updates automatically once per day and shows a notice if a new version is available.
+
+**Version comparison results:**
+- If your version matches the latest release: `Already up to date (v1.6.1).`
+- If your version is ahead of the latest release (e.g., a pre-release build): `Current version (v1.6.2) is ahead of latest release (v1.6.1).`
+- If a newer version is available: shows an update banner with instructions
+
+**How `update` works (default):**
+- Asks for confirmation before downloading
+- Downloads the new binary in chunks with progress display and resume support (up to 3 retries)
+- Verifies the SHA256 checksum, then replaces the current binary
+- If the binary is in a user-writable location (e.g., `~/.local/bin/`), replacement is done directly
+- If the binary is in a system directory (e.g., `/usr/local/bin/`), sudo is used automatically
+- On Windows, a helper script replaces the binary after the process exits (Windows locks running executables)
+
+**How `update --full` works:**
+- Downloads and runs the installer script from wp-staging.com (sets up aliases, shell completions, PATH)
+- After the installer finishes, if the current binary is at a different location than the installed one (e.g., running from `/tmp/wpstaging`), copies the installed binary to replace it
+- Preserves original file permissions and uses sudo if needed
+- On Windows, a detached wrapper script handles the copy after the installer completes
+
+**Environment variable overrides (for development/testing):**
+- `WPSTGCLI_UPDATE_TAGS_URL` — Override the GitHub tags API URL
+- `WPSTGCLI_UPDATE_MANIFEST_URL` — Override the manifest URL template (`%s` = version)
+- `WPSTGCLI_UPDATE_BINARY_URL` — Override the binary download URL template (`%s` = version, `%s` = binary name)
 
 <a name="q85"></a>
 **Q86: Where can I report bugs or request features?**  
@@ -1972,7 +2017,9 @@ wpstaging add mysite.local
 ```
 
 **Technical details:**
-The MariaDB service includes a healthcheck configuration:
+The MariaDB service includes a healthcheck configuration with platform-specific timings:
+
+Docker Engine:
 ```yaml
 healthcheck:
   test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
@@ -1982,12 +2029,22 @@ healthcheck:
   retries: 3
 ```
 
+Docker Desktop uses longer timings because bind-mounted volumes are slower:
+```yaml
+healthcheck:
+  test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+  start_period: 90s
+  interval: 10s
+  timeout: 5s
+  retries: 5
+```
+
 This ensures the database is fully ready before WordPress installation begins.
 
 ---
 
 <a name="q89e"></a>
-**Q89e: MariaDB fails with "InnoDB: Cannot open './ibdata1'" on macOS. What's wrong?**
+**Q89e: MariaDB fails with "InnoDB: Cannot open './ibdata1'" on macOS. What's wrong?**  
 **A89e:**
 This error occurs on Docker Desktop for Mac (especially macOS 26+) when InnoDB's native I/O operations are incompatible with the virtualized filesystem.
 
@@ -2306,7 +2363,7 @@ docker compose version
 ---
 
 <a name="q98"></a>
-**Q98: How do I restore a remote backup to a dockerized site?**
+**Q98: How do I restore a remote backup to a dockerized site?**  
 **A98:**
 The simplest way is to use `add --from` which creates a new site and restores from a backup in one step. For existing sites, database credentials are auto-detected from the site's `.env` file.
 
@@ -2669,4 +2726,96 @@ wpstaging extract https://example.com/backups/backup.wpstg
 
 ---
 
-**Last Updated:** 2026-02-04 12:00:00 UTC
+## Cross-Site Communication and SSL
+
+<a name="q107"></a>
+**Q107: Can one dockerized site send HTTPS requests to another site?**  
+**A107:**
+Yes. All sites share a Docker network called `wpstg-site-shared-network`. Each site's Nginx registers its hostname as a DNS alias on this network. When site1's PHP sends a request to `https://site2.local`, Docker DNS resolves the hostname to site2's Nginx container.
+
+This works for:
+- Cross-site requests (site1 to site2)
+- Self-referral (site1 to itself)
+- WordPress features like wp-cron, health checks, and WP Staging Remote Sync
+
+The shared network is created automatically when you run `wpstaging start`. No extra setup is needed.
+
+<a name="q108"></a>
+**Q108: Why does `curl` inside the container fail with "unable to get local issuer certificate"?**  
+**A108:**
+This happens when the container does not trust the mkcert CA certificate. The fix is to regenerate the site's config files:
+
+```bash
+wpstaging generate-docker-file <hostname>   # single site
+wpstaging generate-docker-file              # all sites
+wpstaging start <hostname>
+```
+
+This creates a combined CA bundle that includes both system CAs (for public websites) and the mkcert CA (for local sites). The bundle is mounted at `/etc/ssl/certs/ca-certificates.crt` inside the container, so both PHP and shell `curl` trust it.
+
+If the issue still happens on a fresh site, make sure you are running the latest binary.
+
+<a name="q109"></a>
+**Q109: Does the shell prompt show the site hostname?**  
+**A109:**
+Yes. When you open a shell with `wpstaging shell <hostname>`, the prompt shows the site hostname:
+
+```
+[www-data@example.local ~]$
+```
+
+For root shell (`wpstaging shell <hostname> root`):
+```
+[root@example.local ~]#
+```
+
+<a name="q110"></a>
+**Q110: What is the `wpstg-site-shared-network` network?**  
+**A110:**
+It is a Docker bridge network that exists only inside Docker. Containers use it to talk to each other. The host machine (your computer) cannot access containers through this network.
+
+| From | To | How |
+|------|----|-----|
+| Host machine (browser) | Container | Loopback IP port binding (`127.3.2.x`) |
+| Container | Container | Shared network Docker DNS (`wpstg-site-shared-network`) |
+
+The network is created when you run `wpstaging start`. It is removed when you run `wpstaging stop` (without a hostname).
+
+<a name="q111"></a>
+**Q111: How do I set up the Docker development environment on macOS?**
+**A111:**
+macOS with Docker Desktop requires extra setup because containers cannot reach the Docker gateway IP (`172.201.0.1`) directly, unlike Linux where the gateway forwards traffic by port.
+
+**Initial setup:**
+```bash
+# 1. Copy the macOS environment overrides
+cp .env.local.example .env.local
+# Edit HOST_UID/HOST_GID if needed (defaults: 501/20 for first macOS user)
+
+# 2. Build and start (Makefile handles macOS automatically)
+make build
+make docker-up        # Adds loopback alias and uses macOS overlay
+make docker-site-setup
+```
+
+**What the Makefile does automatically on macOS:**
+- Adds a loopback alias (`sudo ifconfig lo0 alias 172.201.0.1`) for host-side port binding
+- Uses `docker-compose.macos.yml` overlay alongside `docker-compose.yml`
+- Builds the correct binary architecture (ARM64 or AMD64) for integration tests
+
+**How the macOS overlay works:**
+- Removes `extra_hosts` from the PHP container (gateway IP is unreachable)
+- Adds nginx network aliases so container hostnames resolve directly to nginx
+- Loads a custom `nginx-macos.conf` with a TCP stream proxy that forwards MySQL traffic (port 3306) from nginx to the database container
+
+**Running tests:**
+```bash
+make tests-backup                # Backup/extract tests
+make tests-docker-integration    # Docker integration tests (external DB tests auto-skip on macOS)
+```
+
+**Note:** The loopback alias does not persist after reboot. Run `make docker-up` again after each restart, or manually run `sudo ifconfig lo0 alias 172.201.0.1`.
+
+---
+
+**Last Updated:** 2026-02-16 12:00:00 UTC
