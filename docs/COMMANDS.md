@@ -147,7 +147,7 @@ WordPress Flags:
       --admin-pass string       WordPress admin password (default "admin")
       --admin-email string      WordPress admin email (default "admin@dev.null")
       --secure-credentials      Use secure random credentials for database and WordPress admin
-      --multisite               Enable WordPress Multisite (subdirectory mode)
+      --multisite               Enable WordPress Multisite
 
 Other Flags:
       --from string             Backup file path or remote URL (http/https) to restore after site creation
@@ -623,15 +623,17 @@ Env Flags:
 
 ```
 Generate a docker-compose.yml file for the Docker environment.
+If no hostname is given, regenerates compose files for all sites.
 
 Usage:
-  wpstaging generate-compose-file <hostname> [flags]
+  wpstaging generate-compose-file [hostname] [flags]
 
 Aliases:
   generate-compose-file, gcf
 
 Examples:
   wpstaging generate-compose-file mysite.local
+  wpstaging generate-compose-file
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -643,15 +645,17 @@ Env Flags:
 
 ```
 Generate Docker-related configuration files.
+If no hostname is given, regenerates files for all sites.
 
 Usage:
-  wpstaging generate-docker-file <hostname> [flags]
+  wpstaging generate-docker-file [hostname] [flags]
 
 Aliases:
   generate-docker-file, gdf
 
 Examples:
   wpstaging generate-docker-file mysite.local
+  wpstaging generate-docker-file
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -866,4 +870,4 @@ Flags:
 
 ---
 
-*Generated on 2026-02-10 13:46:17 UTC*
+*Generated on 2026-03-03 16:46:55 UTC*

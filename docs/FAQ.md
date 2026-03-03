@@ -1767,8 +1767,8 @@ wpstaging update --full
 The CLI also checks for updates automatically once per day and shows a notice if a new version is available.
 
 **Version comparison results:**
-- If your version matches the latest release: `Already up to date (v1.6.1).`
-- If your version is ahead of the latest release (e.g., a pre-release build): `Current version (v1.6.2) is ahead of latest release (v1.6.1).`
+- If your version matches the latest release: `Already up to date (vX.Y.Z).`
+- If your version is ahead of the latest release (e.g., a pre-release build): `Current version (vX.Y.Z) is ahead of latest release (vA.B.C).`
 - If a newer version is available: shows an update banner with instructions
 
 **How `update` works (default):**
@@ -2818,4 +2818,4 @@ make tests-docker-integration    # Docker integration tests (external DB tests a
 
 ---
 
-**Last Updated:** 2026-02-16 12:00:00 UTC
+**Last Updated:** 2026-03-03 16:30:00 UTC
