@@ -1,9 +1,38 @@
+## v1.8.0 (2026-03-09)
+
+- **New:** `switch-php` command to change the PHP version for an existing site without reinstalling WordPress (#216).
+- **New:** Auto-detect OrbStack Docker context and switch to Docker Desktop or Docker Engine. OrbStack networking does not support loopback IP aliases used by the CLI (#223).
+- **New:** macOS loopback IP aliases now persist across reboots via LaunchDaemon. Only creates aliases for existing sites (#223).
+- **New:** The `start` and `restart` commands auto-create missing macOS loopback aliases (#223).
+- **Enh:** Extract command now shows a progress bar with file count and percentage (#205).
+- **Enh:** Large files now show byte-level extraction progress (e.g., "3.00 MB of 4.50 MB") (#205).
+- **Enh:** The CLI now checks Windows version at startup and shows a clear error on Windows older than Windows 10 / Server 2016 (#205).
+- **Enh:** `list` command now shows the PHP version for each site (#216).
+- **Enh:** Limit PHP extension config bind mounts to 25 files per site to prevent excessive Docker mounts (#217).
+- **Enh:** LaunchDaemon auto-updates when `--env-path` changes, so loopback aliases always use the correct sites directory (#223).
+- **Enh:** Rename LaunchDaemon plist to `com.wp-staging.cli-loopback` to follow Apple reverse-DNS naming convention (#223).
+- **Enh:** Use modern `launchctl bootstrap`/`bootout` API with fallback to legacy `load`/`unload` for older macOS (#223).
+- **Enh:** WordPress downloads now support resume for `latest` and `nightly` versions. Interrupted downloads continue from where they left off instead of starting over (#198).
+- **Fix:** The `register` command now accepts the `-l` short flag for `--license` (#231).
+- **Fix:** Site setup no longer fails with "is a directory" error when Docker creates bind mount paths as directories (#217).
+- **Fix:** Spinner and database restore progress no longer output ANSI escape codes when stdout is piped or redirected (#205).
+- **Fix:** The `remove` command now shows the Docker start prompt instead of exiting silently when Docker is not running (#223).
+- **Fix:** Show error message when Docker check fails in `initWorkingEnvironment` instead of exiting silently (#223).
+- **Fix:** Harden LaunchDaemon plist against shell injection by escaping the sites directory path (#223).
+- **Fix:** Validate IP addresses from site `.env` files before using them in shell commands (#223).
+- **Fix:** Fix typo in method name `genereateContainerConfig` → `generateContainerConfig` (#223).
+- **Dev:** Consolidate macOS platform detection into exported `IsDarwinOrTest()`, removing inline duplications across `cmd` package (#223).
+- **Dev:** Remove unused `commandsSkipDocker` variable and simplify Docker check condition (#223).
+
 ## v1.7.0 (2026-03-03)
 
 - **New:** `update` command to update WP Staging CLI to the latest version directly from the terminal (#67).
 - **New:** Automatic update check notifies when a new version is available (once per day) (#67).
 - **New:** Cross-site communication - Dockerized sites can now send HTTPS requests to each other using a shared Docker network (#196).
 - **New:** Combined CA bundle - PHP and shell tools inside containers now trust both local mkcert certificates and public certificates (#196).
+- **New:** Installer `--bin-dir` (`-d`) flag to install the binary to a custom directory instead of the auto-detected location (#189).
+- **New:** Installer `--extract` (`-e`) flag to download all installable files to a directory without running the full installation (#189).
+- **New:** Installer `--cli-args` (`-a`) flag to pass extra arguments to every wpstaging binary call during installation (#189).
 - **Enh:** Auto-detect multisite from backup in `add --from` and `reset --from` commands (#206).
 - **Enh:** Persist multisite setting in `.env` file so `reset` preserves multisite (#206).
 - **Enh:** Show backup type in restore confirmation and multisite status in `list` command (#206).

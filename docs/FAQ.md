@@ -9,7 +9,7 @@
 <a name="q1"></a>
 **Q2: Which operating systems are supported?**  
 **A2:**
-Windows, Linux, and macOS. Pre-built binaries are available for all major OSes.
+Windows (10 or later), Linux, and macOS. Pre-built binaries are available for all major OSes. On Windows, the CLI requires Windows 10 / Windows Server 2016 or later. Older versions are not supported.
 
 <a name="q2"></a>
 **Q3: Do I need a license to use this tool?**  
@@ -23,7 +23,7 @@ Benchmarks show it can extract a 20GB backup in under 36 seconds on an AMD Ryzen
 
 ## Installation Questions
 
-<a name="q4"></a>
+<a name="q5"></a>
 **Q5: How do I install `wpstaging`?**  
 **A5:**
 Use the quick install script (recommended):
@@ -67,14 +67,45 @@ The installer will:
 
 For complete installation details, see the [Installation section in README](../README.md#installation).
 
-<a name="q5"></a>
-**Q6: Can I use it without installing?**  
+<a name="q6"></a>
+**Q6: Can I install to a custom directory?**  
 **A6:**
-Yes, you can run the binary directly from the extracted folder.
+Yes. Use the `--bin-dir` (`-d`) flag to install the binary to a specific directory:
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- --bin-dir /opt/tools
+```
+The installer still configures PATH, shell aliases, and completion scripts. On Windows (PowerShell): `-d "C:\Tools"`. On Windows (CMD): `--bin-dir C:\Tools`.
 
 <a name="q6a"></a>
-**Q6a: How do I uninstall wpstaging?**  
+**Q6a: Can I download files without installing?**  
+**A6a:**
+Yes. Use the `--extract` (`-e`) flag to download all installable files to a directory without running the full installation:
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- --extract /tmp/wpstaging-files
+```
+No PATH changes, aliases, or completion scripts are configured. The binary and completion files are copied to the specified directory.
+
+**Note:** `--bin-dir` and `--extract` cannot be used together.
+
+<a name="q6a1"></a>
+**Q6a1: Can I pass extra arguments to the binary during installation?**  
+**A6a1:**
+Yes. Use the `--cli-args` (`-a`) flag to pass extra arguments to every wpstaging binary call the installer makes (version check and license registration):
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- -a "--debug"
+```
+On Windows (PowerShell): `-a "--debug"`. On Windows (CMD): `-a "--debug"`.
+
+**Note:** Only simple space-separated flags are supported. Arguments with embedded spaces are not supported.
+
+<a name="q6b"></a>
+**Q6b: Can I use it without installing?**  
 **A6b:**
+Yes, you can run the binary directly from the extracted folder.
+
+<a name="q6c"></a>
+**Q6c: How do I uninstall wpstaging?**  
+**A6c:**
 Use the quick uninstall script (recommended):
 
 **Linux / macOS / WSL:**
@@ -109,7 +140,7 @@ For complete uninstallation details, see the [Uninstallation section in README](
 
 ## Usage Questions
 
-<a name="q6"></a>
+<a name="q7"></a>
 **Q7: How do I run `wpstaging`?**  
 **A7:**
 Use the following command:
@@ -118,7 +149,7 @@ wpstaging [commands] [flags] <backupfile.wpstg>
 ```
 Commands must come first. Flags and the backup file can appear in any order.
 
-<a name="q7"></a>
+<a name="q8"></a>
 **Q8: What are the main commands?**  
 **A8:**
 WP Staging CLI has four main command groups:
@@ -151,6 +182,7 @@ WP Staging CLI has four main command groups:
 
 **Other Commands:**
 - `register` – Activate your WP Staging Pro license
+- `update` – Update WP Staging CLI to the latest version
 - `clean` – Clean up cached data, license info, and temporary files
 - `help` – Help about any command
 
@@ -167,6 +199,7 @@ You can provide your license in three ways:
 wpstaging register
 
 # Non-interactive mode (useful for scripts/automation)
+wpstaging register -l=YOUR_LICENSE_KEY
 wpstaging register --license=YOUR_LICENSE_KEY
 ```
 This will validate your license with WP STAGING servers and store it encrypted locally for future use.
@@ -468,14 +501,20 @@ wpstaging add site3.local --container-ip=127.3.2.1 --https-port=8445
 <a name="q26"></a>
 **Q27: How can I configure PHP version or ports?**  
 **A27:**
-PHP version and ports can be configured in two ways:
+PHP version and ports can be configured in several ways:
 
 **1. During site creation (using `add` command):**
 ```bash
 wpstaging add mysite.local --php=8.3 --http-port=8080 --https-port=8443
 ```
 
-**2. After site creation (edit the `.env` file):**
+**2. Switch PHP version (using `switch-php` command):**
+```bash
+wpstaging switch-php mysite.local 8.4
+```
+This updates the configuration, regenerates Docker files, and restarts the containers automatically. Supported PHP versions: 7.4, 8.1, 8.2, 8.3, 8.4.
+
+**3. Edit the `.env` file manually:**
 ```bash
 # Edit ~/wpstaging/sites/<hostname>/.env
 PHP_VERSION=8.3
@@ -493,7 +532,7 @@ wpstaging restart mysite.local
 - `--http-port=<port>` (default: 80)
 - `--https-port=<port>` (default: 443)
 
-**Note:** These settings cannot be changed via the `start` command — only during initial creation or by editing `.env` manually.
+**Note:** Port settings can only be set during initial creation or by editing `.env` manually. PHP version can be changed at any time using the `switch-php` command.
 
 <a name="q27"></a>
 **Q28: How do I configure MariaDB?**  
@@ -520,7 +559,7 @@ wpstaging restart mysite.local --compose-file=/path/to/custom-compose.yml
 ```
 
 **Better approach - Add to config file:**
-To avoid specifying `--compose-file` every time, add it to your config file `~/.wpstaging/wpstaging.conf`:
+To avoid specifying `--compose-file` every time, add it to your config file (e.g., `~/.config/wpstaging/wpstaging.conf` on Linux — see [Q18](#q17) for OS-specific paths):
 
 ```ini
 --compose-file /path/to/custom-compose.yml
@@ -1571,7 +1610,7 @@ On Linux and Windows, the CLI automatically manages IP addresses from a reserved
 ```bash
 # First site - automatically assigned 127.3.2.1
 wpstaging add site1.local
-# Saved in ~/.wpstaging/sites/site1.local/.env
+# Saved in ~/wpstaging/sites/site1.local/.env
 
 # Second site - automatically assigned 127.3.2.2
 wpstaging add site2.local
@@ -1604,20 +1643,17 @@ wpstaging add site2.local
 ```
 
 **How it works:**
-1. CLI automatically finds the next available IP in the 127.3.2.x range
-2. Binds the IP using `sudo ifconfig lo0 alias 127.3.2.X netmask 255.255.255.255`
-3. Creates the site with the assigned IP
-4. You'll be prompted for your password (per terminal session, 5-15 min timeout)
+1. On first `add`, the CLI installs a macOS LaunchDaemon that reads site configurations and creates loopback aliases only for existing sites at boot
+2. Only one sudo prompt is needed for installation
+3. Aliases persist across reboots automatically
+4. The daemon is removed when you run `wpstaging remove`
+
+**Fallback:** If daemon installation fails, the CLI falls back to creating a single IP alias for the current site (as before).
 
 **Passwordless sudo (recommended for macOS):**
-On macOS, automatic IP alias binding is enabled by default for seamless multi-site setups using loopback IP range **127.3.2.1 - 127.3.2.254**. This requires sudo for IP binding and hosts file updates. To avoid repeated password prompts, see [Q87](#q87) for complete passwordless sudo setup instructions.
+On macOS, the LaunchDaemon install requires one sudo prompt. To avoid the prompt, see [Q87](#q87) for passwordless sudo setup.
 
-**About sudo password prompts on macOS:**
-By default, sudo uses per-terminal session authentication (5-15 minute timeout). You'll be prompted for your password in each new terminal window when adding sites. Options:
-- **Recommended:** Set up passwordless sudo (see [Q87](#q87)) for seamless automatic IP binding from the 127.3.2.x range — **this is the intended workflow**
-- **Alternative:** Use `--skip-macos-auto-ip` flag to disable automatic IP binding and perform manual `ifconfig lo0 alias` commands for each IP in the range
-
-**Summary:** On macOS, automatic IP alias binding is enabled by default for the loopback range **127.3.2.1 - 127.3.2.254** (requires sudo), allowing multiple sites to use the same port numbers on different IPs. Linux/Windows don't need this because loopback IPs are always available. Use `--skip-macos-auto-ip` on macOS if you prefer manual IP binding.
+**Summary:** On macOS, a LaunchDaemon reads site configurations and creates loopback aliases only for existing sites at boot. One-time sudo on first `add`, aliases survive reboots. Linux/Windows don't need this because loopback IPs are always available. Use `--skip-macos-auto-ip` on macOS to skip daemon installation.
 
 **Q73: How can I disable automatic IP alias binding on macOS?**  
 **A73:**
@@ -1790,17 +1826,18 @@ The CLI also checks for updates automatically once per day and shows a notice if
 - `WPSTGCLI_UPDATE_MANIFEST_URL` — Override the manifest URL template (`%s` = version)
 - `WPSTGCLI_UPDATE_BINARY_URL` — Override the binary download URL template (`%s` = version, `%s` = binary name)
 
-<a name="q85"></a>
+<a name="q86"></a>
 **Q86: Where can I report bugs or request features?**  
 **A86:**
 Visit the official WP Staging support at https://wp-staging.com/support/ or check the CLI documentation for the issue tracker URL.
 
-<a name="q86"></a>
+<a name="q87"></a>
 **Q87: How do I set up passwordless sudo for the wpstaging binary?**  
 **A87:**
-The wpstaging binary uses sudo for two operations:
+The wpstaging binary uses sudo for these operations:
 1. **Updating /etc/hosts file** - Adding hostname entries for local sites (all platforms)
-2. **IP alias binding** - Binding loopback IPs (macOS only)
+2. **LaunchDaemon install/remove** - Installing persistent loopback IP daemon (macOS only, one-time)
+3. **IP alias binding** - Creating loopback IP aliases if daemon install fails (macOS only, fallback)
 
 To set up passwordless sudo:
 
@@ -1821,14 +1858,32 @@ To set up passwordless sudo:
    # Hosts file update (all platforms)
    username ALL=(ALL) NOPASSWD: /path/to/wpstaging update-hosts-file*
 
-   # Loopback IP alias (macOS only - skip this line on Linux)
+   # LaunchDaemon and loopback IP alias (macOS only - skip these lines on Linux)
+   username ALL=(ALL) NOPASSWD: /bin/cp /tmp/com.wp-staging.cli-loopback-*.plist /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /usr/sbin/chown root\:wheel /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/chmod 644 /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.wp-staging.cli-loopback
+   username ALL=(ALL) NOPASSWD: /bin/launchctl load -w /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/launchctl unload /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/rm -f /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   username ALL=(ALL) NOPASSWD: /bin/bash -c *ifconfig lo0*
    username ALL=(ALL) NOPASSWD: /sbin/ifconfig lo0 alias 127.3.2.* netmask 255.255.255.255
    ```
 
    For example:
    ```
-   nawawi ALL=(ALL) NOPASSWD: /usr/local/bin/wpstaging update-hosts-file*
-   nawawi ALL=(ALL) NOPASSWD: /sbin/ifconfig lo0 alias 127.3.2.* netmask 255.255.255.255
+   bob ALL=(ALL) NOPASSWD: /usr/local/bin/wpstaging update-hosts-file*
+   bob ALL=(ALL) NOPASSWD: /bin/cp /tmp/com.wp-staging.cli-loopback-*.plist /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /usr/sbin/chown root\:wheel /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/chmod 644 /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.wp-staging.cli-loopback
+   bob ALL=(ALL) NOPASSWD: /bin/launchctl load -w /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/launchctl unload /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/rm -f /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
+   bob ALL=(ALL) NOPASSWD: /bin/bash -c *ifconfig lo0*
+   bob ALL=(ALL) NOPASSWD: /sbin/ifconfig lo0 alias 127.3.2.* netmask 255.255.255.255
    ```
 
 4. **Save and exit the editor**
@@ -1842,7 +1897,7 @@ Note: When using `--skip-update-hosts-file`, you will need to manually add entri
 
 ---
 
-<a name="q87"></a>
+<a name="q88"></a>
 **Q88: I get "Error response from daemon: could not find an available, non-overlapping IPv4 address pool" when creating sites. How do I fix this?**  
 **A88:**
 This error occurs when Docker runs out of available IP address pools for creating new networks. This typically happens when you have many Docker networks created (e.g., from running multiple tests or creating many sites).
@@ -2519,10 +2574,12 @@ Or use --skip-macos-auto-ip flag to use port-based separation instead.
 ```
 
 **Solutions:**
-1. Run the suggested `sudo ifconfig` command
-2. Use `--skip-macos-auto-ip` flag when adding sites (uses port-based separation instead of IP-based)
+1. Run `wpstaging start <site>` — the CLI automatically creates the missing IP alias
+2. Run `wpstaging add <site>` again — the CLI installs a LaunchDaemon for persistent aliases
+3. Run the suggested `sudo ifconfig` command for a quick manual fix
+4. Use `--skip-macos-auto-ip` flag when adding sites (uses port-based separation instead of IP-based)
 
-**Note:** Loopback IP aliases on macOS don't persist across reboots. You'll need to re-add them after restarting your Mac.
+**Note:** The CLI installs a LaunchDaemon that creates loopback aliases for existing sites at boot. Aliases persist across reboots automatically. The `start` and `restart` commands also auto-create missing aliases.
 
 ---
 
@@ -2782,7 +2839,7 @@ It is a Docker bridge network that exists only inside Docker. Containers use it 
 The network is created when you run `wpstaging start`. It is removed when you run `wpstaging stop` (without a hostname).
 
 <a name="q111"></a>
-**Q111: How do I set up the Docker development environment on macOS?**
+**Q111: How do I set up the Docker development environment on macOS?**  
 **A111:**
 macOS with Docker Desktop requires extra setup because containers cannot reach the Docker gateway IP (`172.201.0.1`) directly, unlike Linux where the gateway forwards traffic by port.
 
@@ -2818,4 +2875,59 @@ make tests-docker-integration    # Docker integration tests (external DB tests a
 
 ---
 
-**Last Updated:** 2026-03-03 16:30:00 UTC
+<a name="q112"></a>
+**Q112: I use OrbStack instead of Docker Desktop. Is it supported?**  
+**A112:**
+No. OrbStack is not supported. OrbStack's networking does not support binding to loopback IP aliases (127.3.2.x) that the CLI uses. Containers start and appear healthy, but sites are not reachable in the browser.
+
+The CLI auto-detects OrbStack's Docker context and switches to Docker Desktop (`desktop-linux`) or Docker Engine (`default`). You will see a notice:
+
+```
+OrbStack Docker context detected. OrbStack is not supported at the moment.
+Switched Docker context to "desktop-linux".
+```
+
+If no alternative context is found, the CLI shows an error. Switch manually:
+
+```bash
+# List available contexts
+docker context ls
+
+# Switch to Docker Desktop
+docker context use desktop-linux
+
+# Or switch to Docker Engine
+docker context use default
+```
+
+**Note:** The OrbStack Docker context stays active even after you quit OrbStack. The Docker CLI silently uses OrbStack's socket until you switch contexts.
+
+---
+
+## Docker Bind Mount Problems
+
+<a name="q113"></a>
+**Q113: I get "is a directory" error when running `wpstaging add` or `wpstaging reset`. How do I fix it?**  
+**A113:**
+This happens when Docker creates bind mount source paths as directories instead of files. Older Docker Compose versions may ignore the `create_host_path: false` setting and create directories at paths where config files are expected (e.g., `php.ini`, `ext-redis.ini`).
+
+Since v1.6.3, the CLI automatically detects and removes these stale directories before generating config files. You should see a message like:
+
+```
+Found directories where config files are expected:
+  /path/to/docker/php/config/php.ini
+  /path/to/docker/php/config/ext-redis.ini
+Removing and recreating as files...
+```
+
+If you're on an older version, run:
+```bash
+wpstaging remove example.local
+wpstaging add example.local
+```
+
+This clears the site directory and recreates it cleanly.
+
+---
+
+**Last Updated:** 2026-03-05 12:00:00 UTC

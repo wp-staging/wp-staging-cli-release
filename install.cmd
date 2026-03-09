@@ -18,6 +18,7 @@ exit 1
 setlocal enabledelayedexpansion
 
 REM WP Staging CLI Installer for Windows (CMD)
+REM Build: 20260219-152540
 REM This script downloads and installs the wpstaging cli binary
 REM
 REM Usage:
@@ -36,6 +37,9 @@ REM
 REM Options:
 REM   -v, --version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
 REM   -l, --license KEY        Register license key after installation
+REM   -d, --bin-dir DIR        Install binary to custom directory
+REM   -e, --extract DIR        Extract all files to directory (no installation)
+REM   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
 REM
 REM Examples:
 REM   install.cmd -v 1.4.0-beta.1           # Install version 1.4.0-beta.1
@@ -43,6 +47,17 @@ REM   install.cmd -v 1.3.5                  # Install version 1.3.5
 REM   install.cmd                           # Install latest stable (no beta/alpha/rc)
 REM   install.cmd -l abc123                 # Install latest with license
 REM   install.cmd -v 1.4.0 -l abc123        # Install 1.4.0 with license
+REM   install.cmd -d C:\mytools             # Install binary to C:\mytools
+REM   install.cmd -e C:\tmp\wpstaging       # Extract all files without installing
+REM   install.cmd -a "--debug"              # Install and pass --debug to binary calls
+
+REM Generate ESC character for ANSI colors (Windows 10+)
+for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "RED=%ESC%[91m"
+set "GREEN=%ESC%[92m"
+set "YELLOW=%ESC%[93m"
+set "BLUE=%ESC%[96m"
+set "NC=%ESC%[0m"
 
 set GITHUB_API_URL=https://api.github.com/repos/wp-staging/wp-staging-cli-release
 set GITHUB_RAW_URL=https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release
@@ -50,6 +65,9 @@ set BINARY_NAME=wpstaging.exe
 set APP_NAME=wpstaging
 set REQUESTED_VERSION=
 set LICENSE_KEY=
+set CUSTOM_BIN_DIR=
+set EXTRACT_DIR=
+set CLI_ARGS=
 
 REM Parse arguments
 :parse_args
@@ -78,19 +96,65 @@ if "%~1"=="-v" (
     shift
     goto :parse_args
 )
+if "%~1"=="--bin-dir" (
+    set CUSTOM_BIN_DIR=%~2
+    shift
+    shift
+    goto :parse_args
+)
+if "%~1"=="-d" (
+    set CUSTOM_BIN_DIR=%~2
+    shift
+    shift
+    goto :parse_args
+)
+if "%~1"=="--extract" (
+    set EXTRACT_DIR=%~2
+    shift
+    shift
+    goto :parse_args
+)
+if "%~1"=="-e" (
+    set EXTRACT_DIR=%~2
+    shift
+    shift
+    goto :parse_args
+)
+if "%~1"=="--cli-args" (
+    set CLI_ARGS=%~2
+    shift
+    shift
+    goto :parse_args
+)
+if "%~1"=="-a" (
+    set CLI_ARGS=%~2
+    shift
+    shift
+    goto :parse_args
+)
 REM Unknown argument - show warning and skip
 echo %YELLOW%Warning: Unknown argument: %~1%NC% >&2
 shift
 goto :parse_args
 :done_args
 
-REM Generate ESC character for ANSI colors (Windows 10+)
-for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
-set "RED=%ESC%[91m"
-set "GREEN=%ESC%[92m"
-set "YELLOW=%ESC%[93m"
-set "BLUE=%ESC%[96m"
-set "NC=%ESC%[0m"
+REM Validate CLI_ARGS for unsafe CMD metacharacters to prevent command injection
+if defined CLI_ARGS (
+    set "CLI_ARGS_SAFE=1"
+    for %%C in ("&" "|" ">" "<" "(" ")" "^" "!") do (
+        echo(!CLI_ARGS!| findstr /C:%%C >nul 2>&1 && set "CLI_ARGS_SAFE="
+    )
+    if not defined CLI_ARGS_SAFE (
+        echo %YELLOW%Warning: Unsafe characters detected in --cli-args value. Ignoring --cli-args for security.%NC%
+        set "CLI_ARGS="
+    )
+)
+
+REM Validate mutually exclusive flags
+if defined CUSTOM_BIN_DIR if defined EXTRACT_DIR (
+    echo %RED%Error: --bin-dir and --extract are mutually exclusive. Use one or the other.%NC%
+    exit /b 1
+)
 
 echo %BLUE%WP Staging CLI - Installer%NC%
 echo %BLUE%==============================%NC%
@@ -233,10 +297,52 @@ if /i not "%ACTUAL_CHECKSUM%"=="%CHECKSUM%" (
 echo %GREEN%Checksum verified%NC%
 echo.
 
+REM ── Extract mode ────────────────────────────────────────────────────
+REM Copy downloaded binary to the given directory and exit early.
+if not defined EXTRACT_DIR goto :skip_extract_mode
+
+if not exist "!EXTRACT_DIR!" (
+    mkdir "!EXTRACT_DIR!"
+    if errorlevel 1 (
+        echo %RED%Error: Cannot create directory: !EXTRACT_DIR!%NC%
+        rmdir /s /q "%TEMP_DIR%"
+        exit /b 1
+    )
+)
+copy /y "%TEMP_DIR%\%BINARY_NAME%" "!EXTRACT_DIR!\%BINARY_NAME%" >nul
+if errorlevel 1 (
+    echo %RED%Error: Failed to copy binary to !EXTRACT_DIR!%NC%
+    rmdir /s /q "%TEMP_DIR%"
+    exit /b 1
+)
+echo.
+echo %GREEN%Files extracted to !EXTRACT_DIR!:%NC%
+dir /b "!EXTRACT_DIR!"
+echo.
+echo %BLUE%To install manually, copy the binary to a directory in your PATH.%NC%
+echo.
+rmdir /s /q "%TEMP_DIR%"
+goto :eof
+
+:skip_extract_mode
+
 REM Determine installation directory
 REM Prefer existing installation, then directories already in PATH
 set INSTALL_DIR=
 set ALREADY_IN_PATH=0
+
+REM ── Custom bin-dir mode ────────────────────────────────────────────
+if defined CUSTOM_BIN_DIR (
+    set INSTALL_DIR=!CUSTOM_BIN_DIR!
+    REM Use semicolon-delimited matching to avoid false positives (e.g., C:\Tools vs C:\Tools2)
+    echo ;!PATH!; | findstr /i /c:";!CUSTOM_BIN_DIR!;" >nul
+    if not errorlevel 1 (
+        set ALREADY_IN_PATH=1
+    ) else (
+        set ALREADY_IN_PATH=0
+    )
+    goto :install_dir_chosen
+)
 
 REM First, check if wpstaging is already installed somewhere
 where %BINARY_NAME% >nul 2>&1
@@ -363,7 +469,7 @@ if not exist "%INSTALL_DIR%\%BINARY_NAME%" (
 
 REM Set environment variable temporarily for this command to avoid exposure in process list
 set "WPSTGPRO_LICENSE=!LICENSE_KEY!"
-"%INSTALL_DIR%\%BINARY_NAME%" register 2>&1
+"%INSTALL_DIR%\%BINARY_NAME%" register !CLI_ARGS! 2>&1
 if errorlevel 1 (
     echo %YELLOW%Warning: License registration failed%NC%
     echo %YELLOW%You can register later with: wpstaging register%NC%
@@ -386,7 +492,7 @@ REM Verify installation
 echo.
 echo %BLUE%Verifying installation...%NC%
 set INSTALLED_VERSION=
-for /f "delims=" %%v in ('"!INSTALL_DIR!\!BINARY_NAME!" --version 2^>^&1') do set INSTALLED_VERSION=%%v
+for /f "delims=" %%v in ('"!INSTALL_DIR!\!BINARY_NAME!" --version !CLI_ARGS! 2^>^&1') do set INSTALLED_VERSION=%%v
 if not defined INSTALLED_VERSION (
     echo %YELLOW%Warning: Could not verify installed binary%NC%
 ) else (

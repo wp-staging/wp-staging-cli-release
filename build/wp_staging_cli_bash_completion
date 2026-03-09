@@ -42,6 +42,7 @@ _wp_staging_cli() {
         start
         status
         stop
+        switch-php
         remove
         update
         update-hosts-file
@@ -65,6 +66,7 @@ _wp_staging_cli() {
         --prompt-timeout
         -d --debug
         -q --quiet
+        --verbose
         -v --version
         --about
         -h --help
@@ -246,6 +248,13 @@ _wp_staging_cli() {
             ;;
         dump-all-help)
             COMPREPLY=( $(compgen -W "--html --markdown ${general_opts}" -- "${cur}") )
+            ;;
+        switch-php)
+            if [[ ${COMP_CWORD} -eq 3 ]]; then
+                COMPREPLY=( $(compgen -W "7.4 8.1 8.2 8.3 8.4" -- "${cur}") )
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts} --env-path" -- "${cur}") )
+            fi
             ;;
         add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|remove|compose-info)
             COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )

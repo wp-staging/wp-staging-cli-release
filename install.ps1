@@ -1,4 +1,5 @@
 # WP Staging CLI Installer for Windows
+# Build: 20260219-152540
 # This script installs wpstaging on Windows
 #
 # Usage:
@@ -17,12 +18,18 @@
 # Options:
 #   -v, -Version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
 #   -l, -License KEY        Register license key after installation
+#   -d, -BinDir DIR         Install binary to custom directory
+#   -e, -Extract DIR        Extract all files to directory (no installation)
+#   -a, -CliArgs ARGS       Extra arguments passed to every wpstaging binary call
 #
 # Examples:
 #   -v "1.4.0-beta.1"                    # Install version 1.4.0-beta.1
 #   -v "1.3.5"                           # Install version 1.3.5
 #   -l "abc123"                          # Install latest with license
 #   -v "1.4.0" -l "abc123"               # Install 1.4.0 with license
+#   -d "C:\mytools"                      # Install binary to C:\mytools
+#   -e "C:\tmp\wpstaging-files"          # Extract all files without installing
+#   -a "--debug"                         # Install and pass --debug to binary calls
 #   (no parameter)                       # Install latest stable (no beta/alpha/rc)
 
 param(
@@ -32,7 +39,19 @@ param(
 
     [Parameter(Mandatory=$false)]
     [Alias("l")]
-    [string]$License = ""
+    [string]$License = "",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("d")]
+    [string]$BinDir = "",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("e")]
+    [string]$Extract = "",
+
+    [Parameter(Mandatory=$false)]
+    [Alias("a")]
+    [string]$CliArgs = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -325,8 +344,17 @@ function Test-VersionExists($versionRef) {
 function Main {
     param(
         [string]$RequestedVersion,
-        [string]$LicenseKey
+        [string]$LicenseKey,
+        [string]$CustomBinDir,
+        [string]$ExtractDir,
+        [string]$ExtraCliArgs
     )
+
+    # Validate mutually exclusive flags
+    if ($CustomBinDir -and $ExtractDir) {
+        Exit-WithError "-BinDir and -Extract are mutually exclusive. Use one or the other."
+    }
+
     Write-Info "WP Staging CLI Installer for Windows"
     Write-Info "======================================"
     Write-Host ""
@@ -415,10 +443,34 @@ function Main {
         Verify-Checksum $binaryFile $checksum
         Write-Host ""
 
-        # Determine installation directory
+        # ── Extract mode ──────────────────────────────────────────────────
+        # Copy all downloaded files to the given directory and exit early.
+        if ($ExtractDir) {
+            Write-Info "Extracting files to $ExtractDir..."
+
+            if (-not (Test-Path $ExtractDir)) {
+                New-Item -ItemType Directory -Path $ExtractDir -Force | Out-Null
+            }
+
+            Copy-Item $binaryFile (Join-Path $ExtractDir $BinaryName) -Force
+            Write-Host ""
+            Write-Success "[OK] Files extracted to $ExtractDir :"
+            Get-ChildItem $ExtractDir | ForEach-Object { Write-Info "  $($_.Name)" }
+            Write-Host ""
+            Write-Info "To install manually, copy the binary to a directory in your PATH."
+            return
+        }
+
+        # ── Determine installation directory ──────────────────────────────
         # Prefer directories already on PATH to avoid needing terminal restart
         Write-Info "Installing wpstaging..."
-        $InstallDir = Get-InstallDir
+
+        if ($CustomBinDir) {
+            $InstallDir = $CustomBinDir
+        }
+        else {
+            $InstallDir = Get-InstallDir
+        }
         $alreadyInPath = Test-InPath $InstallDir
 
         if ($alreadyInPath) {
@@ -463,7 +515,11 @@ function Main {
             else {
                 try {
                     # Use --license flag to pass the key directly (avoids stdin prompt)
-                    $registerOutput = & $targetPath register --license $LicenseKey 2>&1
+                    $registerArgs = @("register", "--license", $LicenseKey)
+                    if ($ExtraCliArgs) {
+                        $registerArgs += $ExtraCliArgs -split '\s+'
+                    }
+                    $registerOutput = & $targetPath @registerArgs 2>&1
 
                     if ($LASTEXITCODE -eq 0) {
                         Write-Success "[OK] License registered successfully"
@@ -487,7 +543,11 @@ function Main {
         $installedBinary = Join-Path $InstallDir $BinaryName
         if (Test-Path $installedBinary) {
             try {
-                $versionOutput = & $installedBinary --version 2>&1
+                $versionArgs = @("--version")
+                if ($ExtraCliArgs) {
+                    $versionArgs += $ExtraCliArgs -split '\s+'
+                }
+                $versionOutput = & $installedBinary @versionArgs 2>&1
                 Write-Success "[OK] Installation successful!"
                 Write-Host ""
                 Write-Success "Installed: $versionOutput"
@@ -576,5 +636,5 @@ function Main {
     }
 }
 
-# Run main function with version and license parameters (if provided)
-Main -RequestedVersion $Version -LicenseKey $License
+# Run main function with version, license, bin-dir, extract, and cli-args parameters (if provided)
+Main -RequestedVersion $Version -LicenseKey $License -CustomBinDir $BinDir -ExtractDir $Extract -ExtraCliArgs $CliArgs
