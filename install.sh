@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # WP Staging CLI Installer
+# Build: 20260219-152540
 # This script installs wpstaging on Linux, macOS, and WSL
 #
 # Usage:
@@ -18,6 +19,9 @@
 # Options:
 #   -v, --version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
 #   -l, --license KEY        Register license key after installation
+#   -d, --bin-dir DIR        Install binary to custom directory
+#   -e, --extract DIR        Extract all files to directory (no installation)
+#   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
 #
 # Examples:
 #   bash -s -- -v 1.4.0-beta.1              # Install version 1.4.0-beta.1
@@ -25,6 +29,9 @@
 #   bash                                    # Install latest stable (no beta/alpha/rc)
 #   bash -s -- -l abc123                    # Install latest with license
 #   bash -s -- -v 1.4.0 -l abc123           # Install 1.4.0 with license
+#   bash -s -- -d /opt/mytools              # Install binary to /opt/mytools
+#   bash -s -- -e /tmp/wpstaging-files      # Extract all files without installing
+#   bash -s -- -a "--debug"                 # Install and pass --debug to binary calls
 
 set -e
 
@@ -147,13 +154,8 @@ detect_os() {
 
     case "$os" in
         linux*)
-            # Check for WSL - this is a legitimate Linux environment on Windows
-            # Use case-insensitive matching as /proc/version may contain "Microsoft" or "microsoft"
-            if grep -qi microsoft /proc/version 2>/dev/null || grep -qi wsl /proc/version 2>/dev/null; then
-                echo "linux"  # WSL is treated as Linux (this is correct)
-            else
-                echo "linux"
-            fi
+            # WSL is a legitimate Linux environment, so we treat it the same as native Linux.
+            echo "linux"
             ;;
         darwin*)
             echo "darwin"
@@ -674,9 +676,12 @@ main() {
     info "WP Staging CLI Installer"
     info "========================\n"
 
-    # Parse arguments (version and license)
+    # Parse arguments (version, license, bin-dir, extract)
     local REQUESTED_VERSION=""
     local LICENSE_KEY=""
+    local CUSTOM_BIN_DIR=""
+    local EXTRACT_DIR=""
+    local CLI_ARGS=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -696,6 +701,32 @@ main() {
                 REQUESTED_VERSION="$2"
                 shift 2
                 ;;
+            --bin-dir=*)
+                CUSTOM_BIN_DIR="${1#*=}"
+                shift
+                ;;
+            --bin-dir|-d)
+                CUSTOM_BIN_DIR="$2"
+                shift 2
+                ;;
+            --extract=*)
+                EXTRACT_DIR="${1#*=}"
+                shift
+                ;;
+            --extract|-e)
+                EXTRACT_DIR="$2"
+                shift 2
+                ;;
+            --cli-args=*)
+                # Split value into array elements to prevent command injection
+                read -ra CLI_ARGS <<< "${1#*=}"
+                shift
+                ;;
+            --cli-args|-a)
+                # Split value into array elements to prevent command injection
+                read -ra CLI_ARGS <<< "$2"
+                shift 2
+                ;;
             -*)
                 warning "Unknown option: $1"
                 shift
@@ -706,6 +737,11 @@ main() {
                 ;;
         esac
     done
+
+    # Validate mutually exclusive flags
+    if [ -n "$CUSTOM_BIN_DIR" ] && [ -n "$EXTRACT_DIR" ]; then
+        error "--bin-dir and --extract are mutually exclusive. Use one or the other."
+    fi
 
     local VERSION_REF=""
 
@@ -797,15 +833,68 @@ main() {
     ZSH_COMPLETION_URL="${REPO_URL}/wp_staging_cli_zsh_completion"
     download "$ZSH_COMPLETION_URL" "$TMP_DIR/wp_staging_cli_zsh_completion" || warning "Failed to download zsh completion (continuing anyway)"
 
-    # Determine installation directory
+    # ── Extract mode ──────────────────────────────────────────────────────
+    # Copy all downloaded files to the given directory and exit early.
+    # No PATH update, no symlinks/aliases, no shell rc changes, no license.
+    if [ -n "$EXTRACT_DIR" ]; then
+        info "\nExtracting files to $EXTRACT_DIR..."
+
+        mkdir -p "$EXTRACT_DIR" || error "Cannot create directory: $EXTRACT_DIR"
+
+        cp "$TMP_DIR/${BINARY_NAME}" "$EXTRACT_DIR/" || error "Failed to copy binary"
+        chmod +x "$EXTRACT_DIR/${BINARY_NAME}"
+
+        if [ -f "$TMP_DIR/wp_staging_cli_bash_completion" ]; then
+            cp "$TMP_DIR/wp_staging_cli_bash_completion" "$EXTRACT_DIR/" || warning "Failed to copy bash completion"
+        fi
+        if [ -f "$TMP_DIR/wp_staging_cli_zsh_completion" ]; then
+            cp "$TMP_DIR/wp_staging_cli_zsh_completion" "$EXTRACT_DIR/" || warning "Failed to copy zsh completion"
+        fi
+
+        echo ""
+        success "✓ Files extracted to $EXTRACT_DIR:"
+        ls -1 "$EXTRACT_DIR" | while read -r f; do
+            info "  $f"
+        done
+        echo ""
+        info "To install manually, copy the binary to a directory in your PATH."
+        return 0
+    fi
+
+    # ── Determine installation directory ──────────────────────────────────
     # Prefer directories already on PATH to avoid needing shell reload
     info "\nInstalling wpstaging..."
 
-    IFS='|' read -r INSTALL_DIR USE_SUDO SUDO_DECLINED < <(pick_install_dir)
+    local USE_SUDO="false"
+    local SUDO_DECLINED=""
 
-    # Show message if user declined sudo
-    if [ "$SUDO_DECLINED" = "declined" ]; then
-        info "Installing to user directory instead (no sudo required)"
+    if [ -n "$CUSTOM_BIN_DIR" ]; then
+        # Custom bin-dir mode: use the user-specified directory
+        INSTALL_DIR="$CUSTOM_BIN_DIR"
+
+        if [ -d "$INSTALL_DIR" ] && [ -w "$INSTALL_DIR" ]; then
+            USE_SUDO=false
+        elif [ ! -d "$INSTALL_DIR" ]; then
+            # Directory doesn't exist yet — try to create it
+            if mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+                USE_SUDO=false
+            elif command_exists sudo; then
+                USE_SUDO=true
+            else
+                error "Cannot create directory: $INSTALL_DIR (permission denied and sudo not available)"
+            fi
+        elif command_exists sudo; then
+            USE_SUDO=true
+        else
+            error "Directory $INSTALL_DIR is not writable and sudo is not available"
+        fi
+    else
+        IFS='|' read -r INSTALL_DIR USE_SUDO SUDO_DECLINED < <(pick_install_dir)
+
+        # Show message if user declined sudo
+        if [ "$SUDO_DECLINED" = "declined" ]; then
+            info "Installing to user directory instead (no sudo required)"
+        fi
     fi
 
     if in_path "$INSTALL_DIR"; then
@@ -859,7 +948,7 @@ main() {
         else
             # Pass license via environment variable to avoid exposure in process list
             local output
-            if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register 2>&1); then
+            if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register "${CLI_ARGS[@]}" 2>&1); then
                 success "✓ License registered successfully"
                 license_registered=true
             else
@@ -872,7 +961,7 @@ main() {
     # Verify installation
     info "\nVerifying installation..."
     if [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
-        VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>&1 || echo "")
+        VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version "${CLI_ARGS[@]}" 2>&1 || echo "")
         success "✓ Installation successful!"
         success "Installed: $VERSION_OUTPUT"
 

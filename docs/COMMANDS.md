@@ -7,6 +7,7 @@
 - [enable](#command-enable)
 - [disable](#command-disable)
 - [reset](#command-reset)
+- [switch-php](#command-switch-php)
 - [extract](#command-extract)
 - [restore](#command-restore)
 - [dump-header](#command-dump-header)
@@ -31,9 +32,9 @@
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
-- [reinstall-cert](#hidden-command-reinstall-cert)
 - [compose-info](#hidden-command-compose-info)
 - [dump-all-help](#hidden-command-dump-all-help)
+- [reinstall-cert](#hidden-command-reinstall-cert)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -61,6 +62,7 @@ Site Commands:
   enable                Enable a WordPress site
   disable               Disable a WordPress site
   reset                 Reset a WordPress site
+  switch-php            Switch PHP version for a site
 
 Backup Commands:
   extract               Extract files, database, or metadata from a WP STAGING backup
@@ -95,6 +97,7 @@ Global Flags:
       --yes                  Automatically confirm all prompts
   -d, --debug                Show debug messages
   -q, --quiet                Suppress all output
+      --verbose              Show detailed per-file output during extraction
   -v, --version              Display application version
       --about                Display license and support notice
 
@@ -147,7 +150,7 @@ WordPress Flags:
       --admin-pass string       WordPress admin password (default "admin")
       --admin-email string      WordPress admin email (default "admin@dev.null")
       --secure-credentials      Use secure random credentials for database and WordPress admin
-      --multisite               Enable WordPress Multisite
+      --multisite               Enable WordPress Multisite (subdirectory mode)
 
 Other Flags:
       --from string             Backup file path or remote URL (http/https) to restore after site creation
@@ -258,6 +261,27 @@ WordPress Flags:
 
 Other Flags:
       --from string       Backup file path or remote URL (http/https) to restore after reset
+
+```
+
+<a name="command-switch-php"></a>
+# Command: switch-php
+
+```
+Switch the PHP version for an existing WordPress site.
+Updates the configuration, regenerates Docker files, and restarts the containers.
+
+Supported PHP versions: 7.4, 8.1, 8.2, 8.3, 8.4
+
+Usage:
+  wpstaging switch-php <hostname> <php-version> [flags]
+
+Examples:
+  wpstaging switch-php mysite.local 8.4
+  wpstaging switch-php mysite.local 8.1
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 ```
 
@@ -674,13 +698,14 @@ Usage:
 
 Examples:
   wpstaging register
+  wpstaging register -l=YOUR_LICENSE_KEY
   wpstaging register --license=YOUR_LICENSE_KEY
 
-This will prompt you to enter your license key (or use --license flag), validate it
+This will prompt you to enter your license key (or use -l/--license flag), validate it
 with WP STAGING servers, and register it for this machine.
 
 Flags:
-      --license string   License key to register (skips interactive prompt)
+  -l, --license string   License key to register (skips interactive prompt)
 
 ```
 
@@ -813,27 +838,6 @@ Examples:
 
 ```
 
-<a name="hidden-command-reinstall-cert"></a>
-## Hidden Command: reinstall-cert
-
-```
-Delete and regenerate the mkcert SSL certificate for a site.
-
-Usage:
-  wpstaging reinstall-cert <hostname> [flags]
-
-Examples:
-  wpstaging reinstall-cert mysite.local
-  wpstaging reinstall-cert mysite.local --reinstall-ca
-
-Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
-
-Other Flags:
-      --reinstall-ca      Also reinstall mkcert CA to system trust store (requires elevated privileges)
-
-```
-
 <a name="hidden-command-compose-info"></a>
 ## Hidden Command: compose-info
 
@@ -867,7 +871,28 @@ Flags:
 
 ```
 
+<a name="hidden-command-reinstall-cert"></a>
+## Hidden Command: reinstall-cert
+
+```
+Delete and regenerate the mkcert SSL certificate for a site.
+
+Usage:
+  wpstaging reinstall-cert <hostname> [flags]
+
+Examples:
+  wpstaging reinstall-cert mysite.local
+  wpstaging reinstall-cert mysite.local --reinstall-ca
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --reinstall-ca      Also reinstall mkcert CA to system trust store (requires elevated privileges)
+
+```
+
 
 ---
 
-*Generated on 2026-03-03 16:46:55 UTC*
+*Generated on 2026-03-04 16:48:23 UTC*

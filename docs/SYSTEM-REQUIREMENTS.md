@@ -33,7 +33,7 @@ Extract backup files without any external dependencies.
 **Supported Platforms:**
 - Linux (x86_64, ARM64, ARM, i386)
 - macOS (ARM64, x86_64)
-- Windows (x86_64, i386)
+- Windows 10+ / Server 2016+ (x86_64, i386)
 
 ### No External Dependencies
 
@@ -142,6 +142,11 @@ Create isolated WordPress environments using Docker containers.
 - Docker Compose V1 (standalone): `docker-compose` ✅ (only if version >= 2.19.0)
 - The CLI checks both commands and uses the one that meets minimum version requirement
 
+**OrbStack:**
+- OrbStack is **not supported**. Its networking does not support loopback IP aliases (127.3.2.x) used by the CLI.
+- The CLI auto-detects OrbStack Docker context and switches to Docker Desktop (`desktop-linux`) or Docker Engine (`default`).
+- The switch happens before Docker requirements are checked.
+
 ### System Requirements
 
 **Minimal Configuration:**
@@ -202,13 +207,13 @@ Some operations require elevated privileges:
 **macOS (Passwordless Sudo Recommended):**
 - Default IP: 127.3.2.1
 - **Automatic IP alias binding enabled by default** for loopback range **127.3.2.1 - 127.3.2.254** (requires sudo, unlike Linux/Windows where loopback IPs are always available)
+- A LaunchDaemon reads site configurations and creates aliases only for existing sites at boot
+- The `start` and `restart` commands auto-create missing aliases
 - Each site automatically gets next available IP from the range as needed
-- Sudo password prompts occur per terminal session (5-15 minute timeout) — can become repetitive
-- **Passwordless sudo highly recommended** for seamless multi-site operation (see FAQ Q76 for setup)
+- **Passwordless sudo recommended** for seamless multi-site operation (see FAQ Q87 for setup)
 - Use `--skip-macos-auto-ip` flag to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP)
-- LaunchDaemon can make manual IP bindings persistent (when using `--skip-macos-auto-ip`)
 
-**Windows:**
+**Windows (10+ / Server 2016+ required):**
 - Requires Docker Desktop in **Linux container mode** (not Windows containers)
 - Docker Desktop defaults to Linux containers, but if switched to Windows containers, you must switch back
 - **Automatic switch:** When detected, the CLI will prompt to switch automatically:
@@ -303,7 +308,7 @@ wpstaging extract --license=your-license-key backup.wpstg
 
 - Online validation against WP Staging servers
 - Cached for 4 hours to reduce API calls
-- Encrypted storage in `~/.wpstaging/`
+- Encrypted storage in the working directory (e.g., `~/.config/wpstaging/` on Linux)
 
 ---
 
@@ -345,6 +350,12 @@ wpstaging extract --license=your-license-key backup.wpstg
 - Modern Docker includes compose plugin: `docker compose`
 - Verify: `docker compose version`
 
+**"OrbStack is not supported at the moment"**
+- OrbStack networking does not support loopback IP aliases (127.3.2.x)
+- The CLI tries to switch to Docker Desktop or Docker Engine automatically
+- If auto-switch fails, switch manually: `docker context use desktop-linux` or `docker context use default`
+- Run `docker context ls` to see available contexts
+
 **"Port already in use"**
 - CLI automatically detects and uses fallback ports
 - Manually specify custom ports:
@@ -381,8 +392,8 @@ wpstaging extract --license=your-license-key backup.wpstg
 | Linux | i386 | ✅ | ✅ | ✅ |
 | macOS | ARM64 (Apple Silicon) | ✅ | ✅ | ✅ |
 | macOS | x86_64 (Intel) | ✅ | ✅ | ✅ |
-| Windows | x86_64 | ✅ | ✅ | ✅ |
-| Windows | i386 | ✅ | ✅ | ✅ |
+| Windows 10+ / Server 2016+ | x86_64 | ✅ | ✅ | ✅ |
+| Windows 10+ / Server 2016+ | i386 | ✅ | ✅ | ✅ |
 
 ---
 
@@ -427,4 +438,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-02-04 12:00:00 UTC
+**Last Updated:** 2026-03-03 15:10:00 UTC

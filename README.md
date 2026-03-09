@@ -21,7 +21,7 @@ Built for developers and agencies who value their time.
 - **Stream-Based Extraction** — Memory-efficient extraction of large `.wpstg` backup files using chunked processing.
 - **Database Normalization** — Automatically process WP Staging placeholders (`{WPSTG_TMP_PREFIX}`, `{WPSTG_FINAL_PREFIX}`, etc.) for standard SQL import.
 - **Backup Introspection** — Inspect backup headers, metadata, and file indexes without full extraction.
-- **Cross-Platform Support** — Native binaries for Linux, Windows, and macOS with platform-specific optimizations.
+- **Cross-Platform Support** — Native binaries for Linux, Windows (10+), and macOS with platform-specific optimizations.
 ---
 
 ## Benchmarks
@@ -77,6 +77,69 @@ curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd -v 1
 
 **Available versions**: See all releases at [GitHub Releases](https://github.com/wp-staging/wp-staging-cli-release/tags)
 
+### Install to a Custom Directory
+
+Use the `--bin-dir` (`-d`) flag to install the binary to a specific directory instead of the auto-detected location:
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- --bin-dir /opt/tools
+```
+
+**Windows (PowerShell):**
+```powershell
+& ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -d "C:\Tools"
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd --bin-dir C:\Tools && del install.cmd
+```
+
+The installer still sets up PATH, shell aliases, and completion scripts as usual.
+
+### Extract Files Only (No Installation)
+
+Use the `--extract` (`-e`) flag to download and extract all installable files to a directory without running the full installation. No PATH changes, shell aliases, or completion scripts are configured:
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- --extract /tmp/wpstaging-files
+```
+
+**Windows (PowerShell):**
+```powershell
+& ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -e "C:\Temp\wpstaging-files"
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd --extract C:\Temp\wpstaging-files && del install.cmd
+```
+
+**Note:** `--bin-dir` and `--extract` cannot be used together.
+
+### Pass Extra Arguments to Binary
+
+Use the `--cli-args` (`-a`) flag to pass extra arguments to every wpstaging binary call the installer makes (version check and license registration):
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- -a "--debug"
+```
+
+**Windows (PowerShell):**
+```powershell
+& ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -a "--debug"
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd -a "--debug" && del install.cmd
+```
+
+**Note:** Only simple space-separated flags are supported. Arguments with embedded spaces are not supported.
+
 ### Manual Installation
 
 If you prefer to download and install manually:
@@ -86,7 +149,7 @@ If you prefer to download and install manually:
 2. Extract the archive and locate the binary in the `build` folder for your platform:
    - **Linux**: `build/linux_amd64/wpstaging` (64-bit) or `build/linux_i386/wpstaging` (32-bit)
    - **macOS**: `build/macos_arm64/wpstaging` (Apple Silicon) or `build/macos_amd64/wpstaging` (Intel)
-   - **Windows**: `build/windows_amd64/wpstaging.exe` (64-bit) or `build/windows_i386/wpstaging.exe` (32-bit)
+   - **Windows (10+)**: `build/windows_amd64/wpstaging.exe` (64-bit) or `build/windows_i386/wpstaging.exe` (32-bit)
 3. Make it accessible from anywhere on your computer:
 
 **Linux / macOS:**
@@ -216,11 +279,12 @@ These commands help you manage multiple WordPress sites in your Docker environme
 | Command | Description |
 |----------|-------------|
 | `add` | Add a new WordPress site |
-| `list` | List all sites or show details for a specific site |
-| `del` | Delete a WordPress site |
+| `list` | List all sites or show details for specific sites |
+| `del` | Delete one or more sites, or all sites |
 | `enable` | Enable a WordPress site |
 | `disable` | Disable a WordPress site |
 | `reset` | Reset a WordPress site |
+| `switch-php` | Switch PHP version for a site |
 
 **Backup Commands:**
 
@@ -428,6 +492,7 @@ wpstaging list site1.local site2.local  # Show details for multiple sites
 wpstaging reset mysite.local  # Reset site to fresh WordPress
 wpstaging reset mysite.local --wp=6.5  # Reset with specific WordPress version
 wpstaging reset mysite.local --from=backup.wpstg  # Reset and restore from backup
+wpstaging switch-php mysite.local 8.4             # Switch PHP version
 wpstaging del oldsite.local
 wpstaging del site1.local site2.local  # Delete multiple sites
 wpstaging del  # Delete all sites (with confirmation)
@@ -444,7 +509,7 @@ https://mysite.local
 **Important Notes:**
 
 - **Linux/macOS:** Some operations may ask for your password (sudo) to update your hosts file. This is normal and only happens during initial setup.
-- **macOS Users (Passwordless Sudo Recommended):** Automatic IP alias binding is enabled by default for seamless multi-site setups using loopback IP range **127.3.2.1 - 127.3.2.254**. This requires sudo and you'll be prompted for your password in each new terminal session (5-15 minute timeout per session). **Solution:** Set up passwordless sudo for wpstaging — see [FAQ Q76](./docs/FAQ.md#q76-how-do-i-set-up-passwordless-sudo-for-wpstaging-cli) for step-by-step instructions. Alternatively, use `--skip-macos-auto-ip` to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP in the range).
+- **macOS Users:** On first site creation, a LaunchDaemon is installed that reads your site configurations and creates loopback IP aliases only for sites that exist. This requires one sudo prompt. After that, aliases survive reboots and no further sudo is needed for IP setup. The daemon is removed when you run `wpstaging remove`. For passwordless sudo setup, see [FAQ Q87](./docs/FAQ.md#q87). Alternatively, use `--skip-macos-auto-ip` to disable automatic IP binding.
 - **External Service Conflicts:** If other services (Apache, nginx, MySQL) or other Docker containers are using ports on the wpstaging IP range, the CLI detects this and either auto-switches to the next available IP or port (for new sites) or shows clear error messages with diagnostic commands.
 - **Skip hosts update:** If you prefer to manage your hosts file manually, use `--skip-update-hosts-file` when creating sites.
 
@@ -459,6 +524,7 @@ Run the `register` command once to securely save your license:
 wpstaging register
 
 # Non-interactive mode (useful for scripts/automation)
+wpstaging register -l=YOUR_LICENSE_KEY
 wpstaging register --license=YOUR_LICENSE_KEY
 ```
 
@@ -479,6 +545,7 @@ Your license key is encrypted and validated. After registration, you can run any
 |----------|---------|---------|
 | `WPSTGPRO_LICENSE` | License key | `export WPSTGPRO_LICENSE=abc123...` |
 | `WPSTGCLI_DEBUG` | Enable debug output | `export WPSTGCLI_DEBUG=1` |
+| `WPSTGCLI_VERBOSE` | Show detailed per-file output | `export WPSTGCLI_VERBOSE=1` |
 | `WPSTGCLI_QUIET` | Suppress informational output | `export WPSTGCLI_QUIET=1` |
 | `WPSTGCLI_ALLOW_ROOT` | Allow running as root user | `export WPSTGCLI_ALLOW_ROOT=1` |
 
@@ -488,7 +555,10 @@ Your license key is encrypted and validated. After registration, you can run any
 
 You can create a settings file to remember your preferences. This saves you from typing the same options repeatedly.
 
-**Default path:** `~/.wpstaging/wpstaging.conf`
+**Default path (OS-specific):**
+- Linux/Unix: `~/.config/wpstaging/wpstaging.conf`
+- macOS: `~/Library/Application Support/wpstaging/wpstaging.conf`
+- Windows: `%APPDATA%\wpstaging\wpstaging.conf`
 
 **Example settings:**
 ```ini
@@ -501,7 +571,7 @@ You can create a settings file to remember your preferences. This saves you from
 ## System Requirements
 
 **Minimum Requirements:**
-- **Extract/Restore:** Any modern system with 512 MB RAM and sufficient disk space
+- **Extract/Restore:** Any modern system with 512 MB RAM and sufficient disk space (Windows 10+ required)
 - **Dockerize:** 2 CPU cores, 4 GB RAM, Docker 20.10.0+, Docker Compose 2.19.0+
 
 **License:** WP Staging Pro (Agency or Developer plan required)
