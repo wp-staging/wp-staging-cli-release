@@ -1,3 +1,22 @@
+## v1.8.1 (2026-03-29)
+
+- **New:** `--json` output mode with `--page`/`--page-size` pagination (default: 100 items per page) for GUI wrappers and automation (#224).
+- **Enh:** JSON mode now sends extraction progress as structured data so GUI wrappers can show a progress bar (#224).
+- **Enh:** JSON mode now sends restore progress as structured data, including file section status and database query progress (#224).
+- **Enh:** JSON mode now sends remote backup information and download progress as structured data (#224).
+- **Enh:** JSON mode now sends license registration and deactivation results as structured data (#224).
+- **Enh:** JSON mode now sends sudo password prompts as structured JSON so GUI wrappers can show a password dialog (#224).
+- **Enh:** JSON mode now outputs structured data for dump-header, dump-metadata, and dump-index commands (#224).
+- **Enh:** JSON mode now outputs structured progress during binary update downloads (#224).
+- **Enh:** JSON mode now includes actionable hints in Docker-related error responses to help resolve problems (#224).
+- **Enh:** Faster database restoration and normalisation by pre-compiling regular expressions used in search-replace operations (#240).
+- **Fix:** Site URL not replaced when the backup metadata stores HTTPS but the database uses HTTP, or vice versa. The search-replace now matches both scheme variants (#240).
+- **Fix:** Search-replace now processes serialised data containing PHP object instances (e.g. ACF taxonomy fields) instead of skipping them. This prevents broken serialisation after restore (#240).
+- **Fix:** All CLI output is now properly structured when using `--json` mode. Status messages from update, clean, and Docker commands no longer break the JSON stream (#224).
+- **Fix:** Fix crash when running Docker commands with JSON pagination environment variables set (#224).
+- **Fix:** CHANGELOG formatting script now properly preserves blank lines between sections instead of removing them (#236).
+- **Dev:** Use Go constants for all JSON command types, sub-types, and progress scopes (#224).
+
 ## v1.8.0 (2026-03-09)
 
 - **New:** `switch-php` command to change the PHP version for an existing site without reinstalling WordPress (#216).
