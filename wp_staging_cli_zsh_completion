@@ -68,6 +68,9 @@ _wpstaging() {
         '(-d --debug)'{-d,--debug}'[Enable debug mode]'
         '(-q --quiet)'{-q,--quiet}'[Quiet mode]'
         '--verbose[Show detailed per-file output during extraction]'
+        '--json[Output in JSON format]'
+        '--page[Page number for paginated output (requires --json)]:page number:'
+        '--page-size[Items per page, 0 = all (requires --json)]:items per page:'
         '(-v --version)'{-v,--version}'[Show version]'
         '--about[Show about information]'
         '(-h --help)'{-h,--help}'[Show help]'
@@ -256,7 +259,19 @@ _wpstaging() {
                         '--env-path[Environment file path]:path:_files' \
                         $general_opts
                     ;;
-                list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|remove)
+                list|status)
+                    _arguments \
+                        '*:hostname:' \
+                        $general_opts \
+                        $dockerize_opts
+                    ;;
+                del)
+                    _arguments \
+                        '*:hostname:' \
+                        $general_opts \
+                        $dockerize_opts
+                    ;;
+                enable|disable|reset|start|up|stop|down|restart|shell|shell-db|remove)
                     _arguments \
                         '1:hostname:' \
                         $general_opts \

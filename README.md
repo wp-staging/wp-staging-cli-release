@@ -325,6 +325,13 @@ These commands help you manage your license, updates, and cache.
 | `clean` | Clean up cached data, license info, and temporary files |
 | `help` | Help about any command |
 
+**Hidden Commands** (shown with `--show-all`):
+
+| Command | Description |
+|----------|-------------|
+| `deactivate` | Deactivate and remove the stored license key |
+| `shell-db` | Open an interactive database shell for a site |
+
 ### Your Backup File
 `backupfile.wpstg` — The backup file you want to work with. You'll need this for `extract` and `restore` commands.
 
@@ -544,10 +551,15 @@ Your license key is encrypted and validated. After registration, you can run any
 | Variable | Purpose | Example |
 |----------|---------|---------|
 | `WPSTGPRO_LICENSE` | License key | `export WPSTGPRO_LICENSE=abc123...` |
+| `WPSTGCLI_JSON_OUTPUT` | Enable structured JSON output | `export WPSTGCLI_JSON_OUTPUT=1` |
+| `WPSTGCLI_JSON_PAGE` | Page number for paginated JSON output | `export WPSTGCLI_JSON_PAGE=2` |
+| `WPSTGCLI_JSON_PAGE_SIZE` | Items per page for paginated JSON output | `export WPSTGCLI_JSON_PAGE_SIZE=50` |
 | `WPSTGCLI_DEBUG` | Enable debug output | `export WPSTGCLI_DEBUG=1` |
 | `WPSTGCLI_VERBOSE` | Show detailed per-file output | `export WPSTGCLI_VERBOSE=1` |
 | `WPSTGCLI_QUIET` | Suppress informational output | `export WPSTGCLI_QUIET=1` |
 | `WPSTGCLI_ALLOW_ROOT` | Allow running as root user | `export WPSTGCLI_ALLOW_ROOT=1` |
+
+Boolean environment variables accept truthy values: `1`, `true`, `yes`, `on` (case-insensitive).
 
 ---
 

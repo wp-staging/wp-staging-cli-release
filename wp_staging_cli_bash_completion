@@ -67,6 +67,9 @@ _wp_staging_cli() {
         -d --debug
         -q --quiet
         --verbose
+        --json
+        --page
+        --page-size
         -v --version
         --about
         -h --help
@@ -256,7 +259,10 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts} --env-path" -- "${cur}") )
             fi
             ;;
-        add|list|del|enable|disable|reset|start|up|stop|down|restart|status|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|remove|compose-info)
+        list|status)
+            COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
+            ;;
+        add|del|enable|disable|reset|start|up|stop|down|restart|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|remove|compose-info)
             COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
             ;;
         reinstall-cert)

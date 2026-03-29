@@ -100,6 +100,9 @@ Global Flags:
       --verbose              Show detailed per-file output during extraction
   -v, --version              Display application version
       --about                Display license and support notice
+      --json                 Output in JSON format
+      --page int             Page number for paginated output (requires --json) (default "1")
+      --page-size int        Items per page, 0 = all (requires --json) (default "100")
 
 Use "wpstaging [command] --help" for more information and available flags for a command.
 
@@ -107,6 +110,23 @@ Note:
   WP STAGING CLI is an independent project and is not affiliated with or
   endorsed by Docker, Inc. "Docker" is a trademark of Docker, Inc.
 
+```
+
+# Environment Variables
+
+```
+Environment Variables:
+  WPSTGPRO_LICENSE             WP Staging Pro license key
+  WPSTGCLI_JSON_OUTPUT         Enable JSON output (equivalent to --json flag)
+  WPSTGCLI_JSON_PAGE           Page number for paginated output (equivalent to --page)
+  WPSTGCLI_JSON_PAGE_SIZE      Items per page (equivalent to --page-size)
+  WPSTGCLI_DEBUG               Enable debug output (equivalent to --debug flag)
+  WPSTGCLI_QUIET               Suppress all output (equivalent to --quiet flag)
+  WPSTGCLI_VERBOSE             Show detailed output (equivalent to --verbose flag)
+  WPSTGCLI_ALLOW_ROOT          Allow running as root (Linux/macOS)
+
+  Note: Command-line flags take precedence over environment variables.
+  Boolean environment variables accept: 1, true, yes, on (case-insensitive).
 ```
 
 <a name="command-add"></a>
@@ -895,4 +915,4 @@ Other Flags:
 
 ---
 
-*Generated on 2026-03-04 16:48:23 UTC*
+*Generated on 2026-03-13 15:32:47 UTC*

@@ -992,7 +992,7 @@ Flags like `--site-url`, `--db-prefix`, `--normalizedb`, and `--verify` are comm
 **Q45: What flags are available globally vs command-specific?**  
 **A45:**
 **Global flags** (work with all commands):
-- `--outputdir`, `--workingdir`, `--debug`, `--quiet`, `--yes`, `--allow-root`
+- `--outputdir`, `--workingdir`, `--debug`, `--quiet`, `--yes`, `--allow-root`, `--json`, `--page`, `--page-size`, `--verbose`
 
 **Extract-specific flags**:
 - `--normalizedb`, `--overwrite`, `--site-url`, `--db-prefix`, `--verify`
@@ -1767,6 +1767,11 @@ wpstaging dump-header backup.wpstg
 wpstaging dump-metadata backup.wpstg
 wpstaging dump-index backup.wpstg
 wpstaging dump-index --data backup.wpstg  # detailed file list
+
+# All dump commands support --json for structured output
+wpstaging dump-header --json backup.wpstg
+wpstaging dump-metadata --json backup.wpstg
+wpstaging dump-index --json backup.wpstg
 ```
 
 <a name="q82"></a>
@@ -2689,9 +2694,15 @@ The CLI supports several environment variables for configuration:
 | Variable | Purpose | Example |
 |----------|---------|---------|
 | `WPSTGPRO_LICENSE` | Provide license key | `export WPSTGPRO_LICENSE=abc123...` |
-| `WPSTGCLI_DEBUG` | Enable debug output (`1` = enabled) | `export WPSTGCLI_DEBUG=1` |
-| `WPSTGCLI_QUIET` | Suppress informational output (`1` = enabled) | `export WPSTGCLI_QUIET=1` |
+| `WPSTGCLI_JSON_OUTPUT` | Enable structured JSON output | `export WPSTGCLI_JSON_OUTPUT=1` |
+| `WPSTGCLI_JSON_PAGE` | Page number for paginated JSON output | `export WPSTGCLI_JSON_PAGE=2` |
+| `WPSTGCLI_JSON_PAGE_SIZE` | Items per page for paginated JSON output | `export WPSTGCLI_JSON_PAGE_SIZE=50` |
+| `WPSTGCLI_DEBUG` | Enable debug output | `export WPSTGCLI_DEBUG=1` |
+| `WPSTGCLI_VERBOSE` | Show detailed per-file output | `export WPSTGCLI_VERBOSE=1` |
+| `WPSTGCLI_QUIET` | Suppress informational output | `export WPSTGCLI_QUIET=1` |
 | `WPSTGCLI_ALLOW_ROOT` | Allow running as root user | `export WPSTGCLI_ALLOW_ROOT=1` |
+
+Boolean environment variables accept truthy values: `1`, `true`, `yes`, `on` (case-insensitive).
 
 ---
 
@@ -2930,4 +2941,88 @@ This clears the site directory and recreates it cleanly.
 
 ---
 
-**Last Updated:** 2026-03-05 12:00:00 UTC
+<a name="q114"></a>
+**Q114: How do I get JSON output from the CLI?**  
+**A114:**
+Use the `--json` global flag or set the `WPSTGCLI_JSON_OUTPUT=1` environment variable. All output switches to structured JSON on stdout. Each JSON response is pretty-printed with 2-space indentation and may span multiple lines. Consumers should parse complete JSON objects rather than assume one object per line.
+
+Examples:
+```bash
+# List all sites as JSON
+wpstaging list --json
+
+# Paginated JSON output (default: 100 items per page)
+wpstaging list --json --page=1 --page-size=50
+
+# Container status as JSON
+wpstaging status --json
+
+# Backup file index as JSON (raw lines)
+wpstaging dump-index backup.wpstg --json
+
+# Backup file index as structured entries
+wpstaging dump-index --data backup.wpstg --json
+
+# Using environment variable
+WPSTGCLI_JSON_OUTPUT=1 wpstaging list
+```
+
+Each JSON object has a `command` field: `message` (progress), `prompt` (waiting for input), `list`, `status`, `dump_header` (backup header), `dump_metadata` (backup metadata), `dump_index` (backup file index), `wp_installed` (installation summary), `site_delete_confirm` (deletion list), or `port_conflict` (port conflict errors).
+Commands that return lists (`list`, `status`, `dump-index`) support `--page` and `--page-size` flags. Default is 100 items per page. Set `--page-size=0` to return all items.
+Errors are written to stderr with `"success": false`. See [GUI Integration Guide](GUI-INTEGRATION.md) for the full JSON protocol documentation.
+
+When a confirmation prompt appears, the CLI outputs a prompt object and waits for `y` or `n` on stdin:
+```json
+{
+  "success": true,
+  "command": "prompt",
+  "data": {
+    "message": "Continue?",
+    "type": "confirm",
+    "accept": ["y", "n"]
+  }
+}
+```
+
+When the CLI needs sudo, it outputs a sudo prompt and waits for the password on stdin (followed by a newline):
+```json
+{
+  "success": true,
+  "command": "prompt",
+  "data": {
+    "message": "Sudo password is required to update /etc/hosts for local domain resolution.",
+    "type": "sudo"
+  }
+}
+```
+The GUI wrapper shows a password dialog with the `message` text and writes the password to stdin. If sudo credentials are already cached, the prompt is skipped.
+
+---
+
+<a name="q115"></a>
+**Q115: How do I change the PHP version for an existing site?**  
+**A115:**
+Use the `switch-php` command to change the PHP version for an existing dockerized site:
+
+```bash
+wpstaging switch-php mysite.local 8.4
+wpstaging switch-php mysite.local 8.1
+```
+
+**Supported PHP versions:** 7.4, 8.1, 8.2, 8.3, 8.4 (default: 8.1)
+
+**What happens:**
+1. Validates the PHP version is supported
+2. Updates the `PHP_VERSION` setting in the site's `.env` file
+3. Pulls the Docker image if not available locally
+4. Regenerates Docker Compose and PHP configuration files
+5. Restarts containers automatically if they are running
+
+**Notes:**
+- If containers are not running, configuration is updated but containers are not started
+- All other site settings (database, ports, WordPress) remain unchanged
+- The command requires exactly two arguments: hostname and PHP version
+
+---
+
+**Last Updated:** 2026-03-13 16:00:00 UTC
