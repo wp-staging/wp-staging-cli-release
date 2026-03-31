@@ -1,3 +1,10 @@
+## v1.8.2 (2026-03-31)
+
+- **Enh:** Search-replace now matches protocol-relative, JSON-escaped, URL-encoded, and bare hostname URL variants, matching the PHP plugin's coverage (#243).
+- **Fix:** Search-replace now replaces bare hostnames stored without a scheme prefix, such as Cloudflare image IDs (#243).
+- **Fix:** ACF taxonomy settings and other serialised data no longer corrupted after restore (#243).
+- **Fix:** Backups with latin1 database tables now restore correctly by converting to utf8mb4 (#243).
+
 ## v1.8.1 (2026-03-29)
 
 - **New:** `--json` output mode with `--page`/`--page-size` pagination (default: 100 items per page) for GUI wrappers and automation (#224).
