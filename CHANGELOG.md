@@ -1,3 +1,23 @@
+## v1.9.0 (2026-04-08)
+
+- **New:** Add `--version` flag to the `update` command to update or downgrade to a specific version, e.g., `wpstaging update --version 1.5.0` (#245).
+- **New:** `switch-wp` command to change WordPress version for existing sites without reinstalling (#222).
+- **New:** Subdomain multisite support with `--subdomains` flag. Wildcard SSL, nginx, and `/etc/hosts` are configured automatically (#212).
+- **New:** `update-subdomains` command to sync subsite hostnames from WordPress into nginx, SSL, and hosts file (#212).
+- **New:** Auto-detect subdomain multisite from backup during restore and configure nginx, SSL, and hosts automatically (#212).
+- **Enh:** `list` command now shows WordPress version. Actual version stored in `.env` instead of symbolic values like "latest" (#222).
+- **Enh:** `list` command now shows multisite type (subdomain/subdirectory) and subsite hostnames (#212).
+- **Fix:** `update --full` did not replace the current binary when the install directory was not yet in the shell PATH (#252).
+- **Fix:** `update --full` removed the installed binary from the install directory, leaving symlinks dangling (#253).
+- **Fix:** macOS: Docker Desktop misreported as "not installed" when PATH is broken by a removed third-party Docker provider (#238).
+- **Fix:** JSON mode now emits spinner-type progress for `switch-wp`, `switch-php`, and Docker shell scripts (#222).
+- **Fix:** Custom domain subsites now show the correct URL in the WordPress "My Sites" menu and login works correctly across all subsite domains (#212).
+- **Fix:** Installer scripts reject valid versions without the `v` prefix, e.g., `install.sh -v 1.7.0` fails while `install.sh -v v1.7.0` works (#250).
+- **Dev:** Fix `findInstalledBinary` unit tests failing on macOS due to `/var` symlink resolution (#259).
+- **Dev:** Add `-trimpath` to build flags for reproducible builds and to avoid leaking local file paths in binaries (#212).
+- **Dev:** Add docker integration tests for subdomain multisite (#212).
+- **Dev:** Deploy workflow now blocks stable release tags from non-master branches (#246).
+
 ## v1.8.2 (2026-03-31)
 
 - **Enh:** Search-replace now matches protocol-relative, JSON-escaped, URL-encoded, and bare hostname URL variants, matching the PHP plugin's coverage (#243).

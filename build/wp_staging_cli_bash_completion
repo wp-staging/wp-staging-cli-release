@@ -43,8 +43,10 @@ _wp_staging_cli() {
         status
         stop
         switch-php
+        switch-wp
         remove
         update
+        update-subdomains
         update-hosts-file
     "
 
@@ -171,6 +173,7 @@ _wp_staging_cli() {
         --admin-email
         --secure-credentials
         --multisite
+        --subdomains
         --from
     "
 
@@ -259,10 +262,17 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts} --env-path" -- "${cur}") )
             fi
             ;;
+        switch-wp)
+            if [[ ${COMP_CWORD} -eq 3 ]]; then
+                COMPREPLY=( $(compgen -W "latest nightly" -- "${cur}") )
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} --env-path" -- "${cur}") )
+            fi
+            ;;
         list|status)
             COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
             ;;
-        add|del|enable|disable|reset|start|up|stop|down|restart|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|remove|compose-info)
+        add|del|enable|disable|reset|start|up|stop|down|restart|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-subdomains|usub|update-hosts-file|uhf|remove|compose-info)
             COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
             ;;
         reinstall-cert)
@@ -272,7 +282,7 @@ _wp_staging_cli() {
             COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
             ;;
         update)
-            COMPREPLY=( $(compgen -W "--check --full ${general_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "--check --full --version ${general_opts}" -- "${cur}") )
             ;;
         deactivate|unregister|clean)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )

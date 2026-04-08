@@ -514,7 +514,17 @@ wpstaging switch-php mysite.local 8.4
 ```
 This updates the configuration, regenerates Docker files, and restarts the containers automatically. Supported PHP versions: 7.4, 8.1, 8.2, 8.3, 8.4.
 
-**3. Edit the `.env` file manually:**
+**3. Switch WordPress version (using `switch-wp` command):**
+```bash
+wpstaging switch-wp mysite.local 6.5
+wpstaging switch-wp mysite.local 6.7-beta1
+wpstaging switch-wp mysite.local latest
+wpstaging switch-wp mysite.local nightly
+```
+Supported version formats: `X.Y`, `X.Y.Z`, `X.Y-beta1`, `X.Y-RC1`, `latest`, `nightly`.
+This replaces only the WordPress core files while preserving the database, themes, plugins, and uploads. Containers must be running before switching.
+
+**4. Edit the `.env` file manually:**
 ```bash
 # Edit ~/wpstaging/sites/<hostname>/.env
 PHP_VERSION=8.3
@@ -532,7 +542,7 @@ wpstaging restart mysite.local
 - `--http-port=<port>` (default: 80)
 - `--https-port=<port>` (default: 443)
 
-**Note:** Port settings can only be set during initial creation or by editing `.env` manually. PHP version can be changed at any time using the `switch-php` command.
+**Note:** Port settings can only be set during initial creation or by editing `.env` manually. PHP version can be changed at any time using the `switch-php` command. WordPress version can be changed using the `switch-wp` command.
 
 <a name="q27"></a>
 **Q28: How do I configure MariaDB?**  
@@ -588,18 +598,25 @@ The `add` command supports various WordPress configuration flags:
 - `--admin-email` - Admin email (default: `admin@<sitename>`)
 
 **WordPress options:**
-- `--wp` - WordPress version to install (default: `latest`)
-- `--multisite` - Install as multisite (subdirectory mode only, subdomain mode is not yet supported)
+- `--wp` - WordPress version to install (default: `latest`). Accepts `X.Y`, `X.Y.Z`, `X.Y-beta1`, `X.Y-RC1`, `latest`, or `nightly`. The actual installed version is stored in `.env` (e.g. `6.7.2`). Use `switch-wp` to change it later without reinstalling.
+- `--multisite` - Install as WordPress Multisite (subdirectory mode by default)
+- `--subdomains` - Enable subdomain multisite mode (implies `--multisite`). Optional: pass comma-separated hostnames to pre-register, e.g. `--subdomains=blog.mysite.local,shop.mysite.local`
 
-**Note:** When using `--from` with a multisite backup, `--multisite` is auto-detected from the backup. You don't need to pass it manually.
+**Note:** When using `--from` with a multisite backup, `--multisite` is auto-detected from the backup. Subdomain mode is also auto-detected from the restored database. You don't need to pass these flags manually.
 
 Example:
 ```bash
-wpstaging add mysite.local \
-  --wp=6.4 \
-  --admin-user=johndoe \
-  --admin-email=john@example.com \
-  --multisite
+# Subdirectory multisite
+wpstaging add mysite.local --multisite
+
+# Subdomain multisite
+wpstaging add mysite.local --subdomains
+
+# Subdomain multisite with pre-registered hostnames
+wpstaging add mysite.local --subdomains=blog.mysite.local,shop.mysite.local
+
+# Auto-detect from backup (no flags needed)
+wpstaging add mysite.local --from=backup.wpstg
 ```
 
 <a name="q30"></a>
@@ -1687,6 +1704,85 @@ It replaces WP Staging placeholders in the database SQL file with actual values:
 **A74a:**
 A full multisite network backup (`multi`) cannot be restored to a single-site WordPress. The restore command will stop with an error. Network subsite and main-site backups can be restored to a single-site.
 
+<a name="q74b"></a>
+**Q74b: How do I set up subdomain multisite?**  
+**A74b:**
+Use the `--subdomains` flag when creating a site. This configures WordPress for subdomain mode, sets up wildcard SSL certificates, and adds wildcard nginx routing.
+
+```bash
+# Basic subdomain multisite
+wpstaging add mysite.local --subdomains
+
+# With pre-registered subsite hostnames (both forms are equivalent)
+wpstaging add mysite.local --subdomains=blog.mysite.local
+wpstaging add mysite.local --subdomains blog.mysite.local
+```
+
+The `--subdomains` flag automatically enables `--multisite`. You don't need to pass both.
+
+When hostnames are provided, the CLI auto-creates WordPress subsites:
+- **Subdomains** (e.g., `blog.mysite.local`) are created via `wp site create --slug=blog`
+- **Custom domains** (e.g., `custom.local`) are created with native domain mapping on WordPress 4.5+. On older WordPress versions, custom domains are skipped.
+
+Custom domains automatically install `sunrise.php` so that login and cookies work correctly on the custom domain.
+
+You can also add more subsites later in the WordPress admin under Network Admin > Sites. Then run `update-subdomains` to sync the new hostnames:
+
+```bash
+wpstaging update-subdomains mysite.local
+```
+
+<a name="q74c"></a>
+**Q74c: What does `update-subdomains` do?**  
+**A74c:**
+The `update-subdomains` command (alias: `usub`) queries WordPress for all subsites and updates the local environment:
+
+1. Runs `wp site list` inside the container to discover all subsite domains
+2. Regenerates the nginx config with the discovered hostnames in `server_name`
+3. Regenerates the SSL certificate to cover all discovered hostnames
+4. Updates the docker-compose file with DNS aliases for cross-site communication
+5. Restarts containers to apply the changes
+6. Updates `/etc/hosts` with entries for each subsite
+
+```bash
+wpstaging update-subdomains mysite.local
+```
+
+Run this command after creating, removing, or modifying subsites in WordPress admin.
+
+<a name="q74d"></a>
+**Q74d: Is subdomain multisite auto-detected from backups?**  
+**A74d:**
+Yes. When restoring a multisite backup with `--from`, the CLI auto-detects both multisite mode and subdomain mode from the restored database. It then discovers all subsites and configures nginx, SSL, and `/etc/hosts` automatically. No flags needed:
+
+```bash
+wpstaging add mysite.local --from=backup.wpstg
+```
+
+<a name="q74e"></a>
+**Q74e: Can I use custom domain names for subsites?**  
+**A74e:**
+Yes, but only with local development TLDs (`.local`, `.test`, `.dev`, `.home`, etc.). Custom domains can be set up in two ways:
+
+**Option 1: During site creation** (WordPress 4.5+ required):
+```bash
+wpstaging add mysite.local --subdomains=custom.local
+```
+The CLI auto-creates the subsite and maps the custom domain using native WordPress domain mapping.
+
+**Option 2: After site creation:**
+Map a custom domain in WordPress admin (Network Admin > Sites > Edit), then run `update-subdomains` to update nginx, SSL, and hosts:
+```bash
+wpstaging update-subdomains mysite.local
+```
+
+Public TLDs (`.com`, `.org`, etc.) are not supported. The tool is designed for local development only.
+
+<a name="q74f"></a>
+**Q74f: Does `reset` preserve subdomain multisite settings?**  
+**A74f:**
+Yes. The `reset` command reads `IS_SUBDOMAIN_MULTISITE` and `SUBDOMAIN_HOSTNAMES` from the site's `.env` file and reinstalls WordPress with the same subdomain multisite configuration.
+
 <a name="q74"></a>
 **Q75: Can I restore only the database without files?**  
 **A75:**
@@ -1803,6 +1899,19 @@ wpstaging update --check
 
 # Update using install script (also updates current binary location)
 wpstaging update --full
+
+# Update or downgrade to a specific version
+wpstaging update --version 1.5.0
+wpstaging update --version v1.5.0
+
+# Target a pre-release version
+wpstaging update --version 1.6.0-beta.1
+
+# Check whether a specific version exists
+wpstaging update --version 1.5.0 --check
+
+# Downgrade using install script
+wpstaging update --version 1.5.0 --full
 ```
 
 The CLI also checks for updates automatically once per day and shows a notice if a new version is available.
@@ -1820,9 +1929,19 @@ The CLI also checks for updates automatically once per day and shows a notice if
 - If the binary is in a system directory (e.g., `/usr/local/bin/`), sudo is used automatically
 - On Windows, a helper script replaces the binary after the process exits (Windows locks running executables)
 
+**How `update --version` works:**
+- Accepts both `1.5.0` and `v1.5.0` formats, including pre-release versions like `1.5.0-beta.1`
+- Skips fetching the latest stable tag and targets the specified version directly
+- Allows both upgrading and downgrading
+- Shows a warning when downgrading to a version before v1.7.0 (where the `update` command was introduced), with instructions to upgrade again using the install script
+- Validates the version by fetching its manifest from GitHub
+- With `--check`, only checks whether the version exists without installing
+- Works with both `--full` (installer script) and default (binary replacement) modes
+
 **How `update --full` works:**
 - Downloads and runs the installer script from wp-staging.com (sets up aliases, shell completions, PATH)
 - After the installer finishes, if the current binary is at a different location than the installed one (e.g., running from `/tmp/wpstaging`), copies the installed binary to replace it
+- When combined with `--version`, passes `-v <version>` (with `v` prefix) to the installer script. The installer scripts also normalise the prefix independently, so direct usage like `install.sh -v 1.7.0` works.
 - Preserves original file permissions and uses sudo if needed
 - On Windows, a detached wrapper script handles the copy after the installer completes
 
@@ -2468,7 +2587,13 @@ wpstaging reset mysite.local --wp=6.5
 wpstaging reset mysite.local --wp=6.5 --from=backup.wpstg
 ```
 
-This reinstalls WordPress and restores from the backup, using the existing site's database credentials from `.env`. The `--wp` flag updates the `WP_VERSION` in the `.env` file for future resets.
+This reinstalls WordPress and restores from the backup, using the existing site's database credentials from `.env`. The `--wp` flag updates the `WP_VERSION` in the `.env` file with the actual installed version.
+
+**Tip:** To change the WordPress version without reinstalling, use `switch-wp` instead:
+```bash
+wpstaging switch-wp mysite.local 6.5
+```
+This replaces only the WordPress core files while preserving your database, themes, plugins, and uploads.
 
 **Alternative: Manual restore to existing site**
 
@@ -2967,7 +3092,7 @@ wpstaging dump-index --data backup.wpstg --json
 WPSTGCLI_JSON_OUTPUT=1 wpstaging list
 ```
 
-Each JSON object has a `command` field: `message` (progress), `prompt` (waiting for input), `list`, `status`, `dump_header` (backup header), `dump_metadata` (backup metadata), `dump_index` (backup file index), `wp_installed` (installation summary), `site_delete_confirm` (deletion list), or `port_conflict` (port conflict errors).
+Each JSON object has a `command` field: `message` (progress), `prompt` (waiting for input), `list`, `status`, `dump_header` (backup header), `dump_metadata` (backup metadata), `dump_index` (backup file index), `wp_installed` (installation summary), `site_delete_confirm` (deletion list), `port_conflict` (port conflict errors), `restore_confirm` (restore confirmation), `remote_backup_info` (remote backup details), or `license` (license operations).
 Commands that return lists (`list`, `status`, `dump-index`) support `--page` and `--page-size` flags. Default is 100 items per page. Set `--page-size=0` to return all items.
 Errors are written to stderr with `"success": false`. See [GUI Integration Guide](GUI-INTEGRATION.md) for the full JSON protocol documentation.
 
@@ -3025,4 +3150,33 @@ wpstaging switch-php mysite.local 8.1
 
 ---
 
-**Last Updated:** 2026-03-13 16:00:00 UTC
+<a name="q116"></a>
+**Q116: How do I change the WordPress version for an existing site?**  
+**A116:**
+Use the `switch-wp` command to change the WordPress version for an existing dockerized site:
+
+```bash
+wpstaging switch-wp mysite.local 6.5
+wpstaging switch-wp mysite.local latest
+wpstaging switch-wp mysite.local nightly
+wpstaging switch-wp mysite.local 6.7-beta1
+```
+
+**Accepted version formats:** `X.Y`, `X.Y.Z`, `X.Y-beta1`, `X.Y-RC1`, `latest`, `nightly`
+
+**What happens:**
+1. Validates the WordPress version format
+2. Regenerates PHP files to ensure the switch script is available
+3. Executes the version switch inside the running container
+4. Downloads WordPress core files for the target version
+5. Updates the database schema if needed
+6. Stores the actual resolved version in the site's `.env` file
+
+**Notes:**
+- Containers must be running (the switch runs inside the container via `docker exec`)
+- Database, themes, plugins, and uploads are preserved
+- Symbolic versions like `latest` are resolved to concrete versions (e.g. `6.7.2`) in `.env`
+
+---
+
+**Last Updated:** 2026-04-07 13:19:58 UTC

@@ -748,7 +748,10 @@ main() {
     if [ -n "$REQUESTED_VERSION" ]; then
         # User specified a version
         info "Requested version: $REQUESTED_VERSION"
-        VERSION_REF="$REQUESTED_VERSION"
+        case "$REQUESTED_VERSION" in
+            v*) VERSION_REF="$REQUESTED_VERSION" ;;
+            *)  VERSION_REF="v${REQUESTED_VERSION}" ;;
+        esac
 
         # Validate version exists
         validate_version "$VERSION_REF"

@@ -44,8 +44,10 @@ _wpstaging() {
         'status:Show site status'
         'stop:Stop site containers'
         'switch-php:Switch PHP version for a site'
+        'switch-wp:Switch WordPress version for a site'
         'remove:Stop containers and remove all Docker data'
         'update:Update WP Staging CLI to latest version'
+        'update-subdomains:Sync subdomain multisite hostnames from WordPress'
         'update-hosts-file:Update /etc/hosts'
     )
 
@@ -171,7 +173,8 @@ _wpstaging() {
         '--admin-pass[WordPress admin password]:password:'
         '--admin-email[WordPress admin email]:email:'
         '--secure-credentials[Generate secure random credentials]'
-        '--multisite[Enable WordPress Multisite (subdirectory mode)]'
+        '--multisite[Enable WordPress Multisite]'
+        '--subdomains[Enable subdomain multisite. Optional: comma-separated hostnames]:hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
     )
 
@@ -259,6 +262,13 @@ _wpstaging() {
                         '--env-path[Environment file path]:path:_files' \
                         $general_opts
                     ;;
+                switch-wp)
+                    _arguments \
+                        '1:hostname:' \
+                        '2:WordPress version:(latest nightly)' \
+                        '--env-path[Environment file path]:path:_files' \
+                        $general_opts
+                    ;;
                 list|status)
                     _arguments \
                         '*:hostname:' \
@@ -277,7 +287,7 @@ _wpstaging() {
                         $general_opts \
                         $dockerize_opts
                     ;;
-                generate-compose-file|gcf|generate-docker-file|gdf|update-hosts-file|uhf|compose-info)
+                generate-compose-file|gcf|generate-docker-file|gdf|update-subdomains|usub|update-hosts-file|uhf|compose-info)
                     _arguments \
                         $general_opts \
                         $dockerize_opts
@@ -298,6 +308,7 @@ _wpstaging() {
                     _arguments \
                         '--check[Only check for updates]' \
                         '--full[Update using install script]' \
+                        '--version[Target a specific version]:version:' \
                         $general_opts
                     ;;
                 deactivate|unregister)
