@@ -8,6 +8,7 @@
 - [disable](#command-disable)
 - [reset](#command-reset)
 - [switch-php](#command-switch-php)
+- [switch-wp](#command-switch-wp)
 - [extract](#command-extract)
 - [restore](#command-restore)
 - [dump-header](#command-dump-header)
@@ -19,6 +20,7 @@
 - [status](#command-status)
 - [shell](#command-shell)
 - [remove](#command-remove)
+- [update-subdomains](#command-update-subdomains)
 - [update-hosts-file](#command-update-hosts-file)
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
@@ -32,9 +34,9 @@
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
+- [reinstall-cert](#hidden-command-reinstall-cert)
 - [compose-info](#hidden-command-compose-info)
 - [dump-all-help](#hidden-command-dump-all-help)
-- [reinstall-cert](#hidden-command-reinstall-cert)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -63,6 +65,7 @@ Site Commands:
   disable               Disable a WordPress site
   reset                 Reset a WordPress site
   switch-php            Switch PHP version for a site
+  switch-wp             Switch WordPress version for a site
 
 Backup Commands:
   extract               Extract files, database, or metadata from a WP STAGING backup
@@ -78,6 +81,7 @@ Docker Commands:
   status                Display container status for sites
   shell                 Open an interactive shell in the PHP container
   remove                Stop containers and remove all Docker data
+  update-subdomains     Sync subdomain multisite hostnames from WordPress
   update-hosts-file     Update the local hosts file with site entries
   generate-compose-file Generate a docker-compose.yml file
   generate-docker-file  Generate Docker configuration files
@@ -170,7 +174,8 @@ WordPress Flags:
       --admin-pass string       WordPress admin password (default "admin")
       --admin-email string      WordPress admin email (default "admin@dev.null")
       --secure-credentials      Use secure random credentials for database and WordPress admin
-      --multisite               Enable WordPress Multisite (subdirectory mode)
+      --multisite               Enable WordPress Multisite
+      --subdomains string       Enable subdomain multisite. Optional: comma-separated hostnames
 
 Other Flags:
       --from string             Backup file path or remote URL (http/https) to restore after site creation
@@ -299,6 +304,30 @@ Usage:
 Examples:
   wpstaging switch-php mysite.local 8.4
   wpstaging switch-php mysite.local 8.1
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
+<a name="command-switch-wp"></a>
+# Command: switch-wp
+
+```
+Switch the WordPress version for an existing site.
+Replaces only the WordPress core files while preserving the database,
+themes, plugins, and uploads. Requires running containers.
+
+Supported versions: specific version (e.g. 6.5, 6.7-beta1, 6.7-RC1), latest, nightly
+
+Usage:
+  wpstaging switch-wp <hostname> <wp-version> [flags]
+
+Examples:
+  wpstaging switch-wp mysite.local 6.5
+  wpstaging switch-wp mysite.local 6.7-beta1
+  wpstaging switch-wp mysite.local latest
+  wpstaging switch-wp mysite.local nightly
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -642,6 +671,27 @@ Env Flags:
 
 ```
 
+<a name="command-update-subdomains"></a>
+# Command: update-subdomains
+
+```
+Query WordPress for all subsites and update Nginx, SSL certificates, and /etc/hosts
+with discovered hostnames. Run this after creating or mapping subsites in wp-admin.
+
+Usage:
+  wpstaging update-subdomains <hostname> [flags]
+
+Aliases:
+  update-subdomains, usub
+
+Examples:
+  wpstaging update-subdomains mysite.local
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
 <a name="command-update-hosts-file"></a>
 # Command: update-hosts-file
 
@@ -738,6 +788,7 @@ Check for and install updates to WP Staging CLI.
 By default, downloads and replaces the current binary with the latest version.
 Use --check to only check for updates without installing.
 Use --full to update using the install script from wp-staging.com.
+Use --version to target a specific version (upgrade or downgrade).
 
 Usage:
   wpstaging update [flags]
@@ -746,10 +797,15 @@ Examples:
   wpstaging update
   wpstaging update --check
   wpstaging update --full
+  wpstaging update --version 1.5.0
+  wpstaging update --version v1.5.0
+  wpstaging update --version 1.5.0 --check
+  wpstaging update --version 1.5.0 --full
 
 Flags:
-      --check   Only check for updates, don't install
-      --full    Update using install script from wp-staging.com
+      --check            Only check for updates, don't install
+      --full             Update using install script from wp-staging.com
+      --version string   Target a specific version (e.g., 1.5.0 or v1.5.0)
 
 ```
 
@@ -858,6 +914,27 @@ Examples:
 
 ```
 
+<a name="hidden-command-reinstall-cert"></a>
+## Hidden Command: reinstall-cert
+
+```
+Delete and regenerate the mkcert SSL certificate for a site.
+
+Usage:
+  wpstaging reinstall-cert <hostname> [flags]
+
+Examples:
+  wpstaging reinstall-cert mysite.local
+  wpstaging reinstall-cert mysite.local --reinstall-ca
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --reinstall-ca      Also reinstall mkcert CA to system trust store (requires elevated privileges)
+
+```
+
 <a name="hidden-command-compose-info"></a>
 ## Hidden Command: compose-info
 
@@ -891,28 +968,7 @@ Flags:
 
 ```
 
-<a name="hidden-command-reinstall-cert"></a>
-## Hidden Command: reinstall-cert
-
-```
-Delete and regenerate the mkcert SSL certificate for a site.
-
-Usage:
-  wpstaging reinstall-cert <hostname> [flags]
-
-Examples:
-  wpstaging reinstall-cert mysite.local
-  wpstaging reinstall-cert mysite.local --reinstall-ca
-
-Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
-
-Other Flags:
-      --reinstall-ca      Also reinstall mkcert CA to system trust store (requires elevated privileges)
-
-```
-
 
 ---
 
-*Generated on 2026-03-13 15:32:47 UTC*
+*Generated on 2026-04-06 12:33:33 UTC*

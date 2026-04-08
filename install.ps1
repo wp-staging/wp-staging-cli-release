@@ -363,7 +363,11 @@ function Main {
     if ($RequestedVersion) {
         # User specified a version
         Write-Info "Requested version: $RequestedVersion"
-        $versionRef = $RequestedVersion
+        if ($RequestedVersion -notmatch '^v') {
+            $versionRef = "v$RequestedVersion"
+        } else {
+            $versionRef = $RequestedVersion
+        }
 
         # Validate version exists
         Test-VersionExists $versionRef | Out-Null

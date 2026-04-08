@@ -165,6 +165,7 @@ if defined REQUESTED_VERSION (
     REM User specified a version
     echo %BLUE%Requested version: %REQUESTED_VERSION%%NC%
     set VERSION_REF=%REQUESTED_VERSION%
+    if not "!VERSION_REF:~0,1!"=="v" set VERSION_REF=v!VERSION_REF!
 
     REM Validate version exists
     echo %BLUE%Validating version !VERSION_REF!...%NC%

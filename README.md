@@ -285,6 +285,7 @@ These commands help you manage multiple WordPress sites in your Docker environme
 | `disable` | Disable a WordPress site |
 | `reset` | Reset a WordPress site |
 | `switch-php` | Switch PHP version for a site |
+| `switch-wp` | Switch WordPress version for a site |
 
 **Backup Commands:**
 
@@ -469,15 +470,31 @@ wpstaging add https://mysite.local --from=backup.wpstg
 wpstaging add https://mysite.local --from=https://example.com/backup.wpstg
 ```
 
-**Add a multisite WordPress site (subdirectory mode):**
+**Add a multisite WordPress site:**
 
 ```bash
-wpstaging add https://mysite.local --multisite
+# Subdirectory mode (default)
+wpstaging add mysite.local --multisite
+
+# Subdomain mode
+wpstaging add mysite.local --subdomains
+
+# Subdomain mode with auto-created subsites
+wpstaging add mysite.local --subdomains=blog.mysite.local,shop.mysite.local
+
+# Subdomain mode with custom domain (WordPress 4.5+)
+wpstaging add mysite.local --subdomains=blog.mysite.local,custom.local
 ```
 
-When using `--from` with a multisite backup, multisite is auto-detected from the backup file.
+When using `--from` with a multisite backup, both multisite and subdomain mode are auto-detected from the backup file. No flags needed.
 
-> **Note:** Multisite uses subdirectory mode (e.g. `https://mysite.local/subsite/`). Subdomain mode is not yet supported.
+**Sync subdomain hostnames after creating subsites in wp-admin:**
+
+```bash
+wpstaging update-subdomains mysite.local
+```
+
+This updates nginx, SSL certificates, and `/etc/hosts` with all subsite hostnames from WordPress.
 
 **Start containers:**
 
@@ -500,6 +517,7 @@ wpstaging reset mysite.local  # Reset site to fresh WordPress
 wpstaging reset mysite.local --wp=6.5  # Reset with specific WordPress version
 wpstaging reset mysite.local --from=backup.wpstg  # Reset and restore from backup
 wpstaging switch-php mysite.local 8.4             # Switch PHP version
+wpstaging switch-wp mysite.local 6.5              # Switch WordPress version
 wpstaging del oldsite.local
 wpstaging del site1.local site2.local  # Delete multiple sites
 wpstaging del  # Delete all sites (with confirmation)
