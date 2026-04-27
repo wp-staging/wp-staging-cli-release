@@ -1,3 +1,36 @@
+## v1.10.0 (2026-04-27)
+
+- **New:** Bundled Adminer database UI at `<site>/adminer/` and `adminer.<site>`. Opt out with `--disable-adminer` (#69).
+- **New:** Add `reconfigure` command to update a site's Docker setup without reinstalling or losing data (#286).
+- **New:** Add `uninstall` command to remove the CLI, shell completions, and PATH entries. Use `--full` to also remove cache, license, and Docker sites (#256).
+- **Enh:** Shell completion: pressing TAB on commands like `add` or `start` now shows usage examples (#262).
+- **Enh:** On macOS, suggest enabling VirtioFS in Docker Desktop during `add`, `reset`, `extract`, and `restore` for faster file sharing (#211).
+- **Enh:** Installer and uninstaller scripts no longer require bash; they now run with any POSIX shell (#251).
+- **Enh:** Uninstall scripts now verify the binary is WP Staging CLI before removing it (#257).
+- **Enh:** Adminer now auto-logs in on first visit. Opt out with `--disable-adminer-autologin` to keep the DB password out of the generated HTML (#69).
+- **Enh:** `--disable-adminer=false` and `--disable-adminer-autologin=false` re-enable the feature on a site that was previously disabled, without editing `.env` by hand (#69).
+- **Enh:** `list` shows whether Adminer is enabled (and if auto-login is on) or disabled for each site (#69).
+- **Fix:** Development and other non-semver builds no longer show a bogus "Update vX.Y.Z available (current: vdev)" notice at startup; any version that is not a valid semver string now skips the update check (#287).
+- **Fix:** Shell completion: `--subdomains` flag forced a mandatory argument in zsh instead of being optional (#262).
+- **Fix:** Shell completion: `switch-wp` version argument restricted to `latest`/`nightly` in zsh instead of allowing free-form versions like `6.5` (#262).
+- **Fix:** Shell completion: `update-subdomains` was grouped with no-argument commands instead of requiring a hostname positional in both Bash and Zsh (#262).
+- **Fix:** Shell completion: `add`, `del`, `enable`, and other commands with a required first positional argument in Bash did not expect that positional first (#262).
+- **Fix:** Shell completion: `compose-info` was grouped with no-argument commands instead of requiring a hostname positional (#262).
+- **Fix:** Shell completion: `generate-compose-file` and `generate-docker-file` did not offer an optional hostname positional (#262).
+- **Fix:** Shell completion: `remove` was grouped with hostname commands but takes no positional argument (#262).
+- **Fix:** Shell completion: `shell` and `shell-db` did not offer `root` as a second positional argument (#262).
+- **Fix:** Shell completion: `--wp` flag suggested stale versions instead of `latest` and `nightly` (#262).
+- **Fix:** Shell completion: `reinstall-cert` in Bash did not expect a hostname positional, unlike Zsh (#262).
+- **Fix:** Shell completion offered invalid flags for site-management commands (#266).
+- **Fix:** `del`, `enable`, `disable`, and `reset` created an empty site folder when run against a non-existent hostname (#278).
+- **Fix:** `remove` ended with a misleading hosts-file error after deleting the sites directory (#279).
+- **Fix:** macOS: VirtioFS tip now works with current Docker Desktop and reappears if you turn off VirtioFS later (#211).
+- **Dev:** Add unit tests for shell completion scripts (Bash and Zsh) with bash/zsh parity check (#265).
+- **Dev:** Fix changelog-format.sh on macOS where the sed block was incompatible with BSD sed and silently aborted (#275).
+- **Dev:** changelog-format.sh now inserts the missing blank line between the "ADD NEW ENTRIES" comment and the first entry (#275).
+- **Dev:** Port installer test coverage to tests-installer-local.sh and remove old tests-installer.sh (#268).
+- **Dev:** Add CI tests for the exact install and uninstall commands documented in README-RELEASES.md (#271).
+
 ## v1.9.0 (2026-04-08)
 
 - **New:** Add `--version` flag to the `update` command to update or downgrade to a specific version, e.g., `wpstaging update --version 1.5.0` (#245).

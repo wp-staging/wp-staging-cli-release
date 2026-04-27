@@ -1,20 +1,20 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # WP Staging CLI Installer
-# Build: 20260219-152540
+# Build: 20260417-120000
 # This script installs wpstaging on Linux, macOS, and WSL
 #
 # Usage:
 #   Install latest stable version (default):
-#     curl -fsSL https://wp-staging.com/install.sh | bash
+#     curl -fsSL https://wp-staging.com/install.sh | sh
 #
 #   Install specific version:
-#     curl -fsSL https://wp-staging.com/install.sh | bash -s -- -v 1.4.0-beta.1
+#     curl -fsSL https://wp-staging.com/install.sh | sh -s -- -v 1.4.0-beta.1
 #
 #   Install with license key (for immediate use without prompts):
-#     curl -fsSL https://wp-staging.com/install.sh | bash -s -- -l YOUR_LICENSE_KEY
+#     curl -fsSL https://wp-staging.com/install.sh | sh -s -- -l YOUR_LICENSE_KEY
 #
 #   Install specific version with license:
-#     curl -fsSL https://wp-staging.com/install.sh | bash -s -- -v 1.4.0 -l YOUR_LICENSE_KEY
+#     curl -fsSL https://wp-staging.com/install.sh | sh -s -- -v 1.4.0 -l YOUR_LICENSE_KEY
 #
 # Options:
 #   -v, --version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
@@ -23,21 +23,25 @@
 #   -e, --extract DIR        Extract all files to directory (no installation)
 #   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
 #
+# Environment variables (for testing only — do not set in production):
+#   GITHUB_API_URL    Override GitHub API base URL
+#   GITHUB_RAW_URL    Override GitHub raw content base URL
+#
 # Examples:
-#   bash -s -- -v 1.4.0-beta.1              # Install version 1.4.0-beta.1
-#   bash -s -- -v 1.3.5                     # Install version 1.3.5
-#   bash                                    # Install latest stable (no beta/alpha/rc)
-#   bash -s -- -l abc123                    # Install latest with license
-#   bash -s -- -v 1.4.0 -l abc123           # Install 1.4.0 with license
-#   bash -s -- -d /opt/mytools              # Install binary to /opt/mytools
-#   bash -s -- -e /tmp/wpstaging-files      # Extract all files without installing
-#   bash -s -- -a "--debug"                 # Install and pass --debug to binary calls
+#   sh -s -- -v 1.4.0-beta.1              # Install version 1.4.0-beta.1
+#   sh -s -- -v 1.3.5                     # Install version 1.3.5
+#   sh                                    # Install latest stable (no beta/alpha/rc)
+#   sh -s -- -l abc123                    # Install latest with license
+#   sh -s -- -v 1.4.0 -l abc123           # Install 1.4.0 with license
+#   sh -s -- -d /opt/mytools              # Install binary to /opt/mytools
+#   sh -s -- -e /tmp/wpstaging-files      # Extract all files without installing
+#   sh -s -- -a "--debug"                 # Install and pass --debug to binary calls
 
 set -e
 
 # Configuration
-GITHUB_API_URL="https://api.github.com/repos/wp-staging/wp-staging-cli-release"
-GITHUB_RAW_URL="https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release"
+GITHUB_API_URL="${GITHUB_API_URL:-https://api.github.com/repos/wp-staging/wp-staging-cli-release}"
+GITHUB_RAW_URL="${GITHUB_RAW_URL:-https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release}"
 INSTALL_DIR_USER="${HOME}/.local/bin"
 INSTALL_DIR_SYSTEM="/usr/local/bin"
 COMPLETION_DIR_USER="${HOME}/.local/share/bash-completion/completions"
@@ -60,20 +64,20 @@ trap "rm -rf '$TMP_DIR'" EXIT
 
 # Helper functions
 error() {
-    echo -e "${RED}Error: $1${NC}" >&2
+    printf '%b\n' "${RED}Error: $1${NC}" >&2
     exit 1
 }
 
 info() {
-    echo -e "${BLUE}$1${NC}" >&2
+    printf '%b\n' "${BLUE}$1${NC}" >&2
 }
 
 success() {
-    echo -e "${GREEN}$1${NC}" >&2
+    printf '%b\n' "${GREEN}$1${NC}" >&2
 }
 
 warning() {
-    echo -e "${YELLOW}$1${NC}" >&2
+    printf '%b\n' "${YELLOW}$1${NC}" >&2
 }
 
 # Check if command exists
@@ -144,10 +148,10 @@ detect_os() {
         error_windows_detected
     fi
 
-    # Note: We don't check for stdin tty here because piped installation (curl | bash)
+    # Note: We don't check for stdin tty here because piped installation (curl | sh)
     # also results in stdin not being a tty, which is the normal installation method.
     # WSL users running from Windows CMD/PowerShell will see prompts fail at runtime,
-    # but that's preferable to blocking the standard curl | bash installation.
+    # but that's preferable to blocking the standard curl | sh installation.
 
     local os
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -374,7 +378,7 @@ install_completion() {
                 return 0
             fi
 
-            cat "$completion_script" >> "$HOME/.bash_completion"
+            cat "$completion_script" >>"$HOME/.bash_completion"
             success "✓ Installed bash completion to ~/.bash_completion"
             info "  Add 'source ~/.bash_completion' to your ~/.bashrc if not already present"
             return 0
@@ -452,13 +456,13 @@ prompt_sudo() {
     info "              This is a standard location for user-installed programs."
     echo "" >&2
 
-    # Read from /dev/tty to work in piped scripts (curl | bash)
+    # Read from /dev/tty to work in piped scripts (curl | sh)
     # Prompt also goes to stderr to keep stdout clean
     printf "%b" "${BLUE}Allow sudo installation to $system_dir? [Y/n] ${NC}" >&2
-    read -r response < /dev/tty 2>/dev/null || response="y"
+    read -r response </dev/tty 2>/dev/null || response="y"
 
     case "$response" in
-        [nN]|[nN][oO])
+        [nN] | [nN][oO])
             return 1
             ;;
         *)
@@ -505,15 +509,8 @@ pick_install_dir() {
     fi
 
     # Trusted candidates only, do not install into arbitrary PATH entries
-    local candidates=(
-        "/usr/local/bin"
-        "/opt/homebrew/bin"
-        "${HOME}/.local/bin"
-        "${HOME}/bin"
-    )
-
     # 1) If candidate is in PATH and writable, use it (no sudo, no reload needed)
-    for d in "${candidates[@]}"; do
+    for d in "/usr/local/bin" "/opt/homebrew/bin" "${HOME}/.local/bin" "${HOME}/bin"; do
         if in_path "$d" && [ -d "$d" ] && [ -w "$d" ]; then
             echo "$d|false"
             return 0
@@ -571,7 +568,7 @@ add_to_path() {
                 echo ""
                 echo "# Added by WP Staging CLI installer"
                 echo "set -gx PATH \$PATH \"$dir\""
-            } >> "$rc"
+            } >>"$rc"
 
             success "✓ Added $dir to PATH in $rc"
             info "  Run '$(get_source_command)' or restart your shell to apply changes"
@@ -596,7 +593,7 @@ add_to_path() {
         echo "  *\":$dir:\"*) ;;"
         echo "  *) export PATH=\"\$PATH:$dir\" ;;"
         echo "esac"
-    } >> "$rc"
+    } >>"$rc"
 
     success "✓ Added $dir to PATH in $rc"
     info "  Run '$(get_source_command)' or restart your shell to apply changes"
@@ -681,15 +678,15 @@ main() {
     local LICENSE_KEY=""
     local CUSTOM_BIN_DIR=""
     local EXTRACT_DIR=""
-    local CLI_ARGS=()
+    local CLI_ARGS=""
 
-    while [[ $# -gt 0 ]]; do
+    while [ $# -gt 0 ]; do
         case "$1" in
             --license=*)
                 LICENSE_KEY="${1#*=}"
                 shift
                 ;;
-            --license|-l)
+            --license | -l)
                 LICENSE_KEY="$2"
                 shift 2
                 ;;
@@ -697,7 +694,7 @@ main() {
                 REQUESTED_VERSION="${1#*=}"
                 shift
                 ;;
-            --version|-v)
+            --version | -v)
                 REQUESTED_VERSION="$2"
                 shift 2
                 ;;
@@ -705,7 +702,7 @@ main() {
                 CUSTOM_BIN_DIR="${1#*=}"
                 shift
                 ;;
-            --bin-dir|-d)
+            --bin-dir | -d)
                 CUSTOM_BIN_DIR="$2"
                 shift 2
                 ;;
@@ -713,18 +710,16 @@ main() {
                 EXTRACT_DIR="${1#*=}"
                 shift
                 ;;
-            --extract|-e)
+            --extract | -e)
                 EXTRACT_DIR="$2"
                 shift 2
                 ;;
             --cli-args=*)
-                # Split value into array elements to prevent command injection
-                read -ra CLI_ARGS <<< "${1#*=}"
+                CLI_ARGS="${1#*=}"
                 shift
                 ;;
-            --cli-args|-a)
-                # Split value into array elements to prevent command injection
-                read -ra CLI_ARGS <<< "$2"
+            --cli-args | -a)
+                CLI_ARGS="$2"
                 shift 2
                 ;;
             -*)
@@ -750,7 +745,7 @@ main() {
         info "Requested version: $REQUESTED_VERSION"
         case "$REQUESTED_VERSION" in
             v*) VERSION_REF="$REQUESTED_VERSION" ;;
-            *)  VERSION_REF="v${REQUESTED_VERSION}" ;;
+            *) VERSION_REF="v${REQUESTED_VERSION}" ;;
         esac
 
         # Validate version exists
@@ -892,7 +887,16 @@ main() {
             error "Directory $INSTALL_DIR is not writable and sudo is not available"
         fi
     else
-        IFS='|' read -r INSTALL_DIR USE_SUDO SUDO_DECLINED < <(pick_install_dir)
+        local _pick_result
+        _pick_result=$(pick_install_dir)
+        local _old_ifs="$IFS"
+        IFS='|'
+        # shellcheck disable=SC2086 -- intentional word splitting on pipe delimiter
+        set -- $_pick_result
+        IFS="$_old_ifs"
+        INSTALL_DIR="$1"
+        USE_SUDO="$2"
+        SUDO_DECLINED="$3"
 
         # Show message if user declined sudo
         if [ "$SUDO_DECLINED" = "declined" ]; then
@@ -950,11 +954,15 @@ main() {
             warning "You can register later with: wpstaging register"
         else
             # Pass license via environment variable to avoid exposure in process list
+            # Disable globbing around $CLI_ARGS to prevent wildcard expansion
             local output
-            if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register "${CLI_ARGS[@]}" 2>&1); then
+            set -f
+            if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register $CLI_ARGS 2>&1); then
+                set +f
                 success "✓ License registered successfully"
                 license_registered=true
             else
+                set +f
                 warning "License registration failed: $output"
                 warning "You can register later with: wpstaging register"
             fi
@@ -964,7 +972,9 @@ main() {
     # Verify installation
     info "\nVerifying installation..."
     if [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
-        VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version "${CLI_ARGS[@]}" 2>&1 || echo "")
+        set -f
+        VERSION_OUTPUT=$("${INSTALL_DIR}/${BINARY_NAME}" --version $CLI_ARGS 2>&1 || echo "")
+        set +f
         success "✓ Installation successful!"
         success "Installed: $VERSION_OUTPUT"
 

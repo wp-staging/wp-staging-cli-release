@@ -1,24 +1,18 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # WP Staging CLI Uninstaller
+# Build: 20260417-120000
 # This script uninstalls wpstaging from Linux, macOS, and WSL
 #
 # Usage:
 #   Uninstall wpstaging:
-#     curl -fsSL https://wp-staging.com/uninstall.sh | bash
+#     curl -fsSL https://wp-staging.com/uninstall.sh | sh
 #
 #   Or run locally:
-#     bash uninstall.sh
+#     sh uninstall.sh
 
 set -e
 
 # Configuration
-# All candidate directories that the installer may use
-INSTALL_CANDIDATES=(
-    "/usr/local/bin"
-    "/opt/homebrew/bin"
-    "${HOME}/.local/bin"
-    "${HOME}/bin"
-)
 COMPLETION_DIR_USER="${HOME}/.local/share/bash-completion/completions"
 COMPLETION_DIR_SYSTEM="/etc/bash_completion.d"
 ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
@@ -35,25 +29,45 @@ NC='\033[0m' # No Color
 
 # Helper functions
 error() {
-    echo -e "${RED}Error: $1${NC}" >&2
+    printf '%b\n' "${RED}Error: $1${NC}" >&2
     exit 1
 }
 
 info() {
-    echo -e "${BLUE}$1${NC}"
+    printf '%b\n' "${BLUE}$1${NC}"
 }
 
 success() {
-    echo -e "${GREEN}$1${NC}"
+    printf '%b\n' "${GREEN}$1${NC}"
 }
 
 warning() {
-    echo -e "${YELLOW}$1${NC}"
+    printf '%b\n' "${YELLOW}$1${NC}"
 }
 
 # Check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+# Verify that a binary is actually WP Staging CLI
+# Returns 0 if verified, 1 if not
+verify_binary() {
+    local binary_path="$1"
+    local output
+
+    # Use timeout to guard against a foreign binary that blocks on --version.
+    # Prefer timeout (Linux coreutils), fall back to gtimeout (macOS Homebrew),
+    # then direct execution as last resort.
+    if command_exists timeout; then
+        output=$(timeout 5 "$binary_path" --version 2>/dev/null) || return 1
+    elif command_exists gtimeout; then
+        output=$(gtimeout 5 "$binary_path" --version 2>/dev/null) || return 1
+    else
+        output=$("$binary_path" --version 2>/dev/null) || return 1
+    fi
+
+    echo "$output" | grep -Eqi "wpstaging|wp[-. ]staging"
 }
 
 # Remove binary and aliases from a directory
@@ -62,9 +76,7 @@ remove_binaries() {
     local use_sudo="$2"
     local removed=false
 
-    local files=("$BINARY_NAME" "wpstg" "wp-staging")
-
-    for file in "${files[@]}"; do
+    for file in "$BINARY_NAME" "wpstg" "wp-staging"; do
         local path="$dir/$file"
         if [ -f "$path" ] || [ -L "$path" ]; then
             if [ "$use_sudo" = "true" ] && command_exists sudo; then
@@ -139,18 +151,15 @@ remove_completion() {
 # Remove PATH entries from shell RC files
 # Handles both old format (single export line) and new format (guarded case block)
 remove_from_path() {
-    local rc_files=(
-        "$HOME/.zshrc"
-        "$HOME/.bashrc"
-        "$HOME/.bash_profile"
-        "$HOME/.profile"
-        "$HOME/.kshrc"
-        "$HOME/.config/fish/config.fish"
-    )
-
     local any_updated=false
 
-    for rc_file in "${rc_files[@]}"; do
+    for rc_file in \
+        "$HOME/.zshrc" \
+        "$HOME/.bashrc" \
+        "$HOME/.bash_profile" \
+        "$HOME/.profile" \
+        "$HOME/.kshrc" \
+        "$HOME/.config/fish/config.fish"; do
         if [ ! -f "$rc_file" ]; then
             continue
         fi
@@ -184,7 +193,7 @@ remove_from_path() {
                     }
                     !skip { print }
                     { skip = 0 }
-                    ' "$rc_file" > "${rc_file}.tmp" && mv "${rc_file}.tmp" "$rc_file"
+                    ' "$rc_file" >"${rc_file}.tmp" && mv "${rc_file}.tmp" "$rc_file"
                     ;;
             esac
             rm -f "${rc_file}.tmp"
@@ -205,18 +214,15 @@ remove_from_path() {
 
 # Remove license key from shell RC files
 remove_license_from_env() {
-    local rc_files=(
-        "$HOME/.zshrc"
-        "$HOME/.bashrc"
-        "$HOME/.bash_profile"
-        "$HOME/.profile"
-        "$HOME/.kshrc"
-        "$HOME/.config/fish/config.fish"
-    )
-
     local any_updated=false
 
-    for rc_file in "${rc_files[@]}"; do
+    for rc_file in \
+        "$HOME/.zshrc" \
+        "$HOME/.bashrc" \
+        "$HOME/.bash_profile" \
+        "$HOME/.profile" \
+        "$HOME/.kshrc" \
+        "$HOME/.config/fish/config.fish"; do
         if [ ! -f "$rc_file" ]; then
             continue
         fi
@@ -255,14 +261,11 @@ remove_license_from_env() {
 
 # Remove cache and working directories
 remove_cache() {
-    local cache_dirs=(
-        "$HOME/.cache/wpstaging"
-        "$HOME/.wpstaging"
-        "$HOME/.config/wpstaging"                         # Linux default working directory
-        "$HOME/Library/Application Support/wpstaging"     # macOS default working directory
-    )
-
-    for cache_dir in "${cache_dirs[@]}"; do
+    for cache_dir in \
+        "$HOME/.cache/wpstaging" \
+        "$HOME/.wpstaging" \
+        "$HOME/.config/wpstaging" \
+        "$HOME/Library/Application Support/wpstaging"; do
         if [ -d "$cache_dir" ]; then
             rm -rf "$cache_dir"
             success "✓ Removed directory: $cache_dir"
@@ -270,10 +273,13 @@ remove_cache() {
     done
 }
 
-# Check for existing dockerized sites and offer cleanup
+# Check for existing dockerized sites and offer cleanup.
+# Uses WPSTG_BINARY env var (set by caller) to avoid running a foreign binary.
 check_and_cleanup_sites() {
-    if ! command_exists wpstaging; then
-        info "wpstaging binary not found, skipping site check"
+    local bin="${WPSTG_BINARY:-}"
+
+    if [ -z "$bin" ] || [ ! -x "$bin" ]; then
+        info "No verified wpstaging binary, skipping site check"
         return 0
     fi
 
@@ -282,41 +288,52 @@ check_and_cleanup_sites() {
 
     # Capture site list output
     local site_output
-    site_output=$(wpstaging list 2>/dev/null) || true
+    site_output=$("$bin" list 2>/dev/null) || true
 
     # Check if there are any sites (look for "Host" followed by spaces and colon in output)
     if echo "$site_output" | grep -q "Host[[:space:]]*:"; then
         echo "$site_output"
         echo ""
         warning "The above sites will remain on disk unless you delete them."
-        printf "Do you want to delete all sites and their Docker data? [y/N] "
 
-        # Read user input with proper fallback handling
-        if [ -r /dev/tty ]; then
-            # Prefer reading from /dev/tty when available (works in piped scripts)
-            read -r DELETE_SITES < /dev/tty 2>/dev/null || DELETE_SITES=""
-        elif [ -t 0 ]; then
-            # Fall back to stdin only if it is an interactive terminal
-            read -r DELETE_SITES || DELETE_SITES=""
-        else
-            # Non-interactive environment without /dev/tty: default to "No"
+        # WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1", auto-answer "No"
+        # here — conservative default that preserves user data. Used by CI only.
+        if [ "${WPSTG_UNINSTALL_ASSUME_YES:-}" = "1" ]; then
             DELETE_SITES=""
+            info "Sites will be preserved (WPSTG_UNINSTALL_ASSUME_YES set)"
+        else
+            printf "Do you want to delete all sites and their Docker data? [y/N] "
+
+            # Read user input with proper fallback handling
+            if [ -r /dev/tty ]; then
+                # Prefer reading from /dev/tty when available (works in piped scripts)
+                read -r DELETE_SITES </dev/tty 2>/dev/null || DELETE_SITES=""
+            elif [ -t 0 ]; then
+                # Fall back to stdin only if it is an interactive terminal
+                read -r DELETE_SITES || DELETE_SITES=""
+            else
+                # Non-interactive environment without /dev/tty: default to "No"
+                DELETE_SITES=""
+            fi
         fi
         echo ""
 
-        if [[ $DELETE_SITES =~ ^[Yy]$ ]]; then
-            info "Stopping all containers first..."
-            wpstaging stop 2>/dev/null || true
+        case "$DELETE_SITES" in
+            [Yy])
+                info "Stopping all containers first..."
+                "$bin" stop 2>/dev/null || true
 
-            info "Running wpstaging remove to remove all sites..."
-            if wpstaging remove --yes 2>/dev/null; then
-                success "✓ Sites and Docker data removed"
-            else
-                warning "Site cleanup may have encountered errors. Some files may remain."
-            fi
-        else
-            info "Sites will be preserved on disk"
-        fi
+                info "Running wpstaging remove to remove all sites..."
+                if "$bin" remove --yes 2>/dev/null; then
+                    success "✓ Sites and Docker data removed"
+                else
+                    warning "Site cleanup may have encountered errors. Some files may remain."
+                fi
+                ;;
+            *)
+                info "Sites will be preserved on disk"
+                ;;
+        esac
     else
         info "No dockerized sites found"
     fi
@@ -328,15 +345,28 @@ main() {
     info "WP Staging CLI Uninstaller"
     info "==========================\n"
 
-    # Check if wpstaging is installed in any candidate directory
+    # Check if wpstaging is installed in any candidate directory.
+    # Track verified directories so we only remove confirmed WP Staging CLI binaries.
+    # Entries are newline-separated (not space-separated) so paths containing
+    # spaces -- e.g. macOS HOME like /Users/Jane Doe/.local/bin -- stay intact
+    # when the list is iterated.
     local found=false
-    local found_dirs=()
+    local verified_dirs=""
+    local verified_binary=""
 
-    for dir in "${INSTALL_CANDIDATES[@]}"; do
-        if [ -f "$dir/$BINARY_NAME" ]; then
-            found=true
-            found_dirs+=("$dir")
-            info "Found installation in: $dir"
+    for dir in "/usr/local/bin" "/opt/homebrew/bin" "${HOME}/.local/bin" "${HOME}/bin"; do
+        # Check for regular file OR symlink -- remove_binaries() handles both,
+        # so candidate discovery must not narrow that.
+        if [ -f "$dir/$BINARY_NAME" ] || [ -L "$dir/$BINARY_NAME" ]; then
+            if verify_binary "$dir/$BINARY_NAME"; then
+                found=true
+                verified_dirs="${verified_dirs}${dir}
+"
+                verified_binary="$dir/$BINARY_NAME"
+                info "Found installation in: $dir"
+            else
+                warning "Binary at $dir/$BINARY_NAME is not WP Staging CLI, skipping"
+            fi
         fi
     done
 
@@ -344,8 +374,15 @@ main() {
         if command_exists wpstaging; then
             local wpstaging_path
             wpstaging_path=$(command -v wpstaging)
-            info "Found wpstaging at: $wpstaging_path"
-            found=true
+            if verify_binary "$wpstaging_path"; then
+                info "Found wpstaging at: $wpstaging_path"
+                found=true
+                verified_binary="$wpstaging_path"
+                verified_dirs="${verified_dirs}$(dirname "$wpstaging_path")
+"
+            else
+                warning "Binary at $wpstaging_path is not WP Staging CLI, skipping"
+            fi
         fi
     fi
 
@@ -365,52 +402,74 @@ main() {
     info "  - Cache and working directories"
     echo ""
 
-    # Read from /dev/tty to work in piped scripts (curl | bash)
-    # Fall back to stdin if /dev/tty is not available (CI environments)
-    printf "Are you sure you want to uninstall WP Staging CLI? [y/N] "
-    { read -r REPLY < /dev/tty; } 2>/dev/null || read -r REPLY || REPLY=""
+    # WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1", skip this
+    # confirmation. Used by CI to test the documented `curl | sh` form.
+    if [ "${WPSTG_UNINSTALL_ASSUME_YES:-}" = "1" ]; then
+        REPLY="y"
+        info "Proceeding (WPSTG_UNINSTALL_ASSUME_YES set)"
+    else
+        # Read from /dev/tty to work in piped scripts (curl | sh)
+        # Fall back to stdin if /dev/tty is not available (CI environments)
+        printf "Are you sure you want to uninstall WP Staging CLI? [y/N] "
+        { read -r REPLY </dev/tty; } 2>/dev/null || read -r REPLY || REPLY=""
+    fi
     echo ""
 
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        info "Uninstallation cancelled"
-        exit 0
-    fi
+    case "$REPLY" in
+        [Yy]) ;;
+        *)
+            info "Uninstallation cancelled"
+            exit 0
+            ;;
+    esac
 
     echo ""
 
     # Check for existing dockerized sites and offer cleanup
-    check_and_cleanup_sites
+    # Use the verified binary path to avoid running commands on a foreign binary
+    if [ -n "$verified_binary" ]; then
+        WPSTG_BINARY="$verified_binary" check_and_cleanup_sites
+    fi
 
     # Stop any running wpstaging containers (fallback for containers not in site list)
     info "Stopping any running wpstaging containers..."
-    if command_exists wpstaging; then
-        wpstaging stop 2>/dev/null || true
+    if [ -n "$verified_binary" ]; then
+        "$verified_binary" stop 2>/dev/null || true
         success "✓ Stopped wpstaging containers (if any were running)"
     else
-        info "wpstaging binary not found, skipping container stop"
+        info "No verified wpstaging binary, skipping container stop"
     fi
 
     echo ""
 
     # Deactivate license on server before removing binary
-    if command_exists wpstaging; then
-        if wpstaging deactivate --yes >/dev/null 2>&1; then
+    if [ -n "$verified_binary" ]; then
+        if "$verified_binary" deactivate --yes >/dev/null 2>&1; then
             success "✓ License deactivated"
         fi
     fi
 
     echo ""
 
-    # Remove binaries from all candidate directories
+    # Remove binaries only from verified directories.
+    # Iterate with IFS=newline so paths containing spaces are preserved.
     info "Removing binaries..."
-    for dir in "${INSTALL_CANDIDATES[@]}"; do
+    OLD_IFS=$IFS
+    IFS='
+'
+    for dir in $verified_dirs; do
+        [ -z "$dir" ] && continue
         # Use sudo for system directories
-        if [[ "$dir" == "/usr/local/bin" ]] || [[ "$dir" == "/opt/homebrew/bin" ]]; then
-            remove_binaries "$dir" "true"
-        else
-            remove_binaries "$dir" "false"
-        fi
+        case "$dir" in
+            /usr/local/bin | /opt/homebrew/bin)
+                remove_binaries "$dir" "true"
+                ;;
+            *)
+                remove_binaries "$dir" "false"
+                ;;
+        esac
     done
+    IFS=$OLD_IFS
 
     echo ""
 

@@ -24,8 +24,10 @@
 - [update-hosts-file](#command-update-hosts-file)
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
+- [reconfigure](#command-reconfigure)
 - [register](#command-register)
 - [update](#command-update)
+- [uninstall](#command-uninstall)
 - [clean](#command-clean)
 - [clean all](#command-clean-all)
 - [clean cache](#command-clean-cache)
@@ -34,9 +36,9 @@
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
-- [reinstall-cert](#hidden-command-reinstall-cert)
-- [compose-info](#hidden-command-compose-info)
 - [dump-all-help](#hidden-command-dump-all-help)
+- [compose-info](#hidden-command-compose-info)
+- [reinstall-cert](#hidden-command-reinstall-cert)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -85,10 +87,12 @@ Docker Commands:
   update-hosts-file     Update the local hosts file with site entries
   generate-compose-file Generate a docker-compose.yml file
   generate-docker-file  Generate Docker configuration files
+  reconfigure           Reconfigure a site docker-related config and apply the changes
 
 Other Commands:
   register              Activate your WP Staging Pro license
   update                Update WP Staging CLI to the latest version
+  uninstall             Uninstall WP Staging CLI from the system
   clean                 Clean up cached data, license info, and temporary files
   help                  Help about any command
 
@@ -151,34 +155,36 @@ Examples:
   wpstaging add newsite.local --from=https://example.com/backup.wpstg
 
 Env Flags:
-      --php string              PHP version to use (default "8.1")
-      --env-path string         Path to store docker environments (default: ~/wpstaging)
-      --compose-file string     File path to docker-compose.yml (default: ~/wpstaging/sites/<hostname>/docker-compose.yml)
-      --container-ip string     Container IP address (default "127.3.2.1")
-      --http-port int           NGINX HTTP port (default "80")
-      --https-port int          NGINX HTTPS port (default "443")
-      --db-port int             MariaDB port (default "3306")
-      --db-root string          MariaDB root password (default "123456")
-      --mailpit-http-port int   Mailpit HTTP port (default "8025")
-      --disable-mailpit         Disable the Mailpit container
+      --php string                  PHP version to use (default "8.1")
+      --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --compose-file string         File path to docker-compose.yml (default: ~/wpstaging/sites/<hostname>/docker-compose.yml)
+      --container-ip string         Container IP address (default "127.3.2.1")
+      --http-port int               NGINX HTTP port (default "80")
+      --https-port int              NGINX HTTPS port (default "443")
+      --db-port int                 MariaDB port (default "3306")
+      --db-root string              MariaDB root password (default "123456")
+      --mailpit-http-port int       Mailpit HTTP port (default "8025")
+      --disable-mailpit             Disable the Mailpit container
 
 WordPress Flags:
-      --wp string               WordPress version to install (default "latest")
-      --db-host string          WordPress database host (default "localhost")
-      --db-name string          WordPress database name
-      --db-user string          WordPress database user
-      --db-pass string          WordPress database password
-      --db-prefix string        WordPress database prefix (default "wp_")
-      --db-ssl                  Enable SSL for WordPress database connection
-      --admin-user string       WordPress admin username (default "admin")
-      --admin-pass string       WordPress admin password (default "admin")
-      --admin-email string      WordPress admin email (default "admin@dev.null")
-      --secure-credentials      Use secure random credentials for database and WordPress admin
-      --multisite               Enable WordPress Multisite
-      --subdomains string       Enable subdomain multisite. Optional: comma-separated hostnames
+      --wp string                   WordPress version to install (default "latest")
+      --db-host string              WordPress database host (default "localhost")
+      --db-name string              WordPress database name
+      --db-user string              WordPress database user
+      --db-pass string              WordPress database password
+      --db-prefix string            WordPress database prefix (default "wp_")
+      --db-ssl                      Enable SSL for WordPress database connection
+      --admin-user string           WordPress admin username (default "admin")
+      --admin-pass string           WordPress admin password (default "admin")
+      --admin-email string          WordPress admin email (default "admin@dev.null")
+      --secure-credentials          Use secure random credentials for database and WordPress admin
+      --multisite                   Enable WordPress Multisite
+      --subdomains string           Enable subdomain multisite. Optional: comma-separated hostnames
 
 Other Flags:
-      --from string             Backup file path or remote URL (http/https) to restore after site creation
+      --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
+      --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --from string                 Backup file path or remote URL (http/https) to restore after site creation
 
 ```
 
@@ -279,13 +285,15 @@ Examples:
   wpstaging reset mysite.local --from=https://example.com/backup.wpstg
 
 Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+      --env-path string             Path to store docker environments (default: ~/wpstaging)
 
 WordPress Flags:
-      --wp string         WordPress version to install (e.g., 6.5, latest)
+      --wp string                   WordPress version to install (e.g., 6.5, latest)
 
 Other Flags:
-      --from string       Backup file path or remote URL (http/https) to restore after reset
+      --from string                 Backup file path or remote URL (http/https) to restore after reset
+      --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
+      --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
 
 ```
 
@@ -730,7 +738,11 @@ Examples:
   wpstaging generate-compose-file
 
 Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+      --env-path string             Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
+      --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
 
 ```
 
@@ -752,7 +764,50 @@ Examples:
   wpstaging generate-docker-file
 
 Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+      --env-path string             Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
+      --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+
+```
+
+<a name="command-reconfigure"></a>
+# Command: reconfigure
+
+```
+Update a site's Docker setup and apply the changes without reinstalling.
+Regenerates the site's configuration files (compose, nginx, PHP, SSL,
+Adminer) and relaunches the site. WordPress files and the database are
+preserved.
+
+Use this to roll a site forward after a CLI upgrade, to apply new defaults,
+or to refresh the SSL certificate after the hostname list changes.
+
+You can also apply feature-toggle changes here. For example, pass
+--disable-adminer=false to re-enable the Adminer UI on a site where
+it was previously disabled, or --disable-adminer-autologin to turn
+off auto-login while keeping Adminer installed.
+
+If no hostname is given, all sites are reconfigured using each
+site's existing settings from its .env.
+
+Usage:
+  wpstaging reconfigure [hostname] [flags]
+
+Aliases:
+  reconfigure, rcf
+
+Examples:
+  wpstaging reconfigure mysite.local
+  wpstaging reconfigure
+
+Env Flags:
+      --env-path string             Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
+      --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
 
 ```
 
@@ -806,6 +861,29 @@ Flags:
       --check            Only check for updates, don't install
       --full             Update using install script from wp-staging.com
       --version string   Target a specific version (e.g., 1.5.0 or v1.5.0)
+
+```
+
+<a name="command-uninstall"></a>
+# Command: uninstall
+
+```
+Remove WP Staging CLI from the system.
+
+By default, deactivates the license, removes the binary, shell completion
+files, and PATH entries from shell RC files.
+Use --full to run the full uninstall script from wp-staging.com,
+which additionally removes cache and Docker sites.
+
+Usage:
+  wpstaging uninstall [flags]
+
+Examples:
+  wpstaging uninstall
+  wpstaging uninstall --full
+
+Flags:
+      --full   Uninstall using uninstall script from wp-staging.com (removes completions, cache, Docker sites, etc.)
 
 ```
 
@@ -914,6 +992,39 @@ Examples:
 
 ```
 
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
+
+```
+Display help for all commands and flags
+
+Usage:
+  wpstaging dump-all-help [flags]
+
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
+
+```
+
+<a name="hidden-command-compose-info"></a>
+## Hidden Command: compose-info
+
+```
+Display environment variables and configuration from the docker-compose.yml file.
+
+Usage:
+  wpstaging compose-info <hostname> [flags]
+
+Examples:
+  wpstaging compose-info mysite.local
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
 <a name="hidden-command-reinstall-cert"></a>
 ## Hidden Command: reinstall-cert
 
@@ -935,40 +1046,7 @@ Other Flags:
 
 ```
 
-<a name="hidden-command-compose-info"></a>
-## Hidden Command: compose-info
-
-```
-Display environment variables and configuration from the docker-compose.yml file.
-
-Usage:
-  wpstaging compose-info <hostname> [flags]
-
-Examples:
-  wpstaging compose-info mysite.local
-
-Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
-
-```
-
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
-
-```
-Display help for all commands and flags
-
-Usage:
-  wpstaging dump-all-help [flags]
-
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
-
-```
-
 
 ---
 
-*Generated on 2026-04-06 12:33:33 UTC*
+*Generated on 2026-04-24 19:35:40 UTC*

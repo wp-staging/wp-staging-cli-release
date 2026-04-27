@@ -1,4 +1,5 @@
 # WP Staging CLI Uninstaller for Windows (PowerShell)
+# Build: 20260417-120000
 # This script uninstalls wpstaging from Windows
 #
 # Download and run directly from the web (recommended):
@@ -47,6 +48,27 @@ function Write-Warning($Message) {
 
 function Write-Error($Message) {
     Write-ColorOutput Red "Error: $Message"
+}
+
+# Verify that a binary is actually WP Staging CLI
+function Test-WpStagingBinary($binaryPath) {
+    try {
+        # Temporarily allow non-zero exit codes so native stderr does not throw
+        $prevPref = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $output = & $binaryPath --version 2>&1
+        $ErrorActionPreference = $prevPref
+
+        $text = ($output | Out-String)
+        if ($text -match "wpstaging|wp[-. ]staging") {
+            return $true
+        }
+    }
+    catch {
+        # Binary failed to execute
+        $ErrorActionPreference = $prevPref
+    }
+    return $false
 }
 
 # Remove binaries and aliases
@@ -175,7 +197,15 @@ function Check-AndCleanupSites {
             $siteOutput | ForEach-Object { Write-Host $_ }
             Write-Host ""
             Write-Warning "The above sites will remain on disk unless you delete them."
-            $deleteSites = Read-Host "Do you want to delete all sites and their Docker data? [y/N]"
+
+            # WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1",
+            # auto-answer "No" to preserve user data. Used by CI only.
+            if ($env:WPSTG_UNINSTALL_ASSUME_YES -eq "1") {
+                $deleteSites = "n"
+                Write-Info "Sites will be preserved (WPSTG_UNINSTALL_ASSUME_YES set)"
+            } else {
+                $deleteSites = Read-Host "Do you want to delete all sites and their Docker data? [y/N]"
+            }
 
             if ($deleteSites -match '^[Yy]') {
                 Write-Info "Stopping all containers first..."
@@ -224,10 +254,16 @@ function Main {
     $foundDirs = @()
 
     foreach ($dir in $InstallCandidates) {
-        if (Test-Path (Join-Path $dir $BinaryName)) {
-            $found = $true
-            $foundDirs += $dir
-            Write-Info "Found installation in: $dir"
+        $binaryPath = Join-Path $dir $BinaryName
+        if (Test-Path $binaryPath) {
+            if (Test-WpStagingBinary $binaryPath) {
+                $found = $true
+                $foundDirs += $dir
+                Write-Info "Found installation in: $dir"
+            }
+            else {
+                Write-Warning "Binary at $binaryPath is not WP Staging CLI, skipping"
+            }
         }
     }
 
@@ -235,8 +271,14 @@ function Main {
         try {
             $wpstaging = Get-Command wpstaging -ErrorAction SilentlyContinue
             if ($wpstaging) {
-                Write-Info "Found wpstaging at: $($wpstaging.Source)"
-                $found = $true
+                if (Test-WpStagingBinary $wpstaging.Source) {
+                    Write-Info "Found wpstaging at: $($wpstaging.Source)"
+                    $found = $true
+                    $foundDirs += Split-Path $wpstaging.Source -Parent
+                }
+                else {
+                    Write-Warning "Binary at $($wpstaging.Source) is not WP Staging CLI, skipping"
+                }
             }
         }
         catch {
@@ -259,7 +301,14 @@ function Main {
     Write-Info "  - Cache and working directories"
     Write-Host ""
 
-    $confirm = Read-Host "Are you sure you want to uninstall WP Staging CLI? [y/N]"
+    # WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1", skip this
+    # confirmation. Used by CI to test the documented `irm | iex` form.
+    if ($env:WPSTG_UNINSTALL_ASSUME_YES -eq "1") {
+        $confirm = "y"
+        Write-Info "Proceeding (WPSTG_UNINSTALL_ASSUME_YES set)"
+    } else {
+        $confirm = Read-Host "Are you sure you want to uninstall WP Staging CLI? [y/N]"
+    }
 
     if ($confirm -notmatch '^[Yy]') {
         Write-Info "Uninstallation cancelled"
@@ -306,9 +355,11 @@ function Main {
 
     Write-Host ""
 
-    # Remove binaries from all candidate directories
+    # Remove binaries only from verified directories. Iterating all candidates
+    # here would delete an unrelated wpstaging.exe in a candidate dir, defeating
+    # the Test-WpStagingBinary verification above.
     Write-Info "Removing binaries..."
-    foreach ($dir in $InstallCandidates) {
+    foreach ($dir in $foundDirs) {
         Remove-Binaries $dir | Out-Null
     }
 

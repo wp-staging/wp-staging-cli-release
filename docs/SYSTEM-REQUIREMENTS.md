@@ -167,7 +167,7 @@ The following Docker images will be downloaded automatically:
 
 | Service | Image | Default Version | Configurable |
 |---------|-------|-----------------|--------------|
-| PHP | wpstaging/dockerize | php-8.1 | Yes (`--php`) |
+| PHP | wpstaging/dockerize | php-8.1 | Yes (`--php`): 7.4, 8.1, 8.2, 8.3, 8.4 |
 | Nginx | nginx | stable-alpine-slim | No |
 | MariaDB | mariadb | 11.8 | No |
 | Mailpit | axllent/mailpit | latest | No |
@@ -212,6 +212,7 @@ Some operations require elevated privileges:
 - Each site automatically gets next available IP from the range as needed
 - **Passwordless sudo recommended** for seamless multi-site operation (see FAQ Q87 for setup)
 - Use `--skip-macos-auto-ip` flag to disable automatic IP binding (requires manual `ifconfig lo0 alias` commands for each IP)
+- **VirtioFS recommended:** For faster file sharing between host and containers, enable VirtioFS in Docker Desktop (Settings → General → Virtual file sharing). The CLI shows a tip on `add`, `reset`, `extract`, and `restore` once per switch away from VirtioFS: it fires the first time VirtioFS is not the active mechanism, stays silent while the setting does not change, and re-arms if VirtioFS is later enabled and then switched off again.
 
 **Windows (10+ / Server 2016+ required):**
 - Requires Docker Desktop in **Linux container mode** (not Windows containers)
@@ -438,4 +439,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-03-03 15:10:00 UTC
+**Last Updated:** 2026-04-21 13:46:10 UTC
