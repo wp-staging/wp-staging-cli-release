@@ -1,5 +1,5 @@
 # WP Staging CLI Installer for Windows
-# Build: 20260219-152540
+# Build: 20260417-120000
 # This script installs wpstaging on Windows
 #
 # Usage:

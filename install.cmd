@@ -18,7 +18,7 @@ exit 1
 setlocal enabledelayedexpansion
 
 REM WP Staging CLI Installer for Windows (CMD)
-REM Build: 20260219-152540
+REM Build: 20260417-120000
 REM This script downloads and installs the wpstaging cli binary
 REM
 REM Usage:

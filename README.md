@@ -181,7 +181,21 @@ wpstaging remove
 
 This will stop and remove all Docker containers, volumes, and configurations.
 
-#### Quick Uninstall (Recommended)
+#### Using the CLI (Recommended)
+
+**Default uninstall** (deactivates license, removes binary, shell completions, and PATH entries):
+```bash
+wpstaging uninstall
+```
+
+**Full uninstall** (additionally removes cache, Docker sites, etc.):
+```bash
+wpstaging uninstall --full
+```
+
+#### Using the Uninstall Script
+
+Alternatively, download and run the uninstall script directly:
 
 **Linux / macOS / WSL:**
 ```bash
@@ -198,11 +212,10 @@ irm https://wp-staging.com/uninstall.ps1 | iex
 curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cmd && del uninstall.cmd
 ```
 
-The uninstaller will:
+The full uninstaller will:
 - Deactivate your license on the WP Staging server (if registered)
 - Remove the wpstaging binary and aliases
 - Remove PATH entries from shell configuration
-- Remove license key environment variable
 - Remove cache and working directories
 
 #### Manual Uninstallation

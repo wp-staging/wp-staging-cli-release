@@ -11,6 +11,45 @@
 # Author: WP Staging <https://wp-staging.com/support/>
 # License: MIT
 
+# Display a usage hint when the user presses TAB at a positional argument
+# whose value cannot be enumerated (e.g. hostnames or new site URLs). Uses
+# _message so the hint shows below the prompt without offering selectable
+# candidates. The current subcommand is read from $words[1], which inside the
+# subcommand's _arguments context refers to the subcommand name.
+#
+# The $PREFIX guard ensures the hint only fires when the current word is
+# empty — if the user has already typed partial input (e.g. `wpstaging add
+# new<TAB>`), fall back to normal completion behaviour. Mirrors the
+# `-z "$cur"` check in the bash `_wp_staging_cli_maybe_hint` helper.
+_wpstaging_hint() {
+    [[ -z "$PREFIX" ]] || return 0
+    local subcmd="${words[1]}"
+    case "$subcmd" in
+        add)
+            _message -r $'Examples:\n  wpstaging add https://newsite.local\n  wpstaging add newsite.local\n  wpstaging add newsite.local --from=backup.wpstg\n  wpstaging add newsite.local --from=https://example.com/backup.wpstg'
+            ;;
+        shell)
+            _message -r $'Examples:\n  wpstaging shell newsite.local\n  wpstaging shell newsite.local root'
+            ;;
+        shell-db)
+            _message -r $'Examples:\n  wpstaging shell-db newsite.local\n  wpstaging shell-db newsite.local root'
+            ;;
+        switch-php)
+            _message -r $'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
+            ;;
+        switch-wp)
+            _message -r $'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
+            ;;
+        reinstall-cert)
+            _message -r $'Examples:\n  wpstaging reinstall-cert newsite.local\n  wpstaging reinstall-cert newsite.local --reinstall-ca'
+            ;;
+        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
+            _message -r "Examples:
+  wpstaging ${subcmd} newsite.local"
+            ;;
+    esac
+}
+
 _wpstaging() {
     local curcontext="$curcontext" state line
     typeset -A opt_args
@@ -33,6 +72,7 @@ _wpstaging() {
         'generate-docker-file:Generate Dockerfile'
         'help:Show help for a command'
         'list:List all dockerized sites'
+        'reconfigure:Reconfigure a site and apply the changes'
         'register:Register license key'
         'reinstall-cert:Reinstall SSL certificate'
         'reset:Reset WordPress installation'
@@ -46,6 +86,7 @@ _wpstaging() {
         'switch-php:Switch PHP version for a site'
         'switch-wp:Switch WordPress version for a site'
         'remove:Stop containers and remove all Docker data'
+        'uninstall:Uninstall WP Staging CLI from the system'
         'update:Update WP Staging CLI to latest version'
         'update-subdomains:Sync subdomain multisite hostnames from WordPress'
         'update-hosts-file:Update /etc/hosts'
@@ -58,6 +99,7 @@ _wpstaging() {
         'license:Clean license cache'
     )
 
+    # General options (available on all subcommands)
     local -a general_opts
     general_opts=(
         '(-l --license)'{-l,--license}'[License key]:license key:'
@@ -73,9 +115,14 @@ _wpstaging() {
         '--json[Output in JSON format]'
         '--page[Page number for paginated output (requires --json)]:page number:'
         '--page-size[Items per page, 0 = all (requires --json)]:items per page:'
+        '(-h --help)'{-h,--help}'[Show help]'
+    )
+
+    # Root-only options (only meaningful at top level, not inside subcommands)
+    local -a root_only_opts
+    root_only_opts=(
         '(-v --version)'{-v,--version}'[Show version]'
         '--about[Show about information]'
-        '(-h --help)'{-h,--help}'[Show help]'
     )
 
     local -a only_opts
@@ -148,12 +195,19 @@ _wpstaging() {
         '--skip-update-hosts-file[Skip updating hosts file]'
     )
 
-    local -a dockerize_opts
-    dockerize_opts=(
+    # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
+    # Only flags VISIBLE in normal help output are listed. Hidden flags
+    # (--skip-update-hosts-file, --skip-macos-auto-ip, --external-db,
+    # --compose-file on most commands, --container-ip on most commands,
+    # and all alias flags) are intentionally excluded from completion.
+
+    # add: full visible set (addPathAndComposeFlags + addServiceConfigFlags +
+    #       addServiceToggleFlags + addWordPressConfigFlags + extras)
+    local -a add_opts
+    add_opts=(
         '--env-path[Environment file path]:path:_files'
         '--compose-file[Docker Compose file]:file:_files -g "*.yml"'
         '--container-ip[Container IP address]:IP:'
-        '--skip-macos-auto-ip[Skip macOS auto IP allocation]'
         '--php[PHP version]:version:(7.4 8.1 8.2 8.3 8.4)'
         '--http-port[HTTP port]:port:'
         '--https-port[HTTPS port]:port:'
@@ -161,21 +215,48 @@ _wpstaging() {
         '--db-root[Database root password]:password:'
         '--mailpit-http-port[Mailpit HTTP port]:port:'
         '--disable-mailpit[Disable Mailpit]'
-        '--wp[WordPress version]:version:(latest 6.7.1 6.6.2)'
+        '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
+        '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+        '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--db-host[Database host]:host:'
         '--db-name[Database name]:name:'
         '--db-user[Database user]:user:'
         '--db-pass[Database password]:password:'
         '--db-prefix[Database table prefix]:prefix:'
         '--db-ssl[Enable database SSL]'
-        '--external-db[Use external database]'
         '--admin-user[WordPress admin username]:user:'
         '--admin-pass[WordPress admin password]:password:'
         '--admin-email[WordPress admin email]:email:'
         '--secure-credentials[Generate secure random credentials]'
         '--multisite[Enable WordPress Multisite]'
-        '--subdomains[Enable subdomain multisite. Optional: comma-separated hostnames]:hostnames:'
+        '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+    )
+
+    # reset: addPathOnlyFlag + --from + --wp + --disable-adminer
+    local -a reset_opts
+    reset_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
+        '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
+        '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+    )
+
+    # generate-docker-file / generate-compose-file: path flags + --disable-adminer
+    local -a generate_docker_file_opts
+    generate_docker_file_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
+        '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+    )
+
+    # All other dockerize subcommands (except shell-db and reinstall-cert):
+    # only --env-path is visible. Other registered flags (--compose-file,
+    # --container-ip, --skip-update-hosts-file, etc.) are hidden in Go.
+    local -a env_path_only_opts
+    env_path_only_opts=(
+        '--env-path[Environment file path]:path:_files'
     )
 
     _arguments -C \
@@ -205,6 +286,7 @@ _wpstaging() {
     case $state in
         command)
             _describe -t commands 'wpstaging command' commands
+            _arguments $root_only_opts $general_opts
             ;;
         args)
             case $words[1] in
@@ -251,50 +333,109 @@ _wpstaging() {
                     ;;
                 add)
                     _arguments \
-                        '1:site URL:' \
+                        '1:site URL:_wpstaging_hint' \
                         $general_opts \
-                        $dockerize_opts
+                        $add_opts
                     ;;
                 switch-php)
                     _arguments \
-                        '1:hostname:' \
+                        '1:hostname:_wpstaging_hint' \
                         '2:PHP version:(7.4 8.1 8.2 8.3 8.4)' \
-                        '--env-path[Environment file path]:path:_files' \
-                        $general_opts
+                        $general_opts \
+                        $env_path_only_opts
                     ;;
                 switch-wp)
                     _arguments \
-                        '1:hostname:' \
-                        '2:WordPress version:(latest nightly)' \
-                        '--env-path[Environment file path]:path:_files' \
-                        $general_opts
+                        '1:hostname:_wpstaging_hint' \
+                        '2:WordPress version:{compadd -S "" -- latest nightly}' \
+                        $general_opts \
+                        $env_path_only_opts
                     ;;
-                list|status)
+                list)
+                    # list [hostname...] — hostname is optional.
                     _arguments \
                         '*:hostname:' \
                         $general_opts \
-                        $dockerize_opts
+                        $env_path_only_opts
+                    ;;
+                status)
+                    # status [hostname...] — hostname is optional.
+                    _arguments \
+                        '*:hostname:' \
+                        $general_opts \
+                        $env_path_only_opts
                     ;;
                 del)
+                    # del [hostname...] — hostname is optional (no hostname = delete all).
                     _arguments \
                         '*:hostname:' \
                         $general_opts \
-                        $dockerize_opts
+                        $env_path_only_opts
                     ;;
-                enable|disable|reset|start|up|stop|down|restart|shell|shell-db|remove)
+                shell)
                     _arguments \
-                        '1:hostname:' \
+                        '1:hostname:_wpstaging_hint' \
+                        '2::root:(root)' \
                         $general_opts \
-                        $dockerize_opts
+                        $env_path_only_opts
                     ;;
-                generate-compose-file|gcf|generate-docker-file|gdf|update-subdomains|usub|update-hosts-file|uhf|compose-info)
+                shell-db)
+                    # All dockerize flags hidden in Go; only general opts apply.
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        '2::root:(root)' \
+                        $general_opts
+                    ;;
+                reset)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $reset_opts
+                    ;;
+                enable|disable)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
+                start|up|stop|down|restart)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
+                remove)
                     _arguments \
                         $general_opts \
-                        $dockerize_opts
+                        $env_path_only_opts
+                    ;;
+                update-subdomains|usub)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
+                compose-info)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
+                generate-compose-file|gcf|generate-docker-file|gdf|reconfigure|rcf)
+                    # generate-*-file / reconfigure [hostname] -- hostname is optional.
+                    _arguments \
+                        '1::hostname:' \
+                        $general_opts \
+                        $generate_docker_file_opts
+                    ;;
+                update-hosts-file|uhf)
+                    _arguments \
+                        $general_opts \
+                        $env_path_only_opts
                     ;;
                 reinstall-cert)
                     _arguments \
-                        '1:hostname:' \
+                        '1:hostname:_wpstaging_hint' \
                         '--env-path[Environment file path]:path:_files' \
                         '--reinstall-ca[Reinstall CA certificate]' \
                         $general_opts
@@ -302,6 +443,11 @@ _wpstaging() {
                 register)
                     _arguments \
                         '--license[License key]:key:' \
+                        $general_opts
+                    ;;
+                uninstall)
+                    _arguments \
+                        '--full[Uninstall using uninstall script]' \
                         $general_opts
                     ;;
                 update)

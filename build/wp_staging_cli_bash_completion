@@ -8,8 +8,54 @@
 #
 # Author: WP Staging <https://wp-staging.com/support/>
 # License: MIT
+
+# Return a multi-line hint string for the given command. Printed above the
+# prompt when the user presses TAB at a position where the completion would
+# otherwise offer nothing (e.g. a hostname the script cannot enumerate).
+_wp_staging_cli_hint_text() {
+    case "$1" in
+        add)
+            printf 'Examples:\n  wpstaging add https://newsite.local\n  wpstaging add newsite.local\n  wpstaging add newsite.local --from=backup.wpstg\n  wpstaging add newsite.local --from=https://example.com/backup.wpstg'
+            ;;
+        shell)
+            printf 'Examples:\n  wpstaging shell newsite.local\n  wpstaging shell newsite.local root'
+            ;;
+        shell-db)
+            printf 'Examples:\n  wpstaging shell-db newsite.local\n  wpstaging shell-db newsite.local root'
+            ;;
+        switch-php)
+            printf 'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
+            ;;
+        switch-wp)
+            printf 'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
+            ;;
+        reinstall-cert)
+            printf 'Examples:\n  wpstaging reinstall-cert newsite.local\n  wpstaging reinstall-cert newsite.local --reinstall-ca'
+            ;;
+        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
+            printf 'Examples:\n  wpstaging %s newsite.local' "$1"
+            ;;
+    esac
+}
+
+# Print a hint message above the current prompt if the user pressed TAB at the
+# given positional index with an empty current word. Returns 0 if a hint was
+# shown (caller should return from the completion function), 1 otherwise.
+_wp_staging_cli_maybe_hint() {
+    local cmd="$1"
+    local pos="${2:-2}"
+    [[ ${COMP_CWORD} -eq ${pos} && -z "${cur}" ]] || return 1
+    local hint
+    hint="$(_wp_staging_cli_hint_text "$cmd")"
+    [[ -n "$hint" ]] || return 1
+    printf '\n%s\n' "$hint" >&2
+    COMPREPLY=()
+    return 0
+}
+
 _wp_staging_cli() {
-    local cur prev commands general_opts restore_opts dockerize_opts only_opts skip_opts
+    local cur prev commands general_opts restore_opts only_opts skip_opts
+    local add_opts reset_opts env_path_only_opts root_only_opts
     COMPREPLY=()
 
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -32,6 +78,7 @@ _wp_staging_cli() {
         generate-docker-file
         help
         list
+        reconfigure
         register
         reinstall-cert
         reset
@@ -45,6 +92,7 @@ _wp_staging_cli() {
         switch-php
         switch-wp
         remove
+        uninstall
         update
         update-subdomains
         update-hosts-file
@@ -57,7 +105,7 @@ _wp_staging_cli() {
         license
     "
 
-    # General options
+    # General options (available on all subcommands)
     general_opts="
         -l --license
         -o --outputdir
@@ -72,9 +120,13 @@ _wp_staging_cli() {
         --json
         --page
         --page-size
+        -h --help
+    "
+
+    # Root-only options (only meaningful at top level, not inside subcommands)
+    root_only_opts="
         -v --version
         --about
-        -h --help
     "
 
     # Only-Filters options
@@ -147,12 +199,18 @@ _wp_staging_cli() {
         --skip-update-hosts-file
     "
 
-    # Docker/Site management options (for add, start, stop, restart, etc.)
-    dockerize_opts="
+    # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
+    # Only flags VISIBLE in normal help output are listed. Hidden flags
+    # (--skip-update-hosts-file, --skip-macos-auto-ip, --external-db,
+    # --compose-file on most commands, --container-ip on most commands,
+    # and all alias flags) are intentionally excluded from completion.
+
+    # add: full visible set (addPathAndComposeFlags + addServiceConfigFlags +
+    #       addServiceToggleFlags + addWordPressConfigFlags + extras)
+    add_opts="
         --env-path
         --compose-file
         --container-ip
-        --skip-macos-auto-ip
         --php
         --http-port
         --https-port
@@ -160,6 +218,8 @@ _wp_staging_cli() {
         --db-root
         --mailpit-http-port
         --disable-mailpit
+        --disable-adminer
+        --disable-adminer-autologin
         --wp
         --db-host
         --db-name
@@ -167,7 +227,6 @@ _wp_staging_cli() {
         --db-pass
         --db-prefix
         --db-ssl
-        --external-db
         --admin-user
         --admin-pass
         --admin-email
@@ -176,6 +235,27 @@ _wp_staging_cli() {
         --subdomains
         --from
     "
+
+    # reset: addPathOnlyFlag + --from + --wp + --disable-adminer
+    reset_opts="
+        --env-path
+        --from
+        --wp
+        --disable-adminer
+        --disable-adminer-autologin
+    "
+
+    # generate-docker-file / generate-compose-file: add path + compose + --disable-adminer
+    generate_docker_file_opts="
+        --env-path
+        --disable-adminer
+        --disable-adminer-autologin
+    "
+
+    # All other dockerize subcommands (except shell-db and reinstall-cert):
+    # only --env-path is visible. Other registered flags (--compose-file,
+    # --container-ip, --skip-update-hosts-file, etc.) are hidden in Go.
+    env_path_only_opts="--env-path"
 
     # Detect if Only or Skip filter is already used
     local has_only=false
@@ -191,7 +271,7 @@ _wp_staging_cli() {
 
     # Handle top-level command completion
     if [[ ${COMP_CWORD} -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "${commands}" -- "${cur}") )
+        COMPREPLY=( $(compgen -W "${commands} ${root_only_opts} ${general_opts}" -- "${cur}") )
         return
     fi
 
@@ -256,30 +336,150 @@ _wp_staging_cli() {
             COMPREPLY=( $(compgen -W "--html --markdown ${general_opts}" -- "${cur}") )
             ;;
         switch-php)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
             if [[ ${COMP_CWORD} -eq 3 ]]; then
                 COMPREPLY=( $(compgen -W "7.4 8.1 8.2 8.3 8.4" -- "${cur}") )
             else
-                COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts} --env-path" -- "${cur}") )
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             fi
             ;;
         switch-wp)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
             if [[ ${COMP_CWORD} -eq 3 ]]; then
                 COMPREPLY=( $(compgen -W "latest nightly" -- "${cur}") )
             else
-                COMPREPLY=( $(compgen -W "${general_opts} --env-path" -- "${cur}") )
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             fi
             ;;
-        list|status)
-            COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
+        list)
+            # list [hostname...] — hostname is optional (no hostname = all).
+            # No hint: the command runs with zero args, so flag completion must work.
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             ;;
-        add|del|enable|disable|reset|start|up|stop|down|restart|shell|shell-db|generate-compose-file|gcf|generate-docker-file|gdf|update-subdomains|usub|update-hosts-file|uhf|remove|compose-info)
-            COMPREPLY=( $(compgen -W "${general_opts} ${dockerize_opts}" -- "${cur}") )
+        status)
+            # status [hostname...] — hostname is optional (no hostname = all).
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            ;;
+        update-subdomains|usub)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        add)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: site URL
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${add_opts}" -- "${cur}") )
+            fi
+            ;;
+        del)
+            # del [hostname...] — hostname is optional (no hostname = delete all).
+            # No hint: the hint would imply a required positional.
+            if [[ "${cur}" != -* ]]; then
+                # Positional: hostname(s)
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        shell)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            elif [[ ${COMP_CWORD} -eq 3 && "${cur}" != -* ]]; then
+                # Second positional: optional root
+                COMPREPLY=( $(compgen -W "root" -- "${cur}") )
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        shell-db)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            elif [[ ${COMP_CWORD} -eq 3 && "${cur}" != -* ]]; then
+                # Second positional: optional root
+                COMPREPLY=( $(compgen -W "root" -- "${cur}") )
+            else
+                # All dockerize flags hidden in Go; only general opts apply.
+                COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
+            fi
+            ;;
+        reset)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${reset_opts}" -- "${cur}") )
+            fi
+            ;;
+        enable|disable)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        start|up|stop|down|restart)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        compose-info)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        generate-compose-file|gcf|generate-docker-file|gdf|reconfigure|rcf)
+            # generate-*-file / reconfigure [hostname] -- hostname is optional
+            # (no hostname = apply to all sites). No hint: would imply a
+            # required positional.
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # Optional first positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${generate_docker_file_opts}" -- "${cur}") )
+            fi
+            ;;
+        remove)
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            ;;
+        update-hosts-file|uhf)
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             ;;
         reinstall-cert)
-            COMPREPLY=( $(compgen -W "--env-path --reinstall-ca ${general_opts}" -- "${cur}") )
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "--env-path --reinstall-ca ${general_opts}" -- "${cur}") )
+            fi
             ;;
         register)
             COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
+            ;;
+        uninstall)
+            COMPREPLY=( $(compgen -W "--full ${general_opts}" -- "${cur}") )
             ;;
         update)
             COMPREPLY=( $(compgen -W "--check --full --version ${general_opts}" -- "${cur}") )
@@ -310,7 +510,7 @@ _wp_staging_cli() {
             return
             ;;
         --wp)
-            COMPREPLY=( $(compgen -W "latest 6.7.1 6.6.2" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "latest nightly" -- "${cur}") )
             return
             ;;
     esac

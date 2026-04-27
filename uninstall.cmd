@@ -18,6 +18,7 @@ exit 1
 setlocal enabledelayedexpansion
 
 REM WP Staging CLI Uninstaller for Windows (CMD)
+REM Build: 20260417-120000
 REM This script uninstalls the wpstaging cli binary
 REM
 REM Download and run directly from the web:
@@ -49,33 +50,70 @@ echo %BLUE%WP Staging CLI - Uninstaller%NC%
 echo %BLUE%==============================%NC%
 echo.
 
-REM Check if wpstaging is installed in any candidate directory
+REM Check if wpstaging is installed in any candidate directory.
+REM Track per-directory verification flags so the removal phase only deletes
+REM from locations that passed the --version check (a foreign wpstaging.exe
+REM in a candidate dir must not be removed).
 set FOUND=0
+set VERIFIED_1=0
+set VERIFIED_2=0
+set VERIFIED_3=0
 
 if exist "%INSTALL_DIR_1%\%BINARY_NAME%" (
-    set FOUND=1
-    echo %BLUE%Found installation in: %INSTALL_DIR_1%%NC%
-)
-
-if exist "%INSTALL_DIR_2%\%BINARY_NAME%" (
-    set FOUND=1
-    echo %BLUE%Found installation in: %INSTALL_DIR_2%%NC%
-)
-
-if exist "%INSTALL_DIR_3%\%BINARY_NAME%" (
-    set FOUND=1
-    echo %BLUE%Found installation in: %INSTALL_DIR_3%%NC%
-)
-
-if %FOUND%==0 (
-    where wpstaging >nul 2>&1
+    "%INSTALL_DIR_1%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
     if not errorlevel 1 (
         set FOUND=1
-        for /f "delims=" %%i in ('where wpstaging 2^>nul') do echo %BLUE%Found wpstaging at: %%i%NC%
+        set VERIFIED_1=1
+        echo %BLUE%Found installation in: !INSTALL_DIR_1!%NC%
+    ) else (
+        echo %YELLOW%Binary at !INSTALL_DIR_1!\!BINARY_NAME! is not WP Staging CLI, skipping%NC%
     )
 )
 
-if %FOUND%==0 (
+if exist "%INSTALL_DIR_2%\%BINARY_NAME%" (
+    "%INSTALL_DIR_2%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+    if not errorlevel 1 (
+        set FOUND=1
+        set VERIFIED_2=1
+        echo %BLUE%Found installation in: !INSTALL_DIR_2!%NC%
+    ) else (
+        echo %YELLOW%Binary at !INSTALL_DIR_2!\!BINARY_NAME! is not WP Staging CLI, skipping%NC%
+    )
+)
+
+if exist "%INSTALL_DIR_3%\%BINARY_NAME%" (
+    "%INSTALL_DIR_3%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+    if not errorlevel 1 (
+        set FOUND=1
+        set VERIFIED_3=1
+        echo %BLUE%Found installation in: !INSTALL_DIR_3!%NC%
+    ) else (
+        echo %YELLOW%Binary at !INSTALL_DIR_3!\!BINARY_NAME! is not WP Staging CLI, skipping%NC%
+    )
+)
+
+if !FOUND!==0 (
+    where wpstaging >nul 2>&1
+    if not errorlevel 1 (
+        for /f "delims=" %%i in ('where wpstaging 2^>nul') do (
+            "%%i" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+            if not errorlevel 1 (
+                set FOUND=1
+                echo %BLUE%Found wpstaging at: %%i%NC%
+                REM Mark matching candidate dir as verified so removal targets it.
+                for %%d in ("%%~dpi.") do (
+                    if /i "%%~fd"=="%INSTALL_DIR_1%" set VERIFIED_1=1
+                    if /i "%%~fd"=="%INSTALL_DIR_2%" set VERIFIED_2=1
+                    if /i "%%~fd"=="%INSTALL_DIR_3%" set VERIFIED_3=1
+                )
+            ) else (
+                echo %YELLOW%Binary at %%i is not WP Staging CLI, skipping%NC%
+            )
+        )
+    )
+)
+
+if !FOUND!==0 (
     echo %YELLOW%WP Staging CLI does not appear to be installed%NC%
     echo %BLUE%Checking for leftover configuration...%NC%
 )
@@ -90,8 +128,15 @@ echo   - License key environment variable
 echo   - Cache and working directories
 echo.
 
-set /p CONFIRM="Are you sure you want to uninstall WP Staging CLI? [y/N] "
-if /i not "%CONFIRM%"=="y" (
+REM WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1", skip this
+REM confirmation. Used by CI to test the documented install.cmd invocation.
+if "%WPSTG_UNINSTALL_ASSUME_YES%"=="1" (
+    set "CONFIRM=y"
+    echo %BLUE%Proceeding ^(WPSTG_UNINSTALL_ASSUME_YES set^)%NC%
+) else (
+    set /p CONFIRM="Are you sure you want to uninstall WP Staging CLI? [y/N] "
+)
+if /i not "!CONFIRM!"=="y" (
     echo.
     echo %BLUE%Uninstallation cancelled%NC%
     goto :EOF
@@ -124,7 +169,15 @@ if not errorlevel 1 (
     type "%TEMP_SITES%"
     echo.
     echo %YELLOW%The above sites will remain on disk unless you delete them.%NC%
-    set /p DELETE_SITES="Do you want to delete all sites and their Docker data? [y/N] "
+
+    REM WPSTG_UNINSTALL_ASSUME_YES (internal, undocumented): when "1",
+    REM auto-answer "No" here to preserve user data. Used by CI only.
+    if "%WPSTG_UNINSTALL_ASSUME_YES%"=="1" (
+        set "DELETE_SITES=n"
+        echo %BLUE%Sites will be preserved ^(WPSTG_UNINSTALL_ASSUME_YES set^)%NC%
+    ) else (
+        set /p DELETE_SITES="Do you want to delete all sites and their Docker data? [y/N] "
+    )
 
     if /i "!DELETE_SITES!"=="y" (
         echo %BLUE%Stopping all containers first...%NC%
@@ -185,17 +238,14 @@ if defined WPSTAGING_CMD (
 
 echo.
 
-REM Remove binaries from all candidate directories
+REM Remove binaries only from verified candidate directories. Iterating every
+REM candidate here would delete a foreign wpstaging.exe in a candidate dir,
+REM defeating the --version verification above.
 echo %BLUE%Removing binaries...%NC%
 
-REM Remove from INSTALL_DIR_1
-call :remove_binaries_from_dir "%INSTALL_DIR_1%"
-
-REM Remove from INSTALL_DIR_2
-call :remove_binaries_from_dir "%INSTALL_DIR_2%"
-
-REM Remove from INSTALL_DIR_3
-call :remove_binaries_from_dir "%INSTALL_DIR_3%"
+if "!VERIFIED_1!"=="1" call :remove_binaries_from_dir "%INSTALL_DIR_1%"
+if "!VERIFIED_2!"=="1" call :remove_binaries_from_dir "%INSTALL_DIR_2%"
+if "!VERIFIED_3!"=="1" call :remove_binaries_from_dir "%INSTALL_DIR_3%"
 
 goto :after_remove_binaries
 

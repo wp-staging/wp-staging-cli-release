@@ -106,7 +106,19 @@ Yes, you can run the binary directly from the extracted folder.
 <a name="q6c"></a>
 **Q6c: How do I uninstall wpstaging?**  
 **A6c:**
-Use the quick uninstall script (recommended):
+Use the built-in `uninstall` command (recommended):
+
+**Default uninstall** (deactivates license, removes binary, shell completions, and PATH entries):
+```bash
+wpstaging uninstall
+```
+
+**Full uninstall** (additionally removes cache, Docker sites, etc.):
+```bash
+wpstaging uninstall --full
+```
+
+Alternatively, download and run the uninstall script directly:
 
 **Linux / macOS / WSL:**
 ```bash
@@ -123,16 +135,18 @@ irm https://wp-staging.com/uninstall.ps1 | iex
 curl -fsSL https://wp-staging.com/uninstall.cmd -o uninstall.cmd && uninstall.cmd && del uninstall.cmd
 ```
 
-The uninstaller will:
-- Deactivate your license on the WP Staging server (if registered)
-- Remove the wpstaging binary and aliases
-- Remove shell completion scripts for Bash and Zsh (Linux/macOS)
-- Remove PATH entries from shell configuration
-- Remove license key environment variable
-- Remove cache and working directories:
+The default `uninstall` command:
+- Deactivates your license on the WP Staging server and deletes the local key
+- Removes the wpstaging binary
+- Removes shell completion scripts for Bash and Zsh (Linux/macOS)
+- Removes PATH entries from shell RC files (Linux/macOS) or user PATH (Windows)
+
+The `--full` flag additionally removes:
+- Cache and working directories:
   - Linux: `~/.config/wpstaging/`
   - macOS: `~/Library/Application Support/wpstaging/`
   - Windows: `%APPDATA%\wpstaging\`
+- Docker sites and data
 
 **Note:** If you've used Docker features, run `wpstaging remove` first to remove Docker containers and data before uninstalling the CLI.
 
@@ -3179,4 +3193,68 @@ wpstaging switch-wp mysite.local 6.7-beta1
 
 ---
 
-**Last Updated:** 2026-04-07 13:19:58 UTC
+<a name="q117"></a>
+**Q117: Why should I use VirtioFS on macOS?**  
+
+**A117:**
+On macOS, Docker shares files between your Mac and the running containers whenever WordPress inside a container reads or writes a file. The default sharing backend is slow, so sites start up slowly and any workflow that touches many files inside the container takes longer than it should. VirtioFS is a faster backend that removes most of this overhead, so sites feel more responsive and file-heavy container work finishes sooner.
+
+VirtioFS does not speed up host-side archive extraction itself, but it improves the parts of `add`, `reset`, and `restore` that run inside the container once the site is up.
+
+**To enable VirtioFS:**
+1. Open Docker Desktop.
+2. Go to Settings → General → Virtual file sharing.
+3. Select **VirtioFS**.
+4. Click **Apply & Restart**.
+
+The CLI shows a tip during `add`, `reset`, `extract`, and `restore` if VirtioFS is not the active file-sharing mechanism. It fires once per switch away: once you enable VirtioFS the tip goes silent, and if you later switch back to a different mechanism the tip is shown again on the next run. This applies to macOS only.
+
+---
+
+<a name="q118"></a>
+**Q118: How do I access the database GUI for a dockerized site?**  
+**A118:**
+By default, dockerized sites ship with a bundled Adminer database UI. Open either URL in your browser:
+
+- `https://<site>/adminer/`
+- `https://adminer.<site>`
+
+The login form is pre-filled with the database server, username, and database name. Enter the password shown when the site was created (also available in the site's `.env` file as `DB_PASSWORD`).
+
+To disable Adminer, add `--disable-adminer` when creating, resetting, or regenerating a site:
+
+```bash
+wpstaging add https://mysite.local --disable-adminer
+wpstaging reset mysite.local --disable-adminer
+wpstaging generate-docker-file mysite.local --disable-adminer
+wpstaging reconfigure mysite.local --disable-adminer
+```
+
+`reconfigure --disable-adminer` turns Adminer off on a live site without losing data: it updates the site's configuration and relaunches it, while WordPress files and the database are preserved.
+
+The `DISABLE_ADMINER=true` setting is persisted in the site's `.env` file so future regenerations keep Adminer off.
+
+---
+
+<a name="q119"></a>
+**Q119: How do I roll an older site forward after a CLI upgrade?**  
+**A119:**
+Run:
+
+```bash
+wpstaging reconfigure <site>
+```
+
+`reconfigure` updates the site's Docker setup (compose, nginx, PHP, SSL certificate) and relaunches the site. WordPress files and the database are preserved.
+
+Use this to apply new defaults introduced by a CLI release (for example, to add the bundled Adminer UI to a site that was created before Adminer support, or to refresh the SSL certificate after the hostname list changed).
+
+If you omit the hostname, all sites are reconfigured:
+
+```bash
+wpstaging reconfigure
+```
+
+---
+
+**Last Updated:** 2026-04-24 16:53:45 UTC
