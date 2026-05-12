@@ -1,5 +1,4 @@
 # WP Staging CLI Uninstaller for Windows (PowerShell)
-# Build: 20260417-120000
 # This script uninstalls wpstaging from Windows
 #
 # Download and run directly from the web (recommended):
@@ -11,11 +10,36 @@
 #
 # Or run locally if already downloaded:
 #   .\uninstall.ps1
+#
+# Print uninstaller build, then exit:
+#   & ([scriptblock]::Create((irm https://wp-staging.com/uninstall.ps1))) -PrintVersion
+#
+# Options:
+#   -PrintVersion           Print uninstaller build, then exit
+#                           (bash and cmd uninstallers also accept the short form -V;
+#                            PowerShell does not, to stay consistent with install.ps1.)
+
+param(
+    [Parameter(Mandatory=$false)]
+    [switch]$PrintVersion
+)
 
 $ErrorActionPreference = "Stop"
 
 # Configuration
 $BinaryName = "wpstaging.exe"
+$ScriptVersion = "20260430-130000"
+
+# Early -PrintVersion short-circuit: print and exit before any uninstall logic
+# so the smoke-test output stays clean for piping through grep / jq / etc.
+# Uses Write-Output so the lines reach stdout in any host -- PowerShell 7's
+# Write-Host writes to the Information stream, which is not captured by a
+# parent process invoking ``& pwsh -File ... 2>&1``.
+if ($PrintVersion) {
+    Write-Output "wpstaging uninstaller"
+    Write-Output "  build: $ScriptVersion"
+    exit 0
+}
 # All candidate directories that the installer may use
 $InstallCandidates = @(
     "$env:LOCALAPPDATA\Programs\wpstaging",
@@ -50,25 +74,36 @@ function Write-Error($Message) {
     Write-ColorOutput Red "Error: $Message"
 }
 
-# Verify that a binary is actually WP Staging CLI
+# Verify that a binary is actually WP Staging CLI.
+# Runs --version under a 5s timeout so a foreign or hung binary cannot stall
+# uninstall (#295). Returns $false on timeout, error, or output mismatch.
 function Test-WpStagingBinary($binaryPath) {
-    try {
-        # Temporarily allow non-zero exit codes so native stderr does not throw
-        $prevPref = $ErrorActionPreference
-        $ErrorActionPreference = "SilentlyContinue"
-        $output = & $binaryPath --version 2>&1
-        $ErrorActionPreference = $prevPref
+    $timeoutMs = 5000
 
-        $text = ($output | Out-String)
-        if ($text -match "wpstaging|wp[-. ]staging") {
-            return $true
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $binaryPath
+    $psi.Arguments = "--version"
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+
+    $proc = $null
+    try {
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        if (-not $proc.WaitForExit($timeoutMs)) {
+            try { $proc.Kill() } catch { }
+            return $false
         }
+        $combined = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
+        return ($combined -match "wpstaging|wp[-. ]staging")
     }
     catch {
-        # Binary failed to execute
-        $ErrorActionPreference = $prevPref
+        return $false
     }
-    return $false
+    finally {
+        if ($proc) { try { $proc.Dispose() } catch { } }
+    }
 }
 
 # Remove binaries and aliases

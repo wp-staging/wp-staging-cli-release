@@ -1,3 +1,56 @@
+## v1.11.0 (2026-05-12)
+
+- **New:** Add `register --status` to display the registered license details, including customer email and plan name (#276).
+- **New:** All install and uninstall scripts add `--print-version` / `-V` to print the build stamp and exit (#297).
+- **New:** Add `sweep-ca-trust` command to remove stale SSL certificate authorities left by previous `--reinstall-ca` cycles (#290).
+- **New:** Add `reinstall-ca` command to rotate the certificate authority and re-sign every site's certificate in one pass (#300).
+- **New:** Add `verify-cert` command to audit SSL certificate trust state across system trust stores and per-site leaves (#301).
+- **New:** Add `docker-start` command to start Docker when it is not already running (#282).
+- **New:** Add `--download-dir` flag; downloaded backup files now land in a `wpstaging-download` subfolder by default (#318).
+- **New:** Add magic-link to sign into wp-admin without a password; URL refreshes on `list` (#285).
+- **New:** Add `magic-link` command to issue a fresh URL on demand, with optional `--timeout` (#285).
+- **Enh:** Add `clean wpcli` subcommand to remove cached WP-CLI downloads; also covered by `clean all` (#139).
+- **Enh:** `--version --json` now emits the standard JSON envelope with `name`, `version`, and `build_time` (#313).
+- **Enh:** Site SSL certificates now show WP Staging CLI in browser certificate viewers instead of the upstream mkcert default (#290).
+- **Enh:** `reinstall-cert` with no hostname now regenerates the SSL certificate for every site in one go (#300).
+- **Enh:** `reinstall-cert` now restarts any running sites automatically after regenerating the certificate (#300).
+- **Enh:** `reinstall-ca` and `reinstall-cert` now confirm completion after restarting running sites (#290).
+- **Enh:** `start` and `stop` now show a progress spinner; pass `--debug` to see verbose Docker output instead (#290).
+- **Enh:** `sweep-ca-trust` confirmation prompt is now shorter and easier to read, especially with `--include-legacy` (#290).
+- **Enh:** When Docker is not running, JSON output now shows which Docker app is installed and how to start it (#282).
+- **Enh:** `list` and `add` JSON output now include each site's `created_at` ISO-8601 UTC timestamp (#274).
+- **Enh:** Rename `--outputdir` to `--output-dir` on extract and restore; the old name still works as a hidden alias (#318).
+- **Enh:** Rename `--workingdir` to `--working-dir`; the old name still works as a hidden alias (#318).
+- **Enh:** Adminer login page now blocks cross-origin requests so its credentials cannot leak to malicious tabs (#324).
+- **Enh:** Adminer is now reachable only at `adminer.<site>`; the `/adminer/` subpath on the main site is no longer routed (#324).
+- **Enh:** Sites restored from a backup now identify themselves as local so plugins suppress telemetry and updates (#323).
+- **Enh:** `add` now rolls back containers and the half-created site directory on Ctrl-C or SIGINT/SIGTERM (#283).
+- **Enh:** Cancel output is now clean with no leftover spinner frame or duplicate "Process cancelled" line (#283).
+- **Enh:** Sudo password is remembered for the rest of the terminal session, so you only enter it once per session (#229).
+- **Enh:** `add --json` now emits a typed `rollback` event around cancel-rollback so callers can detect start and finish (#325).
+- **Fix:** `--disable-mailpit=false` now re-enables the Mailpit container on sites where it was previously disabled (#319).
+- **Fix:** macOS: SSL certificate now reliably trusted by Chrome and Safari for sites running under Docker (#273).
+- **Fix:** `reinstall-cert --reinstall-ca` now removes the previous CA from the system trust store after regenerating (#290).
+- **Fix:** `reinstall-cert <hostname> --reinstall-ca` no longer leaves other sites with untrusted certificates after rotating the CA (#300).
+- **Fix:** `remove` now cleans up wpstaging certificate authority entries from the system trust store instead of leaving them as orphans (#290).
+- **Fix:** Windows: `sweep-ca-trust` now removes stale CA entries silently instead of prompting a confirmation dialog per certificate (#290).
+- **Fix:** Windows: spinner no longer leaves a stale frame on the previous line after `reinstall-ca` finishes (#290).
+- **Fix:** `--json` license output now emits `valid_through` as ISO-8601 (`YYYY-MM-DD`) so locale-aware GUI clients can parse it reliably (#276).
+- **Fix:** `start` and `restart` now create the missing Adminer directory on sites created before the bundled Adminer feature (#299).
+- **Fix:** Default output directory falls back to a writable location when the working directory is not writable (#289).
+- **Fix:** Installer and uninstaller scripts now work with any POSIX shell, not only bash or dash (#294).
+- **Fix:** Uninstaller now only removes `wpstg` or `wp-staging` files that are confirmed WP Staging CLI aliases (#296).
+- **Fix:** Windows uninstaller now times out the `--version` check after 5 seconds, preventing a hang on an unresponsive binary (#295).
+- **Fix:** Re-running `add` after a canceled attempt no longer fails with a Docker mount-namespace error (#283).
+- **Fix:** `--output-dir` now appends a `wpstaging-output` subfolder, matching the default output layout (#321).
+- **Fix:** `reconfigure` without a hostname now applies `--disable-*` flags to every site and saves them to each site's `.env` (#315).
+- **Fix:** Saving a disable flag to a site's `.env` no longer leaves a blank line gap or strips the trailing newline (#316).
+- **Dev:** CHANGELOG release PR now stages only `CHANGELOG.md` so its title matches its diff (#298).
+- **Dev:** Stop tracking `manifest.json` and `target_repo` in the source repo; both are regenerated by the deploy workflow each release (#298).
+- **Dev:** Consolidate `--disable-*` toggle plumbing into shared helpers across the single-site commands (#288).
+- **Dev:** Consolidate duplicated sites-directory path-building into shared helpers used across site commands (#304).
+- **Dev:** macOS unit test now tolerates `$TMPDIR` with a trailing slash so `make tests-go-unit` passes (#326).
+
 ## v1.10.0 (2026-04-27)
 
 - **New:** Bundled Adminer database UI at `<site>/adminer/` and `adminer.<site>`. Opt out with `--disable-adminer` (#69).

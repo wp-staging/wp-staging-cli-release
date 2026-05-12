@@ -18,7 +18,6 @@ exit 1
 setlocal enabledelayedexpansion
 
 REM WP Staging CLI Installer for Windows (CMD)
-REM Build: 20260417-120000
 REM This script downloads and installs the wpstaging cli binary
 REM
 REM Usage:
@@ -68,10 +67,13 @@ set LICENSE_KEY=
 set CUSTOM_BIN_DIR=
 set EXTRACT_DIR=
 set CLI_ARGS=
+set SCRIPT_VERSION=20260430-110000
 
 REM Parse arguments
 :parse_args
 if "%~1"=="" goto :done_args
+if "%~1"=="--print-version" goto :do_print_version
+if "%~1"=="-V" goto :do_print_version
 if "%~1"=="--license" (
     set LICENSE_KEY=%~2
     shift
@@ -592,3 +594,27 @@ echo   https://github.com/wp-staging/wp-staging-cli-release
 echo.
 
 endlocal
+exit /b 0
+
+REM Print installer build and latest release, then exit. Used as a release
+REM smoke test instead of installing. Reachable only via goto from :parse_args
+REM so that the script never falls into it during a normal install run.
+:do_print_version
+echo wpstaging installer
+echo   build:          %SCRIPT_VERSION%
+curl -fsSL "%GITHUB_API_URL%/tags" -o "%TEMP%\pv_tags.json" >nul 2>&1
+if errorlevel 1 (
+    echo   latest release: unknown ^(could not fetch from GitHub^)
+    endlocal
+    exit /b 0
+)
+set "PV_LATEST="
+for /f "delims=" %%i in ('powershell -NoProfile -Command "$tags = Get-Content -Raw '%TEMP%\pv_tags.json' | ConvertFrom-Json; $stable = @($tags | Where-Object { $_.name -notmatch '(?i)(beta|alpha|rc)' }); if ($stable.Count -gt 0) { $stable[0].name } else { '' }"') do set "PV_LATEST=%%i"
+del "%TEMP%\pv_tags.json" >nul 2>&1
+if defined PV_LATEST (
+    echo   latest release: !PV_LATEST!
+) else (
+    echo   latest release: unknown
+)
+endlocal
+exit /b 0

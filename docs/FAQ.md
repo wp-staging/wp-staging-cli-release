@@ -2,21 +2,21 @@
 
 ## General Questions
 
-<a name="q0"></a>
+<a name="q1"></a>
 **Q1: What is `wpstaging`?**  
 **A1:** `wpstaging` is a high-performance command-line tool to process WP Staging backup files (`.wpstg`). It allows you to extract, normalize, inspect, and restore backups without using WordPress itself.
 
-<a name="q1"></a>
+<a name="q2"></a>
 **Q2: Which operating systems are supported?**  
 **A2:**
 Windows (10 or later), Linux, and macOS. Pre-built binaries are available for all major OSes. On Windows, the CLI requires Windows 10 / Windows Server 2016 or later. Older versions are not supported.
 
-<a name="q2"></a>
+<a name="q3"></a>
 **Q3: Do I need a license to use this tool?**  
 **A3:**
 Yes. You need a valid WP Staging Agency or Developer license key to access backup files.
 
-<a name="q3"></a>
+<a name="q4"></a>
 **Q4: How fast is it?**  
 **A4:**
 Benchmarks show it can extract a 20GB backup in under 36 seconds on an AMD Ryzen 7 PRO 7840U with a fast SSD running Ubuntu 20.04.
@@ -202,7 +202,7 @@ WP Staging CLI has four main command groups:
 
 Use `wpstaging [command] --help` for detailed information about each command.
 
-<a name="q8"></a>
+<a name="q9"></a>
 **Q9: How do I register my license?**  
 **A9:**
 You can provide your license in three ways:
@@ -237,7 +237,16 @@ wpstaging extract --license=YOUR_LICENSE_KEY backup.wpstg
 
 Using license registration (Option 1) is recommended as it keeps sensitive data out of command history and works seamlessly across all commands.
 
-<a name="q9"></a>
+<a name="q9a"></a>
+**Q9a: How do I check my current license status?**  
+**A9a:**
+Run:
+```bash
+wpstaging register --status
+```
+This shows your registered license details from local storage: license holder, email, plan name, and expiration date. No network call is made. If no license is registered, the command tells you and prints the registration command.
+
+<a name="q10"></a>
 **Q10: How do I deactivate my license?**  
 **A10:**
 To deactivate and remove your license from this machine:
@@ -259,14 +268,14 @@ wpstaging clean license
 
 After deactivating, you'll need to re-enter your license key the next time you run a command.
 
-<a name="q10"></a>
+<a name="q11"></a>
 **Q11: How can I extract and normalize the database file?**  
 **A11:**
 ```bash
 wpstaging extract --normalizedb backupfile.wpstg
 ```
 
-<a name="q11"></a>
+<a name="q12"></a>
 **Q12: How can I restore to a different WordPress path?**  
 **A12:**
 Use the `--path` flag:
@@ -277,7 +286,7 @@ If running from the WP root, `--path` is optional.
 
 ## Filter Flags Questions
 
-<a name="q12"></a>
+<a name="q13"></a>
 **Q13: Can I extract only specific parts of the backup?**  
 **A13:**
 Yes, using “Only-Filters”:
@@ -285,7 +294,7 @@ Yes, using “Only-Filters”:
 - `--only-plugins` – Only extract plugins.
 - `--only-file=<string>` – Extract only matching files.
 
-<a name="q13"></a>
+<a name="q14"></a>
 **Q14: Can I skip certain parts?**  
 **A14:**
 Yes, using "Skip-Filters":
@@ -293,7 +302,7 @@ Yes, using "Skip-Filters":
 - `--skip-uploads` – Skip uploads.
 - `--skip-file=<string>` – Skip files matching a string.
 
-<a name="q14"></a>
+<a name="q15"></a>
 **Q15: How do --skip-file and --only-file work? Do they support regex or wildcards?**  
 **A15:**
 These flags use **simple substring matching**, not regex or wildcards. The string you provide is matched anywhere in the file path.
@@ -339,7 +348,7 @@ wpstaging extract --only-file=/uploads/ --skip-file=-150x150 backup.wpstg
 
 ## Restore Flags Questions
 
-<a name="q15"></a>
+<a name="q16"></a>
 **Q16: How do I restore to an external database?**  
 **A16:**
 Use DB-related flags:
@@ -348,7 +357,7 @@ wpstaging restore --path=/var/www/site \
   --db-name=dbname --db-user=user --db-pass=pass --db-host=host backupfile.wpstg
 ```
 
-<a name="q16"></a>
+<a name="q17"></a>
 **Q17: Can I overwrite existing files or DB tables?**  
 **A17:**
 Yes, use:
@@ -358,7 +367,7 @@ Yes, use:
 
 ## Config File Questions
 
-<a name="q17"></a>
+<a name="q18"></a>
 **Q18: What is the default configuration file used for?**  
 **A18:**
 The config file is used to store **flags only**, not commands. It allows you to avoid repeatedly typing commonly used flags, such as paths, database credentials, filters, or Docker flags.
@@ -368,17 +377,17 @@ The config file is used to store **flags only**, not commands. It allows you to 
 - **macOS:** `~/Library/Application Support/wpstaging/wpstaging.conf`
 - **Windows:** `%APPDATA%\wpstaging\wpstaging.conf`
 
-<a name="q18"></a>
+<a name="q19"></a>
 **Q19: Can I skip reading the config file?**  
 **A19:**
 Yes, use the `--skip-config` flag when running any command. This ensures the CLI ignores the config file entirely and only uses flags provided on the command line.
 
-<a name="q19"></a>
+<a name="q20"></a>
 **Q20: Do CLI flags override the config file?**  
 **A20:**
 Yes. Any flag provided directly in the CLI command will override the corresponding value in the config file.
 
-<a name="q20"></a>
+<a name="q21"></a>
 **Q21: What kind of flags can I define in the config file?**  
 **A21:**
 You can define most CLI flags in the config file to avoid repeatedly typing them on the command line. Each flag should be on its own line with its value (e.g., `--path=/var/www` or `--debug`).
@@ -394,14 +403,14 @@ You can define flags such as:
 - **Docker Defaults:** `--php`, `--http-port`, `--https-port`, `--db-port`, `--env-path`, etc.
 - **General Flags:** `--debug`, `--quiet`, `--verify`
 
-<a name="q21"></a>
+<a name="q22"></a>
 **Q22: Can I use multiple config files?**  
 **A22:**
 WP-Staging-CLI only reads one config file at a time. By default, it uses the OS-specific config location (see [Q18](#q18)), but you can override it with a custom file using `--config=file.conf`. You can also temporarily bypass it using `--skip-config` and pass all flags directly on the CLI.
 
 ## Docker Questions
 
-<a name="q22"></a>
+<a name="q23"></a>
 **Q23: Where is the Docker environment setup?**  
 **A23:**
 By default, Docker-related files are stored in `~/wpstaging/`. Each WordPress site has its own isolated directory in `~/wpstaging/sites/<sitename>/`. You can change the parent location with the `--env-path=<path>` flag.
@@ -410,7 +419,7 @@ By default, Docker-related files are stored in `~/wpstaging/`. Each WordPress si
 - `--env-path=/tmp/test` → actual path: `/tmp/test/wpstaging/`
 - Site directory: `/tmp/test/wpstaging/sites/<hostname>/`
 
-<a name="q23"></a>
+<a name="q24"></a>
 **Q24: How do I create a new WordPress site with Docker?**  
 **A24:**
 Use the `add` command to create a new WordPress site with its own isolated Docker environment. Here's what happens step by step:
@@ -463,7 +472,7 @@ wpstaging add mysite.local --wp=6.4
 
 After creating a site, use `wpstaging list` to see all your sites and their ports.
 
-<a name="q24"></a>
+<a name="q25"></a>
 **Q25: How can I assign a specific IP to my Docker site?**  
 **A25:**
 Use `--container-ip=<ipv4>` when creating a site. If you don't specify an IP, the CLI automatically assigns the next available IP from the range **127.3.2.1 - 127.3.2.254**:
@@ -512,7 +521,7 @@ wpstaging add site3.local --container-ip=127.3.2.1 --https-port=8445
 - **RAM**: ~500MB per site (PHP + MariaDB + Nginx)
 - **Disk**: ~1GB per site (WordPress files + database)
 
-<a name="q26"></a>
+<a name="q27"></a>
 **Q27: How can I configure PHP version or ports?**  
 **A27:**
 PHP version and ports can be configured in several ways:
@@ -558,7 +567,7 @@ wpstaging restart mysite.local
 
 **Note:** Port settings can only be set during initial creation or by editing `.env` manually. PHP version can be changed at any time using the `switch-php` command. WordPress version can be changed using the `switch-wp` command.
 
-<a name="q27"></a>
+<a name="q28"></a>
 **Q28: How do I configure MariaDB?**  
 **A28:**
 You can set `--db-port=<port>` (default `3306`) and `--db-root=<password>` for root password (default `123456`). Database credentials use default values (admin/123456) unless you specify `--secure-credentials` which generates cryptographically secure random passwords. All credentials are stored in the site's `.env` file. You can also use an external database with `--external-db` which disables the MariaDB container.
@@ -583,7 +592,7 @@ wpstaging restart mysite.local --compose-file=/path/to/custom-compose.yml
 ```
 
 **Better approach - Add to config file:**
-To avoid specifying `--compose-file` every time, add it to your config file (e.g., `~/.config/wpstaging/wpstaging.conf` on Linux — see [Q18](#q17) for OS-specific paths):
+To avoid specifying `--compose-file` every time, add it to your config file (e.g., `~/.config/wpstaging/wpstaging.conf` on Linux — see [Q18](#q18) for OS-specific paths):
 
 ```ini
 --compose-file /path/to/custom-compose.yml
@@ -593,7 +602,7 @@ Now all commands will automatically use your custom compose file path, and it wi
 
 **Note:** If you manually edit the compose file outside of wpstaging, those changes will be overwritten when wpstaging regenerates it.
 
-<a name="q29"></a>
+<a name="q30"></a>
 **Q30: How do I configure WordPress settings?**  
 **A30:**
 The `add` command supports various WordPress configuration flags:
@@ -633,15 +642,30 @@ wpstaging add mysite.local --subdomains=blog.mysite.local,shop.mysite.local
 wpstaging add mysite.local --from=backup.wpstg
 ```
 
-<a name="q30"></a>
-**Q31: How do I disable the Mailpit container?**  
+<a name="q31"></a>
+**Q31: How do I disable or re-enable the Mailpit container?**  
 **A31:**
-Use `--disable-mailpit` when creating a site to prevent the Mailpit container from running:
+Pass `--disable-mailpit` when creating, resetting, or regenerating a site:
+
 ```bash
 wpstaging add mysite.local --disable-mailpit
+wpstaging reset mysite.local --disable-mailpit
+wpstaging generate-docker-file mysite.local --disable-mailpit
+wpstaging reconfigure mysite.local --disable-mailpit
 ```
 
-<a name="q31"></a>
+The `DISABLE_MAILPIT=true` setting is saved in the site's `.env` file so future runs keep Mailpit off.
+
+To re-enable Mailpit on a site where it was previously disabled, pass `--disable-mailpit=false`:
+
+```bash
+wpstaging reconfigure mysite.local --disable-mailpit=false
+wpstaging reset mysite.local --disable-mailpit=false
+```
+
+`reconfigure --disable-mailpit=false` updates the configuration and recreates the containers, so the Mailpit container is added back without losing WordPress files or database data. `reset --disable-mailpit=false` does the same after reinstalling WordPress core.
+
+<a name="q32"></a>
 **Q32: How do I use secure random passwords?**  
 **A32:**
 By default, sites use simple default credentials (admin/admin, root password: 123456) for convenience during development. To generate cryptographically secure random passwords, use the `--secure-credentials` flag:
@@ -659,7 +683,7 @@ All passwords are stored in the site's `.env` file. You can also manually specif
 wpstaging add mysite.local --admin-pass=MySecurePass123 --db-pass=DbSecurePass456
 ```
 
-<a name="q32"></a>
+<a name="q33"></a>
 **Q33: How do I use an external database?**  
 **A33:**
 Use the `--external-db` flag along with database connection details to use an external database instead of the containerized MariaDB:
@@ -866,37 +890,37 @@ This protection prevents you from starting a site with a broken database configu
 
 ## Debugging & Misc
 
-<a name="q35"></a>
+<a name="q36"></a>
 **Q36: How do I enable debug messages?**  
 **A36:**
 Use `-d` or `--debug`.
 
-<a name="q36"></a>
+<a name="q37"></a>
 **Q37: Can I suppress output?**  
 **A37:**
 Yes, use `-q` or `--quiet`.
 
-<a name="q37"></a>
+<a name="q38"></a>
 **Q38: How do I verify the integrity of extracted files?**  
 **A38:**
 Use the `--verify` flag.
 
-<a name="q38"></a>
+<a name="q39"></a>
 **Q39: How do I enable debug messages?**  
 **A39:**
 Use `-d` or `--debug`.
 
-<a name="q39"></a>
+<a name="q40"></a>
 **Q40: Can I suppress output?**  
 **A40:**
 Yes, use `-q` or `--quiet`.
 
-<a name="q40"></a>
+<a name="q41"></a>
 **Q41: How do I verify the integrity of extracted files?**  
 **A41:**
 Use the `--verify` flag.
 
-<a name="q41"></a>
+<a name="q42"></a>
 **Q42: How can I test what the CLI extracts from docker-compose.yml?**  
 **A42:**
 Use the `compose-info` command to display all data parsed from the compose file:
@@ -928,7 +952,7 @@ The extracted data includes:
 
 This is particularly helpful when troubleshooting port conflicts or verifying custom configurations.
 
-<a name="q42"></a>
+<a name="q43"></a>
 **Q43: I get "port already in use" error when using the Docker environment. What should I do?**  
 **A43:**
 The CLI now has **automatic port conflict detection and resolution**! The tool automatically detects port conflicts and tries alternative ports.
@@ -1010,7 +1034,7 @@ When services are disabled, their port validation is automatically skipped.
 
 ## Command-Specific Flags Questions
 
-<a name="q43"></a>
+<a name="q44"></a>
 **Q44: Why can't I use `--site-url` with the root command?**  
 **A44:**
 Flags like `--site-url`, `--db-prefix`, `--normalizedb`, and `--verify` are command-specific. You must use them with their respective commands:
@@ -1019,11 +1043,11 @@ Flags like `--site-url`, `--db-prefix`, `--normalizedb`, and `--verify` are comm
 - Use: `wpstaging extract --site-url=https://example.com backup.wpstg`
 - Not: `wpstaging --site-url=https://example.com extract backup.wpstg`
 
-<a name="q44"></a>
+<a name="q45"></a>
 **Q45: What flags are available globally vs command-specific?**  
 **A45:**
 **Global flags** (work with all commands):
-- `--outputdir`, `--workingdir`, `--debug`, `--quiet`, `--yes`, `--allow-root`, `--json`, `--page`, `--page-size`, `--verbose`
+- `--working-dir`, `--debug`, `--quiet`, `--yes`, `--allow-root`, `--json`, `--page`, `--page-size`, `--verbose`
 
 **Extract-specific flags**:
 - `--normalizedb`, `--overwrite`, `--site-url`, `--db-prefix`, `--verify`
@@ -1059,17 +1083,17 @@ wpstaging dump-header backup.wpstg --outputdir=/tmp/output
 
 ## License & Authentication Questions
 
-<a name="q46"></a>
+<a name="q47"></a>
 **Q47: When does license validation occur?**  
 **A47:**
 License validation happens automatically when you run any backup-related or Docker command (extract, restore, dump-*, add, etc.). Commands like `help`, `register`, `clean`, `status`, and `list` skip license validation for faster access.
 
-<a name="q47"></a>
+<a name="q48"></a>
 **Q48: Do I need a license to view help messages?**  
 **A48:**
 No. Running `wpstaging --help` or `wpstaging extract --help` does not require license validation. You only need a valid license when executing actual operations.
 
-<a name="q48"></a>
+<a name="q49"></a>
 **Q49: How is my license stored and validated?**  
 **A49:**
 After you register your license using `wpstaging register`, the key is encrypted and stored locally. The CLI automatically validates your license when running backup-related or Docker commands, and caches the validation results for 4 hours to minimize API calls.
@@ -1092,7 +1116,7 @@ Error: License expired - Extend License https://wp-staging.com/
 
 ## Troubleshooting Questions
 
-<a name="q49"></a>
+<a name="q50"></a>
 **Q50: I get "Error: Backup file does not exist" but the file is there. Why?**  
 **A50:**
 Make sure you're providing the correct path to the `.wpstg` file. Use absolute paths if running from a different directory:
@@ -1100,12 +1124,12 @@ Make sure you're providing the correct path to the `.wpstg` file. Use absolute p
 wpstaging extract /full/path/to/backup.wpstg
 ```
 
-<a name="q50"></a>
+<a name="q51"></a>
 **Q51: Can I run multiple extraction/restore operations simultaneously?**  
 **A51:**
 No. The CLI uses file-based locking to prevent concurrent operations on the same backup file. If you need parallel operations, use different backup files.
 
-<a name="q51"></a>
+<a name="q52"></a>
 **Q52: What does "This application cannot be run as root" mean?**  
 **A52:**
 On **Linux/macOS**, the CLI blocks root execution by default as a security best practice.
@@ -1134,7 +1158,7 @@ sudo wpstaging extract --allow-root backup.wpstg
 sudo chown -R www-data:www-data ./wpstaging-output
 ```
 
-<a name="q52"></a>
+<a name="q53"></a>
 **Q53: I get "Error: Failed to open the backup file" on Windows. Help?**  
 **A53:**
 Ensure:
@@ -1145,7 +1169,7 @@ Ensure:
 
 ## Performance Questions
 
-<a name="q53"></a>
+<a name="q54"></a>
 **Q54: How can I speed up extraction?**  
 **A54:**
 - Use fast storage (SSD/NVMe) for both source and destination
@@ -1153,19 +1177,19 @@ Ensure:
 - Disable verification (`--verify` adds overhead)
 - Run on systems with good I/O performance
 
-<a name="q54"></a>
+<a name="q55"></a>
 **Q55: Does the CLI support multi-threading?**  
 **A55:**
 The CLI is optimized for single-threaded sequential extraction with efficient streaming. Multi-threading isn't needed as disk I/O is typically the bottleneck.
 
-<a name="q55"></a>
+<a name="q56"></a>
 **Q56: How much memory does the CLI require?**  
 **A56:**
 Memory usage is minimal (typically <100MB) even for large backups because the CLI uses streaming extraction rather than loading entire files into memory.
 
 ## SSL Certificate and Browser Trust Questions
 
-<a name="q56"></a>
+<a name="q57"></a>
 **Q57: Why does my browser show "Your connection is not private" or "Not Secure" warnings?**  
 **A57:**
 This warning appears when your browser doesn't trust the SSL certificate used by your local development site. There are two common scenarios:
@@ -1197,7 +1221,7 @@ This warning appears when your browser doesn't trust the SSL certificate used by
 3. **Manual bypass (not recommended):**
    Click "Advanced" → "Proceed to site" in your browser. This only works for the current session and doesn't actually solve the trust issue.
 
-<a name="q57"></a>
+<a name="q58"></a>
 **Q58: What is mkcert and why does WP Staging CLI use it?**  
 **A58:** mkcert is a trusted tool for creating locally-trusted SSL certificates for development environments. WP Staging CLI uses mkcert to provide a seamless HTTPS development experience.
 
@@ -1225,7 +1249,7 @@ This warning appears when your browser doesn't trust the SSL certificate used by
 - ✅ Better testing environment - catches HTTPS-related issues early
 - ✅ One-time setup, works for all local sites
 
-<a name="q58"></a>
+<a name="q59"></a>
 **Q59: Why not just use HTTP instead of HTTPS for local development?**  
 **A59:**
 While HTTP is simpler, using HTTPS for local development is strongly recommended for several important reasons:
@@ -1263,7 +1287,7 @@ While HTTP is simpler, using HTTPS for local development is strongly recommended
 
 **Using mkcert solves all these issues while keeping local development simple and warning-free.**
 
-<a name="q59"></a>
+<a name="q60"></a>
 **Q60: Why does mkcert installation require sudo (Linux/macOS) or administrator permission (Windows)?**  
 **A60:**
 Installing a Certificate Authority (CA) to the system trust store is a system-level operation that requires elevated privileges. Here's why:
@@ -1293,13 +1317,13 @@ Installing a Certificate Authority (CA) to the system trust store is a system-le
 
 **Security note:** The CA created by mkcert is stored locally and never leaves your computer. It's only used to sign certificates for your local development sites.
 
-<a name="q60"></a>
+<a name="q61"></a>
 **Q61: Does the mkcert CA installation affect my system security?**  
 **A61:**
 The mkcert CA is designed specifically for local development and is safe to install. Here's what you should know:
 
 **Security design:**
-- ✅ CA private key is stored locally only (`~/wpstaging-dockerize/docker/nginx/ca/rootCA-key.pem`)
+- ✅ CA private key is stored locally only (`~/wpstaging/stack/mkcert/ca/rootCA-key.pem`)
 - ✅ Never transmitted over network
 - ✅ Only used for local development sites
 - ✅ Cannot be used to intercept real websites (different domains)
@@ -1316,12 +1340,18 @@ The mkcert CA is designed specifically for local development and is safe to inst
    ```bash
    wpstaging remove
    ```
-2. Manually remove CA from system (optional):
-   - Linux: `sudo rm /usr/local/share/ca-certificates/rootCA.pem && sudo update-ca-certificates`
-   - macOS: Open Keychain Access, search "mkcert", delete the certificate
-   - Windows: Open Certificate Manager, remove "mkcert" from Trusted Root CAs
+2. Remove the CA from your system trust store (optional). The simplest way is:
+   ```bash
+   wpstaging sweep-ca-trust --include-legacy
+   ```
+   This removes both current `WP Staging CLI development CA` entries and any legacy `mkcert development CA` entries left by older builds. See [Q120](#q120).
 
-<a name="q61"></a>
+   To remove manually, look for `WP Staging CLI development CA` in:
+   - Linux: `/usr/local/share/ca-certificates/` (system) and `~/.pki/nssdb/` (Chrome)
+   - macOS: Keychain Access (search "WP Staging CLI")
+   - Windows: Certificate Manager, under Trusted Root Certification Authorities (search "WP Staging CLI")
+
+<a name="q62"></a>
 **Q62: What happens when I'm asked about security certificate installation?**  
 **A62:**
 When you create your first WordPress site with the `add` command, you'll see a prompt like this:
@@ -1355,7 +1385,7 @@ Continue to install? [y/N]:
 
 **Important:** This prompt only appears once. If the CA is already installed in your system trust store (detected via X.509 verification), the prompt is skipped automatically.
 
-<a name="q62"></a>
+<a name="q63"></a>
 **Q63: My browser still shows warnings after installing the CA. What's wrong?**  
 **A63:**
 If you're still seeing warnings after confirming CA installation, try these troubleshooting steps:
@@ -1400,7 +1430,7 @@ wpstaging add yoursite.local
 - **Chrome:** Go to `chrome://settings/security` → "Manage certificates" → Clear SSL state
 - **Firefox:** Settings → Privacy & Security → Certificates → View Certificates → Servers → Delete cached certificates
 
-<a name="q63"></a>
+<a name="q64"></a>
 **Q64: Can I use my own SSL certificates instead of mkcert?**  
 **A64:**
 Yes, but it's not recommended for local development. If you still want to use custom certificates:
@@ -1424,7 +1454,7 @@ If mkcert download or CA installation fails, the CLI automatically falls back to
 
 ## Advanced Docker Questions
 
-<a name="q64"></a>
+<a name="q65"></a>
 **Q65: Can I use external databases with the Docker environment?**  
 **A65:**
 Yes, use `--external-db` flag to disable the MariaDB container and connect to your external database:
@@ -1436,7 +1466,7 @@ wpstaging add mysite.local --external-db \
 
 This disables the local MariaDB container and configures WordPress to use your external database server.
 
-<a name="q65"></a>
+<a name="q66"></a>
 **Q66: How do I manage multiple WordPress sites in Docker?**  
 **A66:**
 Use the site management commands:
@@ -1472,7 +1502,7 @@ wpstaging restart        # Restart all sites
 
 Each site runs in its own isolated set of containers with unique IPs and ports.
 
-<a name="q65b"></a>
+<a name="q66b"></a>
 **Q66b: Why can't I add multiple sites at once with the `add` command?**  
 **A66b:**
 The `add` command only accepts one site URL at a time because each site requires unique configuration:
@@ -1497,7 +1527,7 @@ done
 
 **Note:** The `--yes` flag auto-confirms prompts for unattended operation.
 
-<a name="q66"></a>
+<a name="q67"></a>
 **Q67: How can I check the status of my sites?**  
 **A67:**
 There are two commands for checking site status:
@@ -1565,7 +1595,7 @@ wpstg-site3-local-mariadb   Disabled                 127.3.2.3:3306->3306/tcp
 wpstg-site3-local-mailpit   Disabled                 1025/tcp, 1110/tcp, 127.3.2.3:8025->8025/tcp
 ```
 
-<a name="q67"></a>
+<a name="q68"></a>
 **Q68: Can I change a site's configuration after creation?**  
 **A68:**
 Configuration is stored in each site's `.env` file. To change configuration:
@@ -1591,12 +1621,12 @@ wpstaging del mysite.local
 wpstaging add mysite.local --http-port=8080 --https-port=8443
 ```
 
-<a name="q68"></a>
+<a name="q69"></a>
 **Q69: Where are Docker logs stored?**  
 **A69:**
 Docker container logs are accessible via `docker logs`. The CLI stores configuration files in `~/wpstaging/` by default (or your custom `--env-path`).
 
-<a name="q69"></a>
+<a name="q70"></a>
 **Q70: How does the per-site container architecture work?**  
 **A70:**
 The CLI uses a per-site container architecture where each WordPress site runs in its own isolated set of containers. This means:
@@ -1626,7 +1656,7 @@ wpstaging list
 - Start/stop/delete sites independently
 - Configuration is preserved in `.env` files across restarts
 
-<a name="q70"></a>
+<a name="q71"></a>
 **Q71: How does automatic IP allocation work (Linux/Windows)?**  
 **A71:**
 On Linux and Windows, the CLI automatically manages IP addresses from a reserved loopback range:
@@ -1656,7 +1686,7 @@ wpstaging start site1.local
 - Each site can use same port numbers (e.g., both use port 8080) because they're on different IPs
 - Configuration persists across restarts
 
-<a name="q71"></a>
+<a name="q72"></a>
 **Q72: How does IP allocation work on macOS?**  
 **A72:**
 On macOS, **automatic IP alias binding is enabled by default**. The CLI automatically assigns each site a unique IP from the loopback range **127.3.2.1 - 127.3.2.254** and binds it for you (requires sudo). This allows multiple sites to use the same port numbers (like 80/443) on different IPs without conflicts.
@@ -1704,7 +1734,7 @@ sudo ifconfig lo0 alias 127.3.2.2 netmask 255.255.255.255
 
 ## Database Operations Questions
 
-<a name="q73"></a>
+<a name="q74"></a>
 **Q74: What does `--normalizedb` actually do?**  
 **A74:**
 It replaces WP Staging placeholders in the database SQL file with actual values:
@@ -1797,7 +1827,7 @@ Public TLDs (`.com`, `.org`, etc.) are not supported. The tool is designed for l
 **A74f:**
 Yes. The `reset` command reads `IS_SUBDOMAIN_MULTISITE` and `SUBDOMAIN_HOSTNAMES` from the site's `.env` file and reinstalls WordPress with the same subdomain multisite configuration.
 
-<a name="q74"></a>
+<a name="q75"></a>
 **Q75: Can I restore only the database without files?**  
 **A75:**
 Yes, combine filters:
@@ -1805,7 +1835,7 @@ Yes, combine filters:
 wpstaging restore --only-dbfile --path=/var/www/site backup.wpstg
 ```
 
-<a name="q75"></a>
+<a name="q76"></a>
 **Q76: How do I change the database prefix during restore?**  
 **A76:**
 Use `--db-prefix`:
@@ -1813,7 +1843,7 @@ Use `--db-prefix`:
 wpstaging restore --path=/var/www/site --db-prefix=newwp_ backup.wpstg
 ```
 
-<a name="q76"></a>
+<a name="q77"></a>
 **Q77: Does restore support database SSL connections?**  
 **A77:**
 Yes, use SSL-related flags:
@@ -1828,7 +1858,7 @@ wpstaging restore --path=/var/www/site \
 
 ## Security Questions
 
-<a name="q77"></a>
+<a name="q78"></a>
 **Q78: Is my license key stored securely?**  
 **A78:**
 The license key is stored encrypted in `.dataIndex*` files within the working directory (`~/.config/wpstaging/` on Linux). The encrypted data is protected and requires proper file permissions.
@@ -1847,7 +1877,7 @@ chmod 700 ~/.config/wpstaging/
 
 **Windows:** The working directory is `%APPDATA%\wpstaging\` with default Windows ACL permissions.
 
-<a name="q78"></a>
+<a name="q79"></a>
 **Q79: Can I use the CLI in CI/CD pipelines?**  
 **A79:**
 Yes, use environment variables and `--yes` flag for non-interactive operation:
@@ -1856,19 +1886,19 @@ export WPSTGPRO_LICENSE=YOUR_KEY
 wpstaging extract --yes backup.wpstg
 ```
 
-<a name="q79"></a>
+<a name="q80"></a>
 **Q80: Does the CLI validate SSL certificates for license checks?**  
 **A80:**
 Yes, the CLI uses HTTPS for license validation and enforces SSL certificate verification for security.
 
 ## Backup Format Questions
 
-<a name="q80"></a>
+<a name="q81"></a>
 **Q81: What backup versions are supported?**  
 **A81:**
 The CLI supports WP Staging backup format versions 1 and 2. Version detection happens automatically when parsing the backup header.
 
-<a name="q81"></a>
+<a name="q82"></a>
 **Q82: Can I inspect backup contents without extracting?**  
 **A82:**
 Yes, use dump commands:
@@ -1884,22 +1914,32 @@ wpstaging dump-metadata --json backup.wpstg
 wpstaging dump-index --json backup.wpstg
 ```
 
-<a name="q82"></a>
+<a name="q83"></a>
 **Q83: Are compressed backups supported?**  
 **A83:**
 Yes, the CLI automatically handles compressed chunks within the `.wpstg` backup format. No additional decompression needed.
 
 ## Miscellaneous Questions
 
-<a name="q83"></a>
+<a name="q84"></a>
 **Q84: Can I extract to a custom directory?**  
 **A84:**
-Yes, use `--outputdir`:
+Yes, use `--output-dir`:
 ```bash
-wpstaging extract --outputdir=/custom/path backup.wpstg
+wpstaging extract --output-dir=/custom/path backup.wpstg
 ```
+Files land in a `wpstaging-output` folder under the path you pass (`/custom/path/wpstaging-output/`) so the command does not overwrite unrelated files in the path you supply. The older `--outputdir` name still works as a hidden alias.
 
-<a name="q84"></a>
+<a name="q84a"></a>
+**Q84a: Can I choose where remote backups download to?**  
+**A84a:**
+Yes, use `--download-dir` on commands that take a remote backup URL (`extract`, `restore`, `add`, `reset`):
+```bash
+wpstaging extract --download-dir=/custom/path --from=https://example.com/backup.wpstg
+```
+Files land in a `wpstaging-download` folder under the path you pass (`/custom/path/wpstaging-download/`) so downloaded backups stay separate from other files in the path you supply.
+
+<a name="q85"></a>
 **Q85: How do I update the CLI to the latest version?**  
 **A85:**
 Use the built-in update command:
@@ -2073,7 +2113,7 @@ sudo systemctl restart docker
 
 ---
 
-<a name="q88"></a>
+<a name="q89"></a>
 **Q89: I get "`docker` is running in Windows container mode" error on Windows. How do I fix this?**  
 **A89:**
 WP Staging CLI requires Docker to run in **Linux container mode** because all the container images (PHP, Nginx, MariaDB, Mailpit) are Linux-based.
@@ -2294,13 +2334,17 @@ This happens when the mkcert Certificate Authority (CA) is not installed in your
 - ERR_CERT_AUTHORITY_INVALID error
 - Certificate appears invalid
 
-**Solution 1: Use reinstall-cert command (recommended)**
+**Solution 1: Use reinstall-ca (recommended)**
 ```bash
-# Reinstall certificate and CA for a site
+# Rotate the certificate authority and re-sign every site in one pass.
+# This is the right command whenever browsers stop trusting your sites.
+wpstaging reinstall-ca
+
+# Equivalent alias on reinstall-cert (same effect, with or without a hostname):
+wpstaging reinstall-cert --reinstall-ca
 wpstaging reinstall-cert <hostname> --reinstall-ca
 
-# Restart to apply changes
-wpstaging restart <hostname>
+# Running sites are restarted automatically after the rotation.
 ```
 
 **Solution 2: Delete CA and re-add site**
@@ -2443,17 +2487,28 @@ wpstaging restart <hostname>
 Use the `reinstall-cert` command (requires `--show-all` flag to see in help):
 
 ```bash
-# Regenerate certificate for a site
+# Regenerate certificate for a single site
 wpstaging reinstall-cert <hostname>
+
+# Or regenerate certificates for every site in one command
+wpstaging reinstall-cert
 
 # Restart to apply changes
 wpstaging restart <hostname>
 ```
 
-To also reinstall the mkcert CA to the system trust store:
+To also rotate the certificate authority (wipe the CA, install a fresh one
+into the system trust store, and re-sign every site's leaf):
 ```bash
+# Dedicated command for CA rotation
+wpstaging reinstall-ca
+
+# Equivalent alias on reinstall-cert (same effect with or without a hostname)
+wpstaging reinstall-cert --reinstall-ca
 wpstaging reinstall-cert <hostname> --reinstall-ca
 ```
+
+The previous CA is also removed from the system trust store automatically. If you have older orphan entries from before this change, see [Q121](#q121).
 
 **Alternative manual method:**
 ```bash
@@ -3214,10 +3269,7 @@ The CLI shows a tip during `add`, `reset`, `extract`, and `restore` if VirtioFS 
 <a name="q118"></a>
 **Q118: How do I access the database GUI for a dockerized site?**  
 **A118:**
-By default, dockerized sites ship with a bundled Adminer database UI. Open either URL in your browser:
-
-- `https://<site>/adminer/`
-- `https://adminer.<site>`
+By default, dockerized sites ship with a bundled Adminer database UI. Open `https://adminer.<site>` in your browser. The `/adminer/` subpath on the main site is not routed -- the dedicated subdomain is the only Adminer URL.
 
 The login form is pre-filled with the database server, username, and database name. Enter the password shown when the site was created (also available in the site's `.env` file as `DB_PASSWORD`).
 
@@ -3234,6 +3286,8 @@ wpstaging reconfigure mysite.local --disable-adminer
 
 The `DISABLE_ADMINER=true` setting is persisted in the site's `.env` file so future regenerations keep Adminer off.
 
+If you upgraded from a CLI version that did not include Adminer, `start` and `restart` create the missing Adminer files automatically the first time -- no manual step is required.
+
 ---
 
 <a name="q119"></a>
@@ -3247,7 +3301,7 @@ wpstaging reconfigure <site>
 
 `reconfigure` updates the site's Docker setup (compose, nginx, PHP, SSL certificate) and relaunches the site. WordPress files and the database are preserved.
 
-Use this to apply new defaults introduced by a CLI release (for example, to add the bundled Adminer UI to a site that was created before Adminer support, or to refresh the SSL certificate after the hostname list changed).
+Use this to apply new defaults introduced by a CLI release (for example, to refresh the SSL certificate after the hostname list changed, or to pick up updated PHP-FPM or Nginx config after a CLI upgrade). For Adminer specifically, you do not need `reconfigure` -- `start` and `restart` regenerate the missing Adminer files automatically on sites created before Adminer support.
 
 If you omit the hostname, all sites are reconfigured:
 
@@ -3257,4 +3311,256 @@ wpstaging reconfigure
 
 ---
 
-**Last Updated:** 2026-04-24 16:53:45 UTC
+<a name="q120"></a>
+**Q120: What does the `sweep-ca-trust` command do?**  
+
+**A120:**
+`sweep-ca-trust` scans your system trust stores and removes stale WP Staging CLI certificate authority entries. Stale means the entry's fingerprint does not match the current active CA on disk. It checks the macOS keychain, Linux NSS database, Firefox profiles, and the Windows CurrentUser Root store. Other CAs (third-party, system, browser bundles) are not touched.
+
+The command is hidden by default. Use `--show-all` to see it in help. It accepts two flags:
+
+- `--dry-run` -- shows what would be removed without changing anything.
+- `--include-legacy` -- also removes legacy `mkcert development CA` entries left by older builds. Asks for confirmation before running.
+
+Run it when you want to clean up trust store bloat:
+
+```bash
+wpstaging sweep-ca-trust --dry-run            # preview only
+wpstaging sweep-ca-trust                      # remove stale WP Staging CLI entries
+wpstaging sweep-ca-trust --include-legacy     # also remove old mkcert-branded entries
+```
+
+This command does not need Docker to be running.
+
+---
+
+<a name="q121"></a>
+**Q121: Why does my system trust store have so many `mkcert development CA` entries?**  
+
+**A121:**
+Older WP Staging CLI builds left a trust store entry behind every time you ran `reinstall-ca` (or its `reinstall-cert --reinstall-ca` alias) or `remove`. Each cycle generated a new CA but never deleted the old one. Over time these entries pile up.
+
+The entries do not break anything. They are harmless trust orphans.
+
+To clean them up, run:
+
+```bash
+wpstaging sweep-ca-trust --include-legacy
+```
+
+The command lists how many entries it found and asks you to confirm before removing them. It keeps the current active CA intact.
+
+Going forward, this problem stops growing. Newer builds brand the CA as `WP Staging CLI development CA` and clean up stale entries automatically every time you run `reinstall-ca`.
+
+---
+
+<a name="q122"></a>
+**Q122: What happens when my local site's SSL certificate expires?**  
+
+**A122:**
+WP Staging CLI rotates local site SSL certificates automatically before they expire. Each leaf certificate is valid for 2 years and 3 months. When a certificate is within 30 days of its expiry date, the next `start`, `restart`, `add`, or `reinstall-cert` command for that site re-issues the certificate using the same CA. You do not need to take any action.
+
+This means active sites never show a "certificate expired" warning in the browser. If you have a site you have not run for more than two years, the next site command rotates its certificate before serving traffic.
+
+The CA itself is valid for 10 years and stays in your system trust store. Only the per-site leaf certificate rotates.
+
+If you want to force a rotation early (for example, after changing the hostname), run:
+
+```bash
+wpstaging reinstall-cert <hostname>
+```
+
+The site is restarted automatically when the certificate is re-issued. Pass `--no-restart` if you want to defer the restart and apply it yourself later.
+
+---
+
+<a name="q123"></a>
+**Q123: How do I check if my SSL certificate is trusted across browsers?**  
+
+**A123:**
+Run `wpstaging verify-cert`. The command audits the certificate authority across every browser trust store and inspects each site's leaf certificate. It reports the trust state for every store and per site. The command does not modify anything.
+
+The trust stores it checks differ by platform:
+
+- Linux: the user NSS database at `~/.pki/nssdb` (shared by Chrome, Edge, Brave, and other Chromium-family browsers) and each Firefox profile.
+- macOS: the System keychain (used by Safari, Chrome, Edge, and Brave).
+- Windows: the CurrentUser Root store (used by Edge, Chrome, and Internet Explorer).
+
+The Linux system trust store at `/etc/ssl/certs` is not part of this audit. That store backs CLI tools like `curl` and `openssl`, not browsers. To inspect it, use `wpstaging sweep-ca-trust --dry-run`.
+
+Pass a hostname to scope the per-site section to one site:
+
+```bash
+wpstaging verify-cert mysite.local
+```
+
+Pass `--live` to open a TLS connection to each site and compare the served certificate against the on-disk file. This helps you spot a stopped site or a container serving an older certificate:
+
+```bash
+wpstaging verify-cert --live
+```
+
+Pass `--json` for a machine-readable report that scripts and integrations can parse.
+
+The command exits with code `0` when everything is trusted and non-zero otherwise, so you can use it in shell scripts to detect when action is needed.
+
+---
+
+<a name="q124"></a>
+**Q124: How do I skip the auto-restart after `reinstall-cert` or `reinstall-ca`?**  
+
+**A124:**
+Pass the `--no-restart` flag. Both commands accept it:
+
+```bash
+wpstaging reinstall-cert <hostname> --no-restart
+wpstaging reinstall-ca --no-restart
+```
+
+The certificate files on disk are still regenerated as usual. The command prints a hint that tells you the exact `wpstaging restart` command to run later when you are ready.
+
+Use `--no-restart` when you want to schedule the restart yourself. For example, when you do not want to interrupt a running test, or when you plan to apply other configuration changes before bringing the containers back up.
+
+<a name="q125"></a>
+**Q125: Why does `wpstaging` only ask for my sudo password once now?**  
+
+**A125:**
+On Linux and macOS, the first command that needs sudo prompts for your password as before. After that, `wpstaging` keeps the credentials warm with a small background helper. While the same terminal stays open, you will not be asked again, even if a later command also needs sudo (for example, to update `/etc/hosts`, install an SSL certificate, or set up a loopback IP).
+
+The helper:
+
+- Runs as a detached background process tied to your terminal.
+- Refreshes the sudo timestamp every 4 minutes (sudo's own cache lasts 5 minutes by default).
+- Stops automatically when you close the terminal.
+- Is skipped on Windows (Windows uses UAC dialogs instead) and when you are already running as root.
+
+To turn the helper off for a single command, set the environment variable before the command:
+
+```bash
+WPSTGCLI_DISABLE_SUDO_KEEPALIVE=1 wpstaging add example.local
+```
+
+To turn it off for the whole shell session:
+
+```bash
+export WPSTGCLI_DISABLE_SUDO_KEEPALIVE=1
+```
+
+This is useful in CI scripts or other automated runs where you want sudo to behave the way it did before.
+
+<a name="q125a"></a>
+**Q125a: I have Touch ID enabled for sudo on macOS. Will the helper trigger Touch ID prompts in the background?**  
+
+**A125a:**
+No. The background helper runs `sudo -n -v` in non-interactive mode. The macOS Touch ID PAM module (`pam_tid.so`) respects the non-interactive flag and does not show a dialog. You see Touch ID one time at the start of the terminal session, when sudo first asks for authentication. After that, the helper refreshes the cache silently in the background and Touch ID stays quiet for the rest of the session.
+
+<a name="q125b"></a>
+**Q125b: I see a `wpstaging sudo-keepalive` process in `ps`. Should I be worried?**  
+
+**A125b:**
+No. That is the small background helper described in [Q125](#q125). One copy runs per terminal session that has used `wpstaging` with a sudo command. It refreshes your sudo timestamp every 4 minutes so you do not get asked for the password again. It uses very little memory and does almost nothing between refreshes.
+
+The full command line looks like:
+
+```
+wpstaging sudo-keepalive --pid-file <TMPDIR>/wpstaging-sudo-keepalive-<uid>-<sid>.pid --leader-sid <pid>
+```
+
+- `<uid>` is your Linux or macOS user ID.
+- `<sid>` and the `--leader-sid` value are the same number: the PID of your shell (the session leader of your terminal).
+- `<TMPDIR>` is your system's temporary directory. On Linux it is usually `/tmp`. On macOS it is usually under `/var/folders/...`; run `echo $TMPDIR` to see your exact path.
+- The PID file is a small marker that stops a second helper from starting in the same terminal.
+
+The helper stops on its own when:
+
+- You close the terminal, or your SSH session ends.
+- You remove its PID file. The helper notices within about 30 seconds and exits:
+
+  ```bash
+  rm "${TMPDIR:-/tmp}"/wpstaging-sudo-keepalive-*.pid
+  ```
+
+- You stop it directly:
+
+  ```bash
+  pkill -f "wpstaging sudo-keepalive"
+  ```
+
+If you do not want the helper to start at all, see [Q125](#q125) for the `WPSTGCLI_DISABLE_SUDO_KEEPALIVE=1` environment variable.
+
+---
+
+**Q125: How do I clear the WP-CLI download cache?**  
+
+**A125:**
+Run `wpstaging clean wpcli`. The command removes three directories shared across all your dockerized sites:
+
+- `<env-path>/wpstaging/stack/wp-cli/cache/plugin/`
+- `<env-path>/wpstaging/stack/wp-cli/cache/core/`
+- `<env-path>/wpstaging/stack/wp-cli/wp-staging-pro/`
+
+By default `<env-path>` is `~/wpstaging`. Pass `--env-path` to target a custom location.
+
+The cache holds downloaded plugin ZIP files, WordPress core archives, and the WP Staging Pro plugin used during site setup. Deleting it forces the next `add` or `reset` to download fresh copies. The directories are recreated on demand, so this is safe to run at any time.
+
+`wpstaging clean all` also clears these directories, on top of the general cache and the stored license key.
+
+---
+
+<a name="q126"></a>
+**Q126: What happens if I press Ctrl-C while `wpstaging add` is running?**  
+
+**A126:**
+The CLI catches the signal and runs a rollback before it exits:
+
+1. It stops and removes the per-site Docker containers.
+2. It deactivates the WP Staging Pro license for the site URL.
+3. It removes the half-created site directory **only when the directory did not exist before this `add` started**. If you ran `add` over an existing partial site, the directory is kept so you do not lose your earlier data.
+
+You will see two lines on stdout that confirm the rollback ran. The first line is always the same; the second line depends on whether the site directory was kept:
+
+```
+Cancelled, rolling back partial site: <hostname>
+Rollback complete: <hostname>
+```
+
+If `add` ran over a site directory that already existed, the second line is instead:
+
+```
+Rollback complete (kept existing site directory): <hostname>
+```
+
+The same handler works for `SIGINT` (Ctrl-C) and `SIGTERM`. `SIGKILL` cannot be caught by any program, so it bypasses the rollback.
+
+You can safely re-run `wpstaging add <hostname>` afterwards. The CLI cleans up any leftover container from the prior cancelled run, so the next attempt starts clean.
+
+---
+
+<a name="q127"></a>
+**Q127: How does wp-admin auto-login work, and how do I turn it off?**  
+
+**A127:**
+Sites you create with `wpstaging add` print a one-time magic-link URL on success. Open the URL in any browser and the site sets the auth cookie for the lowest-ID administrator and redirects you to the WordPress dashboard. You do not need to type a username or password.
+
+The magic-link is single-use: clicking it consumes the token. Run `wpstaging list <site>` to see the current URL -- the command auto-refreshes the URL when the previous one has expired, so the printed link is always usable. Run `wpstaging magic-link <site>` to force-issue a new URL on demand. The regular `/wp-login.php` form is always available alongside the magic-link if you want to sign in as a different user.
+
+The auto-login script lives outside the WordPress webroot, in the site's Docker configuration directory at `<site>/docker/php/magiclink/`. It is never copied into `.wpstg` backups and never pushed to production.
+
+To turn the magic-link feature off, add `--disable-magic-link` when creating, resetting, or regenerating a site:
+
+```bash
+wpstaging add https://mysite.local --disable-magic-link
+wpstaging reset mysite.local --disable-magic-link
+wpstaging generate-docker-file mysite.local --disable-magic-link
+wpstaging reconfigure mysite.local --disable-magic-link
+```
+
+`reconfigure --disable-magic-link` turns auto-login off on a live site without losing data. It updates the site's configuration and relaunches it, while WordPress files and the database are preserved.
+
+The `DISABLE_MAGIC_LINK=true` setting is persisted in the site's `.env` file so future regenerations keep auto-login off. Pass `--disable-magic-link=false` to a later `reconfigure` to turn it back on.
+
+To reach the regular WordPress login form, open `/wp-login.php` directly. The auto-login URL is single-use and only triggers on its own dedicated path, so the standard WordPress login form is always available alongside it.
+
+---
+
+**Last Updated:** 2026-05-12 12:06:01 UTC

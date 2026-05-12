@@ -40,9 +40,6 @@ _wpstaging_hint() {
         switch-wp)
             _message -r $'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
             ;;
-        reinstall-cert)
-            _message -r $'Examples:\n  wpstaging reinstall-cert newsite.local\n  wpstaging reinstall-cert newsite.local --reinstall-ca'
-            ;;
         enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
             _message -r "Examples:
   wpstaging ${subcmd} newsite.local"
@@ -55,13 +52,18 @@ _wpstaging() {
     typeset -A opt_args
 
     local -a commands
+    # NOTE: `sudo-keepalive` is intentionally omitted. It is an internal command
+    # spawned by the CLI to refresh sudo credentials in the background and is
+    # not meant to be invoked by users -- do not add it to completion.
     commands=(
         'add:Create a new dockerized WordPress site'
         'clean:Clean cache, license, or all data'
+        'sweep-ca-trust:Remove stale CA trust entries'
         'compose-info:Show Docker Compose information'
         'deactivate:Deactivate license from this machine'
         'del:Delete a dockerized site'
         'disable:Disable a site (stop and prevent auto-start)'
+        'docker-start:Start the installed Docker runtime and wait for the daemon'
         'dump-all-help:Dump help for all commands'
         'dump-header:Dump backup file header'
         'dump-index:Dump backup file index'
@@ -72,8 +74,10 @@ _wpstaging() {
         'generate-docker-file:Generate Dockerfile'
         'help:Show help for a command'
         'list:List all dockerized sites'
+        'magic-link:Issue a fresh wp-admin auto-login URL for a site'
         'reconfigure:Reconfigure a site and apply the changes'
         'register:Register license key'
+        'reinstall-ca:Rotate the certificate authority'
         'reinstall-cert:Reinstall SSL certificate'
         'reset:Reset WordPress installation'
         'restart:Restart site containers'
@@ -90,6 +94,7 @@ _wpstaging() {
         'update:Update WP Staging CLI to latest version'
         'update-subdomains:Sync subdomain multisite hostnames from WordPress'
         'update-hosts-file:Update /etc/hosts'
+        'verify-cert:Audit SSL certificate trust state'
     )
 
     local -a clean_subcommands
@@ -97,14 +102,15 @@ _wpstaging() {
         'all:Clean all data'
         'cache:Clean cache only'
         'license:Clean license cache'
+        'wpcli:Clean WP-CLI cache'
     )
+
 
     # General options (available on all subcommands)
     local -a general_opts
     general_opts=(
         '(-l --license)'{-l,--license}'[License key]:license key:'
-        '(-o --outputdir)'{-o,--outputdir}'[Output directory]:directory:_files -/'
-        '--workingdir[Working directory]:directory:_files -/'
+        '--working-dir[Working directory]:directory:_files -/'
         '--skip-config[Skip config file]'
         '--config[Config file]:config file:_files -g "*.conf"'
         '--yes[Auto-confirm prompts]'
@@ -155,6 +161,8 @@ _wpstaging() {
 
     local -a extract_opts
     extract_opts=(
+        '(-o --output-dir)'{-o,--output-dir}'[Output directory]:directory:_files -/'
+        '--download-dir[Directory for downloaded backup files]:directory:_files -/'
         '(-n --normalizedb)'{-n,--normalizedb}'[Normalize database file]'
         '--site-url[Target site URL]:URL:'
         '--db-prefix[Database table prefix]:prefix:'
@@ -165,6 +173,8 @@ _wpstaging() {
 
     local -a restore_opts
     restore_opts=(
+        '(-o --output-dir)'{-o,--output-dir}'[Output directory]:directory:_files -/'
+        '--download-dir[Directory for downloaded backup files]:directory:_files -/'
         '(-p --path)'{-p,--path}'[WordPress installation path]:path:_files -/'
         '--site-url[Target site URL]:URL:'
         '--overwrite[Overwrite files]:overwrite:(yes no all)'
@@ -190,9 +200,6 @@ _wpstaging() {
         '--db-ssl-cert[SSL client certificate]:file:_files'
         '--db-ssl-key[SSL client key]:file:_files'
         '--db-ssl-mode[SSL mode]:mode:(skip-verify preferred)'
-        '--env-path[Environment file path]:path:_files'
-        '--compose-file[Docker Compose file]:file:_files -g "*.yml"'
-        '--skip-update-hosts-file[Skip updating hosts file]'
     )
 
     # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
@@ -214,9 +221,11 @@ _wpstaging() {
         '--db-port[Database port]:port:'
         '--db-root[Database root password]:password:'
         '--mailpit-http-port[Mailpit HTTP port]:port:'
-        '--disable-mailpit[Disable Mailpit]'
+        '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+        '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
+        '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--db-host[Database host]:host:'
         '--db-name[Database name]:name:'
@@ -233,22 +242,34 @@ _wpstaging() {
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
     )
 
-    # reset: addPathOnlyFlag + --from + --wp + --disable-adminer
+    # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
     local -a reset_opts
     reset_opts=(
         '--env-path[Environment file path]:path:_files'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
+        '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+        '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
+        '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
     )
 
-    # generate-docker-file / generate-compose-file: path flags + --disable-adminer
+    # generate-docker-file / generate-compose-file: path flags + --disable-mailpit + --disable-adminer
     local -a generate_docker_file_opts
     generate_docker_file_opts=(
         '--env-path[Environment file path]:path:_files'
+        '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+        '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
+        '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+    )
+
+    # magic-link <hostname> [--timeout MINUTES]
+    local -a magic_link_opts
+    magic_link_opts=(
+        '--timeout[One-shot token lifetime in minutes]:minutes:'
     )
 
     # All other dockerize subcommands (except shell-db and reinstall-cert):
@@ -330,6 +351,12 @@ _wpstaging() {
                     if [[ $state == subcommand ]]; then
                         _describe -t subcommands 'clean subcommand' clean_subcommands
                     fi
+                    ;;
+                docker-start)
+                    _arguments \
+                        '--timeout[Timeout in seconds to wait for the daemon]:seconds:' \
+                        '--status[Report the current Docker state without starting it]' \
+                        $general_opts
                     ;;
                 add)
                     _arguments \
@@ -428,21 +455,52 @@ _wpstaging() {
                         $general_opts \
                         $generate_docker_file_opts
                     ;;
+                magic-link)
+                    # magic-link <hostname> [--timeout MINUTES]
+                    _arguments \
+                        '1:hostname:' \
+                        $general_opts \
+                        $magic_link_opts
+                    ;;
                 update-hosts-file|uhf)
                     _arguments \
                         $general_opts \
                         $env_path_only_opts
                     ;;
                 reinstall-cert)
+                    # reinstall-cert [hostname] -- hostname is optional.
                     _arguments \
-                        '1:hostname:_wpstaging_hint' \
+                        '1::hostname:' \
                         '--env-path[Environment file path]:path:_files' \
                         '--reinstall-ca[Reinstall CA certificate]' \
+                        '--no-restart[Skip restarting running sites after regenerating]' \
+                        $general_opts
+                    ;;
+                reinstall-ca)
+                    _arguments \
+                        '--env-path[Environment file path]:path:_files' \
+                        '--no-restart[Skip restarting running sites after rotating the CA]' \
+                        $general_opts
+                    ;;
+                verify-cert)
+                    # verify-cert [hostname] -- hostname is optional.
+                    _arguments \
+                        '1::hostname:' \
+                        '--env-path[Environment file path]:path:_files' \
+                        '--live[Probe HTTPS and compare served leaf with on-disk leaf]' \
+                        $general_opts
+                    ;;
+                sweep-ca-trust)
+                    _arguments \
+                        '--env-path[Environment file path]:path:_files' \
+                        '--dry-run[List stale CA entries without removing them]' \
+                        '--include-legacy[Also remove legacy mkcert-branded CAs]' \
                         $general_opts
                     ;;
                 register)
                     _arguments \
                         '--license[License key]:key:' \
+                        '--status[Show the registered license details]' \
                         $general_opts
                     ;;
                 uninstall)

@@ -1,6 +1,5 @@
 #!/bin/sh
 # WP Staging CLI Installer
-# Build: 20260417-120000
 # This script installs wpstaging on Linux, macOS, and WSL
 #
 # Usage:
@@ -16,12 +15,16 @@
 #   Install specific version with license:
 #     curl -fsSL https://wp-staging.com/install.sh | sh -s -- -v 1.4.0 -l YOUR_LICENSE_KEY
 #
+#   Print installer build and latest release, then exit:
+#     curl -fsSL https://wp-staging.com/install.sh | sh -s -- --print-version
+#
 # Options:
 #   -v, --version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
 #   -l, --license KEY        Register license key after installation
 #   -d, --bin-dir DIR        Install binary to custom directory
 #   -e, --extract DIR        Extract all files to directory (no installation)
 #   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
+#   -V, --print-version      Print installer build and latest release version, then exit
 #
 # Environment variables (for testing only — do not set in production):
 #   GITHUB_API_URL    Override GitHub API base URL
@@ -50,6 +53,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
+SCRIPT_VERSION="20260430-090000"
 
 # Colors for output
 RED='\033[0;31m'
@@ -85,13 +89,28 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Print installer build and latest release version, then exit.
+# Used as a release smoke test instead of installing the script.
+print_version_and_exit() {
+    echo "wpstaging installer"
+    echo "  build:          $SCRIPT_VERSION"
+
+    _pv_latest=$(fetch_latest_stable_version 2>/dev/null)
+    if [ -n "$_pv_latest" ] && [ "$_pv_latest" != "main" ]; then
+        echo "  latest release: $_pv_latest"
+    else
+        echo "  latest release: unknown (could not fetch from GitHub)"
+    fi
+
+    exit 0
+}
+
 # Pick the appropriate RC file based on user's login shell
 # Only edit one file to avoid noise and user distrust
 pick_rc_file() {
-    local s
-    s=$(basename "${SHELL:-/bin/bash}")
+    _prf_s=$(basename "${SHELL:-/bin/bash}")
 
-    case "$s" in
+    case "$_prf_s" in
         zsh)
             echo "$HOME/.zshrc"
             ;;
@@ -114,18 +133,17 @@ pick_rc_file() {
 
 # Get shell-specific source command based on user's login shell
 get_source_command() {
-    local rc
-    rc=$(pick_rc_file)
-    echo "source $rc"
+    _gsc_rc=$(pick_rc_file)
+    echo "source $_gsc_rc"
 }
 
 # Show Windows detected error and exit
 # This helper function avoids duplicating the error message
 error_windows_detected() {
-    local context="${1:-}"
-    local msg="Windows detected"
-    [ -n "$context" ] && msg="Windows detected ($context)"
-    error "$msg. Please use the Windows installer instead:\n\n    For PowerShell:\n        irm https://wp-staging.com/install.ps1 | iex\n\n    For CMD:\n        curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd\n\nOr download manually from:\n    https://github.com/wp-staging/wp-staging-cli-release"
+    _ewd_context="${1:-}"
+    _ewd_msg="Windows detected"
+    [ -n "$_ewd_context" ] && _ewd_msg="Windows detected ($_ewd_context)"
+    error "$_ewd_msg. Please use the Windows installer instead:\n\n    For PowerShell:\n        irm https://wp-staging.com/install.ps1 | iex\n\n    For CMD:\n        curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd\n\nOr download manually from:\n    https://github.com/wp-staging/wp-staging-cli-release"
 }
 
 # Detect OS
@@ -153,10 +171,9 @@ detect_os() {
     # WSL users running from Windows CMD/PowerShell will see prompts fail at runtime,
     # but that's preferable to blocking the standard curl | sh installation.
 
-    local os
-    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    _do_os=$(uname -s | tr '[:upper:]' '[:lower:]')
 
-    case "$os" in
+    case "$_do_os" in
         linux*)
             # WSL is a legitimate Linux environment, so we treat it the same as native Linux.
             echo "linux"
@@ -168,17 +185,16 @@ detect_os() {
             error_windows_detected "MinGW/MSYS/Cygwin"
             ;;
         *)
-            error "Unsupported operating system: $os"
+            error "Unsupported operating system: $_do_os"
             ;;
     esac
 }
 
 # Detect architecture
 detect_arch() {
-    local arch
-    arch=$(uname -m)
+    _da_arch=$(uname -m)
 
-    case "$arch" in
+    case "$_da_arch" in
         x86_64 | amd64)
             echo "amd64"
             ;;
@@ -189,7 +205,7 @@ detect_arch() {
             echo "386"
             ;;
         *)
-            error "Unsupported architecture: $arch"
+            error "Unsupported architecture: $_da_arch"
             ;;
     esac
 }
@@ -211,13 +227,13 @@ is_musl() {
 
 # Download file using curl or wget
 download() {
-    local url="$1"
-    local output="$2"
+    _dl_url="$1"
+    _dl_output="$2"
 
     if command_exists curl; then
-        curl -fsSL "$url" -o "$output" || error "Failed to download: $url"
+        curl -fsSL "$_dl_url" -o "$_dl_output" || error "Failed to download: $_dl_url"
     elif command_exists wget; then
-        wget -q "$url" -O "$output" || error "Failed to download: $url"
+        wget -q "$_dl_url" -O "$_dl_output" || error "Failed to download: $_dl_url"
     else
         error "Neither curl nor wget is available. Please install one of them."
     fi
@@ -225,53 +241,52 @@ download() {
 
 # Parse JSON value (works without jq)
 parse_json() {
-    local json="$1"
-    local key="$2"
-    echo "$json" | grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | sed 's/.*"\([^"]*\)".*/\1/'
+    _pj_json="$1"
+    _pj_key="$2"
+    echo "$_pj_json" | grep -o "\"$_pj_key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | sed 's/.*"\([^"]*\)".*/\1/'
 }
 
 # Get platform string
 get_platform() {
-    local os="$1"
-    local arch="$2"
+    _gp_os="$1"
+    _gp_arch="$2"
 
     # Map to platform strings used in binary names
-    case "$os" in
+    case "$_gp_os" in
         darwin)
             # Use universal binary for macOS (works on both Intel and ARM)
             echo "macos_universal"
             ;;
         linux)
-            echo "linux_${arch}"
+            echo "linux_${_gp_arch}"
             ;;
         *)
-            error "Unknown OS: $os"
+            error "Unknown OS: $_gp_os"
             ;;
     esac
 }
 
 # Verify checksum
 verify_checksum() {
-    local file="$1"
-    local expected="$2"
+    _vc_file="$1"
+    _vc_expected="$2"
 
     # Validate checksum format (SHA256 is 64 hex characters)
-    if ! echo "$expected" | grep -qE '^[a-f0-9]{64}$'; then
-        error "Invalid checksum format: $expected"
+    if ! echo "$_vc_expected" | grep -qE '^[a-f0-9]{64}$'; then
+        error "Invalid checksum format: $_vc_expected"
     fi
 
-    local actual
     if command_exists sha256sum; then
-        actual=$(sha256sum "$file" | awk '{print $1}')
+        _vc_actual=$(sha256sum "$_vc_file" | awk '{print $1}')
     elif command_exists shasum; then
-        actual=$(shasum -a 256 "$file" | awk '{print $1}')
+        _vc_actual=$(shasum -a 256 "$_vc_file" | awk '{print $1}')
     else
         warning "Neither sha256sum nor shasum found. Skipping checksum verification."
         return 0
     fi
 
-    if [ "$actual" != "$expected" ]; then
-        error "Checksum verification failed!\n  Expected: $expected\n  Got:      $actual"
+    if [ "$_vc_actual" != "$_vc_expected" ]; then
+        error "Checksum verification failed!\n  Expected: $_vc_expected\n  Got:      $_vc_actual"
     fi
 
     success "✓ Checksum verified"
@@ -279,66 +294,66 @@ verify_checksum() {
 
 # Check if directory is writable
 is_writable() {
-    local dir="$1"
-    [ -d "$dir" ] && [ -w "$dir" ]
+    _iw_dir="$1"
+    [ -d "$_iw_dir" ] && [ -w "$_iw_dir" ]
 }
 
 # Ensure directory exists and is writable
 ensure_dir() {
-    local dir="$1"
-    local use_sudo="$2"
+    _ed_dir="$1"
+    _ed_use_sudo="$2"
 
-    if [ ! -d "$dir" ]; then
-        if [ "$use_sudo" = "true" ] && command_exists sudo; then
-            sudo mkdir -p "$dir" || return 1
+    if [ ! -d "$_ed_dir" ]; then
+        if [ "$_ed_use_sudo" = "true" ] && command_exists sudo; then
+            sudo mkdir -p "$_ed_dir" || return 1
         else
-            mkdir -p "$dir" || return 1
+            mkdir -p "$_ed_dir" || return 1
         fi
     fi
 
-    if [ "$use_sudo" = "true" ]; then
-        [ -d "$dir" ]
+    if [ "$_ed_use_sudo" = "true" ]; then
+        [ -d "$_ed_dir" ]
     else
-        is_writable "$dir"
+        is_writable "$_ed_dir"
     fi
 }
 
 # Install binary
 install_binary() {
-    local binary="$1"
-    local install_dir="$2"
-    local use_sudo="$3"
+    _ib_binary="$1"
+    _ib_install_dir="$2"
+    _ib_use_sudo="$3"
 
-    ensure_dir "$install_dir" "$use_sudo" || error "Cannot create directory: $install_dir"
+    ensure_dir "$_ib_install_dir" "$_ib_use_sudo" || error "Cannot create directory: $_ib_install_dir"
 
-    local target="${install_dir}/${BINARY_NAME}"
+    _ib_target="${_ib_install_dir}/${BINARY_NAME}"
 
-    if [ "$use_sudo" = "true" ] && command_exists sudo; then
-        sudo cp "$binary" "$target" || error "Failed to install binary to $target"
-        sudo chmod +x "$target" || error "Failed to set executable permission"
+    if [ "$_ib_use_sudo" = "true" ] && command_exists sudo; then
+        sudo cp "$_ib_binary" "$_ib_target" || error "Failed to install binary to $_ib_target"
+        sudo chmod +x "$_ib_target" || error "Failed to set executable permission"
     else
-        cp "$binary" "$target" || error "Failed to install binary to $target"
-        chmod +x "$target" || error "Failed to set executable permission"
+        cp "$_ib_binary" "$_ib_target" || error "Failed to install binary to $_ib_target"
+        chmod +x "$_ib_target" || error "Failed to set executable permission"
     fi
 
-    success "✓ Installed binary to $target"
+    success "✓ Installed binary to $_ib_target"
 }
 
 # Install aliases (symlinks)
 install_aliases() {
-    local install_dir="$1"
-    local use_sudo="$2"
+    _ia_install_dir="$1"
+    _ia_use_sudo="$2"
 
-    local binary_path="${install_dir}/${BINARY_NAME}"
-    local wpstg_alias="${install_dir}/wpstg"
-    local wp_staging_alias="${install_dir}/wp-staging"
+    _ia_binary_path="${_ia_install_dir}/${BINARY_NAME}"
+    _ia_wpstg_alias="${_ia_install_dir}/wpstg"
+    _ia_wp_staging_alias="${_ia_install_dir}/wp-staging"
 
-    if [ "$use_sudo" = "true" ] && command_exists sudo; then
-        sudo ln -sf "$BINARY_NAME" "$wpstg_alias" || warning "Failed to create wpstg alias"
-        sudo ln -sf "$BINARY_NAME" "$wp_staging_alias" || warning "Failed to create wp-staging alias"
+    if [ "$_ia_use_sudo" = "true" ] && command_exists sudo; then
+        sudo ln -sf "$BINARY_NAME" "$_ia_wpstg_alias" || warning "Failed to create wpstg alias"
+        sudo ln -sf "$BINARY_NAME" "$_ia_wp_staging_alias" || warning "Failed to create wp-staging alias"
     else
-        ln -sf "$BINARY_NAME" "$wpstg_alias" || warning "Failed to create wpstg alias"
-        ln -sf "$BINARY_NAME" "$wp_staging_alias" || warning "Failed to create wp-staging alias"
+        ln -sf "$BINARY_NAME" "$_ia_wpstg_alias" || warning "Failed to create wpstg alias"
+        ln -sf "$BINARY_NAME" "$_ia_wp_staging_alias" || warning "Failed to create wp-staging alias"
     fi
 
     success "✓ Created aliases: wpstg, wp-staging"
@@ -346,8 +361,8 @@ install_aliases() {
 
 # Install bash completion
 install_completion() {
-    local completion_script="$1"
-    local use_sudo="$2"
+    _ic_completion_script="$1"
+    _ic_use_sudo="$2"
 
     # Skip if bash is not available
     if ! command_exists bash; then
@@ -355,18 +370,15 @@ install_completion() {
         return 0
     fi
 
-    local completion_dir
-    local completion_target
-
     # Try user directory first
-    if [ "$use_sudo" = "false" ]; then
-        completion_dir="$COMPLETION_DIR_USER"
-        ensure_dir "$completion_dir" "false" 2>/dev/null || true
+    if [ "$_ic_use_sudo" = "false" ]; then
+        _ic_completion_dir="$COMPLETION_DIR_USER"
+        ensure_dir "$_ic_completion_dir" "false" 2>/dev/null || true
 
-        if [ -d "$completion_dir" ] && [ -w "$completion_dir" ]; then
-            completion_target="${completion_dir}/${COMPLETION_NAME}"
-            cp "$completion_script" "$completion_target" || warning "Failed to install bash completion"
-            success "✓ Installed bash completion to $completion_target"
+        if [ -d "$_ic_completion_dir" ] && [ -w "$_ic_completion_dir" ]; then
+            _ic_completion_target="${_ic_completion_dir}/${COMPLETION_NAME}"
+            cp "$_ic_completion_script" "$_ic_completion_target" || warning "Failed to install bash completion"
+            success "✓ Installed bash completion to $_ic_completion_target"
             return 0
         fi
 
@@ -378,87 +390,84 @@ install_completion() {
                 return 0
             fi
 
-            cat "$completion_script" >>"$HOME/.bash_completion"
+            cat "$_ic_completion_script" >>"$HOME/.bash_completion"
             success "✓ Installed bash completion to ~/.bash_completion"
             info "  Add 'source ~/.bash_completion' to your ~/.bashrc if not already present"
             return 0
         fi
     else
         # System-wide installation
-        completion_dir="$COMPLETION_DIR_SYSTEM"
-        ensure_dir "$completion_dir" "true" || return 1
+        _ic_completion_dir="$COMPLETION_DIR_SYSTEM"
+        ensure_dir "$_ic_completion_dir" "true" || return 1
 
-        completion_target="${completion_dir}/${COMPLETION_NAME}"
+        _ic_completion_target="${_ic_completion_dir}/${COMPLETION_NAME}"
         if command_exists sudo; then
-            sudo cp "$completion_script" "$completion_target" || warning "Failed to install bash completion"
-            success "✓ Installed bash completion to $completion_target"
+            sudo cp "$_ic_completion_script" "$_ic_completion_target" || warning "Failed to install bash completion"
+            success "✓ Installed bash completion to $_ic_completion_target"
         fi
     fi
 }
 
 # Install zsh completion
 install_zsh_completion() {
-    local completion_script="$1"
-    local use_sudo="$2"
+    _iz_completion_script="$1"
+    _iz_use_sudo="$2"
 
     # Skip if zsh is not available
     if ! command_exists zsh; then
         return 0
     fi
 
-    local completion_dir
-    local completion_target
-
     # Try user directory first
-    if [ "$use_sudo" = "false" ]; then
-        completion_dir="$ZSH_COMPLETION_DIR_USER"
-        ensure_dir "$completion_dir" "false" 2>/dev/null || true
+    if [ "$_iz_use_sudo" = "false" ]; then
+        _iz_completion_dir="$ZSH_COMPLETION_DIR_USER"
+        ensure_dir "$_iz_completion_dir" "false" 2>/dev/null || true
 
-        if [ -d "$completion_dir" ] && [ -w "$completion_dir" ]; then
-            completion_target="${completion_dir}/_${COMPLETION_NAME}"
-            cp "$completion_script" "$completion_target" || warning "Failed to install zsh completion"
-            success "✓ Installed zsh completion to $completion_target"
-            info "  Add 'fpath=(${completion_dir} \$fpath)' to ~/.zshrc and run 'autoload -Uz compinit && compinit'"
+        if [ -d "$_iz_completion_dir" ] && [ -w "$_iz_completion_dir" ]; then
+            _iz_completion_target="${_iz_completion_dir}/_${COMPLETION_NAME}"
+            cp "$_iz_completion_script" "$_iz_completion_target" || warning "Failed to install zsh completion"
+            success "✓ Installed zsh completion to $_iz_completion_target"
+            info "  Add 'fpath=(${_iz_completion_dir} \$fpath)' to ~/.zshrc and run 'autoload -Uz compinit && compinit'"
             return 0
         fi
     else
         # System-wide installation
-        completion_dir="$ZSH_COMPLETION_DIR_SYSTEM"
-        ensure_dir "$completion_dir" "true" || return 1
+        _iz_completion_dir="$ZSH_COMPLETION_DIR_SYSTEM"
+        ensure_dir "$_iz_completion_dir" "true" || return 1
 
-        completion_target="${completion_dir}/_${COMPLETION_NAME}"
+        _iz_completion_target="${_iz_completion_dir}/_${COMPLETION_NAME}"
         if command_exists sudo; then
-            sudo cp "$completion_script" "$completion_target" || warning "Failed to install zsh completion"
-            success "✓ Installed zsh completion to $completion_target"
+            sudo cp "$_iz_completion_script" "$_iz_completion_target" || warning "Failed to install zsh completion"
+            success "✓ Installed zsh completion to $_iz_completion_target"
         fi
     fi
 }
 
 # Check if directory is in PATH
 in_path() {
-    local dir="$1"
-    echo "$PATH" | tr ':' '\n' | grep -q "^${dir}\$"
+    _ip_dir="$1"
+    echo "$PATH" | tr ':' '\n' | grep -q "^${_ip_dir}\$"
 }
 
 # Prompt user for sudo permission
 # Returns 0 if user accepts, 1 if user declines
 # NOTE: All output goes to stderr to avoid polluting stdout (used for return values)
 prompt_sudo() {
-    local system_dir="$1"
+    _ps_system_dir="$1"
 
     echo "" >&2
     info "sudo permission requested"
     echo "" >&2
-    info "Why: Installing to $system_dir allows wpstaging to work immediately"
+    info "Why: Installing to $_ps_system_dir allows wpstaging to work immediately"
     info "     without modifying your shell configuration or restarting your terminal."
     echo "" >&2
-    info "What happens: sudo will copy the wpstaging binary to $system_dir"
+    info "What happens: sudo will copy the wpstaging binary to $_ps_system_dir"
     info "              This is a standard location for user-installed programs."
     echo "" >&2
 
     # Read from /dev/tty to work in piped scripts (curl | sh)
     # Prompt also goes to stderr to keep stdout clean
-    printf "%b" "${BLUE}Allow sudo installation to $system_dir? [Y/n] ${NC}" >&2
+    printf "%b" "${BLUE}Allow sudo installation to $_ps_system_dir? [Y/n] ${NC}" >&2
     read -r response </dev/tty 2>/dev/null || response="y"
 
     case "$response" in
@@ -474,11 +483,10 @@ prompt_sudo() {
 # Find existing wpstaging installation in PATH
 # Returns the directory containing the existing binary, or empty if not found
 find_existing_installation() {
-    local existing
-    existing=$(command -v "$BINARY_NAME" 2>/dev/null) || true
-    if [ -n "$existing" ] && [ -x "$existing" ]; then
+    _fei_existing=$(command -v "$BINARY_NAME" 2>/dev/null) || true
+    if [ -n "$_fei_existing" ] && [ -x "$_fei_existing" ]; then
         # Return the directory containing the existing binary
-        dirname "$existing" 2>/dev/null || true
+        dirname "$_fei_existing" 2>/dev/null || true
     fi
 }
 
@@ -487,23 +495,22 @@ find_existing_installation() {
 # Returns: "directory|use_sudo" (e.g., "/usr/local/bin|true")
 pick_install_dir() {
     # First, check if wpstaging is already installed somewhere
-    local existing_dir
-    existing_dir=$(find_existing_installation)
+    _pid_existing_dir=$(find_existing_installation)
 
-    if [ -n "$existing_dir" ]; then
+    if [ -n "$_pid_existing_dir" ]; then
         # Found existing installation - update it
-        if [ -w "$existing_dir" ]; then
-            info "Found existing installation at $existing_dir (will update)"
-            echo "$existing_dir|false"
+        if [ -w "$_pid_existing_dir" ]; then
+            info "Found existing installation at $_pid_existing_dir (will update)"
+            echo "$_pid_existing_dir|false"
             return 0
         elif command_exists sudo; then
-            info "Found existing installation at $existing_dir (requires sudo to update)"
-            if prompt_sudo "$existing_dir"; then
-                echo "$existing_dir|true"
+            info "Found existing installation at $_pid_existing_dir (requires sudo to update)"
+            if prompt_sudo "$_pid_existing_dir"; then
+                echo "$_pid_existing_dir|true"
                 return 0
             fi
             # User declined sudo - warn about potential conflict
-            warning "Cannot update existing installation at $existing_dir without sudo"
+            warning "Cannot update existing installation at $_pid_existing_dir without sudo"
             warning "Installing to user directory instead - you may have multiple versions"
         fi
     fi
@@ -546,20 +553,19 @@ pick_install_dir() {
 # Add directory to shell RC file (single file based on user's shell)
 # Uses idempotent guarded block to avoid duplicates
 add_to_path() {
-    local dir="$1"
-    local rc
-    rc=$(pick_rc_file)
+    _atp_dir="$1"
+    _atp_rc=$(pick_rc_file)
 
     # Fish shell uses different syntax
-    case "$rc" in
+    case "$_atp_rc" in
         *"fish/config.fish")
             # Ensure fish config directory exists
-            mkdir -p "$(dirname "$rc")"
-            [ -f "$rc" ] || touch "$rc"
+            mkdir -p "$(dirname "$_atp_rc")"
+            [ -f "$_atp_rc" ] || touch "$_atp_rc"
 
             # Check if already configured (idempotent)
-            if grep -q "WP Staging CLI installer" "$rc" 2>/dev/null; then
-                info "PATH already configured in $rc"
+            if grep -q "WP Staging CLI installer" "$_atp_rc" 2>/dev/null; then
+                info "PATH already configured in $_atp_rc"
                 return 0
             fi
 
@@ -567,21 +573,21 @@ add_to_path() {
             {
                 echo ""
                 echo "# Added by WP Staging CLI installer"
-                echo "set -gx PATH \$PATH \"$dir\""
-            } >>"$rc"
+                echo "set -gx PATH \$PATH \"$_atp_dir\""
+            } >>"$_atp_rc"
 
-            success "✓ Added $dir to PATH in $rc"
+            success "✓ Added $_atp_dir to PATH in $_atp_rc"
             info "  Run '$(get_source_command)' or restart your shell to apply changes"
             return 0
             ;;
     esac
 
     # Create file if it doesn't exist (for bash/zsh/POSIX shells)
-    [ -f "$rc" ] || touch "$rc"
+    [ -f "$_atp_rc" ] || touch "$_atp_rc"
 
     # Check if already configured (idempotent)
-    if grep -q "WP Staging CLI installer" "$rc" 2>/dev/null; then
-        info "PATH already configured in $rc"
+    if grep -q "WP Staging CLI installer" "$_atp_rc" 2>/dev/null; then
+        info "PATH already configured in $_atp_rc"
         return 0
     fi
 
@@ -590,12 +596,12 @@ add_to_path() {
         echo ""
         echo "# Added by WP Staging CLI installer"
         echo "case \":\$PATH:\" in"
-        echo "  *\":$dir:\"*) ;;"
-        echo "  *) export PATH=\"\$PATH:$dir\" ;;"
+        echo "  *\":$_atp_dir:\"*) ;;"
+        echo "  *) export PATH=\"\$PATH:$_atp_dir\" ;;"
         echo "esac"
-    } >>"$rc"
+    } >>"$_atp_rc"
 
-    success "✓ Added $dir to PATH in $rc"
+    success "✓ Added $_atp_dir to PATH in $_atp_rc"
     info "  Run '$(get_source_command)' or restart your shell to apply changes"
 }
 
@@ -603,18 +609,17 @@ add_to_path() {
 fetch_latest_stable_version() {
     info "Fetching latest stable version..."
 
-    local tags_json
-    local version=""
+    _flsv_version=""
 
     # Try to fetch tags from GitHub API
     if command_exists curl; then
-        tags_json=$(curl -fsSL "${GITHUB_API_URL}/tags" 2>/dev/null) || {
+        _flsv_tags_json=$(curl -fsSL "${GITHUB_API_URL}/tags" 2>/dev/null) || {
             warning "Failed to fetch tags from GitHub API, falling back to 'main'"
             echo "main"
             return 0
         }
     elif command_exists wget; then
-        tags_json=$(wget -qO- "${GITHUB_API_URL}/tags" 2>/dev/null) || {
+        _flsv_tags_json=$(wget -qO- "${GITHUB_API_URL}/tags" 2>/dev/null) || {
             warning "Failed to fetch tags from GitHub API, falling back to 'main'"
             echo "main"
             return 0
@@ -628,60 +633,72 @@ fetch_latest_stable_version() {
     # Parse tags and filter out pre-release versions (beta, alpha, rc)
     # Extract tag names and filter
     # Filter out pre-release versions using case-insensitive matching
-    version=$(echo "$tags_json" | grep '"name"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | grep -v -i -E 'beta|alpha|rc' | head -1)
+    _flsv_version=$(echo "$_flsv_tags_json" | grep '"name"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | grep -v -i -E 'beta|alpha|rc' | head -1)
 
-    if [ -z "$version" ]; then
+    if [ -z "$_flsv_version" ]; then
         warning "No stable version found, falling back to 'main'"
         echo "main"
         return 0
     fi
 
-    echo "$version"
+    echo "$_flsv_version"
 }
 
 # Validate that a version exists in the release repository
 validate_version() {
-    local version="$1"
+    _vv_version="$1"
 
     # Skip validation for 'main'
-    if [ "$version" = "main" ]; then
+    if [ "$_vv_version" = "main" ]; then
         return 0
     fi
 
-    info "Validating version $version..."
+    info "Validating version $_vv_version..."
 
-    local manifest_url="${GITHUB_RAW_URL}/${version}/manifest.json"
-    local status_code
+    _vv_manifest_url="${GITHUB_RAW_URL}/${_vv_version}/manifest.json"
 
     # Check if manifest exists for this version
     if command_exists curl; then
-        status_code=$(curl -o /dev/null -s -w "%{http_code}" "$manifest_url")
-        if [ "$status_code" != "200" ]; then
-            error "Version '$version' not found in release repository.\n\n  Please check available versions at:\n  https://github.com/wp-staging/wp-staging-cli-release/tags\n\n  Or install the latest stable version by omitting the version argument."
+        _vv_status_code=$(curl -o /dev/null -s -w "%{http_code}" "$_vv_manifest_url")
+        if [ "$_vv_status_code" != "200" ]; then
+            error "Version '$_vv_version' not found in release repository.\n\n  Please check available versions at:\n  https://github.com/wp-staging/wp-staging-cli-release/tags\n\n  Or install the latest stable version by omitting the version argument."
         fi
     elif command_exists wget; then
-        if ! wget -q --spider "$manifest_url" 2>/dev/null; then
-            error "Version '$version' not found in release repository.\n\n  Please check available versions at:\n  https://github.com/wp-staging/wp-staging-cli-release/tags\n\n  Or install the latest stable version by omitting the version argument."
+        if ! wget -q --spider "$_vv_manifest_url" 2>/dev/null; then
+            error "Version '$_vv_version' not found in release repository.\n\n  Please check available versions at:\n  https://github.com/wp-staging/wp-staging-cli-release/tags\n\n  Or install the latest stable version by omitting the version argument."
         fi
     fi
 
-    success "✓ Version $version exists"
+    success "✓ Version $_vv_version exists"
 }
 
 # Main installation
 main() {
+    # Early --print-version short-circuit: print and exit before the banner so
+    # the smoke-test output stays clean for piping through grep / jq / etc.
+    for _arg in "$@"; do
+        case "$_arg" in
+            --print-version | -V)
+                print_version_and_exit
+                ;;
+        esac
+    done
+
     info "WP Staging CLI Installer"
     info "========================\n"
 
     # Parse arguments (version, license, bin-dir, extract)
-    local REQUESTED_VERSION=""
-    local LICENSE_KEY=""
-    local CUSTOM_BIN_DIR=""
-    local EXTRACT_DIR=""
-    local CLI_ARGS=""
+    REQUESTED_VERSION=""
+    LICENSE_KEY=""
+    CUSTOM_BIN_DIR=""
+    EXTRACT_DIR=""
+    CLI_ARGS=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
+            --print-version | -V)
+                print_version_and_exit
+                ;;
             --license=*)
                 LICENSE_KEY="${1#*=}"
                 shift
@@ -738,7 +755,7 @@ main() {
         error "--bin-dir and --extract are mutually exclusive. Use one or the other."
     fi
 
-    local VERSION_REF=""
+    VERSION_REF=""
 
     if [ -n "$REQUESTED_VERSION" ]; then
         # User specified a version
@@ -863,8 +880,8 @@ main() {
     # Prefer directories already on PATH to avoid needing shell reload
     info "\nInstalling wpstaging..."
 
-    local USE_SUDO="false"
-    local SUDO_DECLINED=""
+    USE_SUDO="false"
+    SUDO_DECLINED=""
 
     if [ -n "$CUSTOM_BIN_DIR" ]; then
         # Custom bin-dir mode: use the user-specified directory
@@ -887,9 +904,8 @@ main() {
             error "Directory $INSTALL_DIR is not writable and sudo is not available"
         fi
     else
-        local _pick_result
         _pick_result=$(pick_install_dir)
-        local _old_ifs="$IFS"
+        _old_ifs="$IFS"
         IFS='|'
         # shellcheck disable=SC2086 -- intentional word splitting on pipe delimiter
         set -- $_pick_result
@@ -943,10 +959,10 @@ main() {
     fi
 
     # Register license key if provided
-    local license_registered=false
+    license_registered=false
     if [ -n "$LICENSE_KEY" ]; then
         info "\nRegistering license key..."
-        local register_binary="${INSTALL_DIR}/${BINARY_NAME}"
+        register_binary="${INSTALL_DIR}/${BINARY_NAME}"
 
         # Check if binary exists and is executable
         if [ ! -x "$register_binary" ]; then
@@ -955,15 +971,14 @@ main() {
         else
             # Pass license via environment variable to avoid exposure in process list
             # Disable globbing around $CLI_ARGS to prevent wildcard expansion
-            local output
             set -f
-            if output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register $CLI_ARGS 2>&1); then
+            if register_output=$(WPSTGPRO_LICENSE="$LICENSE_KEY" "$register_binary" register $CLI_ARGS 2>&1); then
                 set +f
                 success "✓ License registered successfully"
                 license_registered=true
             else
                 set +f
-                warning "License registration failed: $output"
+                warning "License registration failed: $register_output"
                 warning "You can register later with: wpstaging register"
             fi
         fi
@@ -979,8 +994,8 @@ main() {
         success "Installed: $VERSION_OUTPUT"
 
         # Check for other installations that might shadow this one
-        local other_installs=""
-        local IFS_BACKUP="$IFS"
+        other_installs=""
+        IFS_BACKUP="$IFS"
         IFS=':'
         for dir in $PATH; do
             if [ "$dir" != "$INSTALL_DIR" ] && [ -x "$dir/$BINARY_NAME" ]; then

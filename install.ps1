@@ -1,5 +1,4 @@
 # WP Staging CLI Installer for Windows
-# Build: 20260417-120000
 # This script installs wpstaging on Windows
 #
 # Usage:
@@ -15,12 +14,19 @@
 #   Install specific version with license:
 #     & ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -v "1.4.0" -l "YOUR_LICENSE_KEY"
 #
+#   Print installer build and latest release, then exit:
+#     & ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -PrintVersion
+#
 # Options:
 #   -v, -Version VERSION    Install specific version (e.g., 1.4.0, 1.4.0-beta.1)
 #   -l, -License KEY        Register license key after installation
 #   -d, -BinDir DIR         Install binary to custom directory
 #   -e, -Extract DIR        Extract all files to directory (no installation)
 #   -a, -CliArgs ARGS       Extra arguments passed to every wpstaging binary call
+#   -PrintVersion           Print installer build and latest release version, then exit
+#                           (Note: bash and cmd installers also accept the short form -V;
+#                            PowerShell cannot, because -v is already the install-version
+#                            short flag and PowerShell aliases are case-insensitive.)
 #
 # Examples:
 #   -v "1.4.0-beta.1"                    # Install version 1.4.0-beta.1
@@ -30,6 +36,7 @@
 #   -d "C:\mytools"                      # Install binary to C:\mytools
 #   -e "C:\tmp\wpstaging-files"          # Extract all files without installing
 #   -a "--debug"                         # Install and pass --debug to binary calls
+#   -PrintVersion                        # Print build stamp + latest release, no install
 #   (no parameter)                       # Install latest stable (no beta/alpha/rc)
 
 param(
@@ -51,7 +58,10 @@ param(
 
     [Parameter(Mandatory=$false)]
     [Alias("a")]
-    [string]$CliArgs = ""
+    [string]$CliArgs = "",
+
+    [Parameter(Mandatory=$false)]
+    [switch]$PrintVersion
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +71,7 @@ $GitHubApiUrl = "https://api.github.com/repos/wp-staging/wp-staging-cli-release"
 $GitHubRawUrl = "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release"
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
+$ScriptVersion = "20260430-130000"
 
 # Colors for output - Uses Write-Host for colored console output
 # Note: Write-Host is intentional here as we need console coloring,
@@ -638,6 +649,28 @@ function Main {
             Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+}
+
+# Early -PrintVersion short-circuit: print build stamp + latest release, then
+# exit before any install actions. Used as a release smoke test.
+# Uses Write-Output so the lines reach stdout in any host -- PowerShell 7's
+# Write-Host writes to the Information stream, which is not captured by a
+# parent process invoking ``& pwsh -File ... 2>&1``.
+if ($PrintVersion) {
+    Write-Output "wpstaging installer"
+    Write-Output "  build:          $ScriptVersion"
+    try {
+        $latest = Get-LatestStableVersion
+        if ($latest -and $latest -ne "main") {
+            Write-Output "  latest release: $latest"
+        } else {
+            Write-Output "  latest release: unknown (could not fetch from GitHub)"
+        }
+    }
+    catch {
+        Write-Output "  latest release: unknown (could not fetch from GitHub)"
+    }
+    exit 0
 }
 
 # Run main function with version, license, bin-dir, extract, and cli-args parameters (if provided)

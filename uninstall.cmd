@@ -18,7 +18,6 @@ exit 1
 setlocal enabledelayedexpansion
 
 REM WP Staging CLI Uninstaller for Windows (CMD)
-REM Build: 20260417-120000
 REM This script uninstalls the wpstaging cli binary
 REM
 REM Download and run directly from the web:
@@ -32,6 +31,12 @@ REM   uninstall.cmd
 
 set BINARY_NAME=wpstaging.exe
 set APP_NAME=wpstaging
+set SCRIPT_VERSION=20260430-154943
+
+REM Early --print-version short-circuit. Print the build stamp and exit before
+REM running any uninstall logic, so the smoke-test output stays clean.
+if "%~1"=="--print-version" goto :do_print_version
+if "%~1"=="-V" goto :do_print_version
 
 REM All candidate directories that the installer may use
 set INSTALL_DIR_1=%LOCALAPPDATA%\Programs\%APP_NAME%
@@ -60,7 +65,7 @@ set VERIFIED_2=0
 set VERIFIED_3=0
 
 if exist "%INSTALL_DIR_1%\%BINARY_NAME%" (
-    "%INSTALL_DIR_1%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+    call :verify_binary "%INSTALL_DIR_1%\%BINARY_NAME%"
     if not errorlevel 1 (
         set FOUND=1
         set VERIFIED_1=1
@@ -71,7 +76,7 @@ if exist "%INSTALL_DIR_1%\%BINARY_NAME%" (
 )
 
 if exist "%INSTALL_DIR_2%\%BINARY_NAME%" (
-    "%INSTALL_DIR_2%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+    call :verify_binary "%INSTALL_DIR_2%\%BINARY_NAME%"
     if not errorlevel 1 (
         set FOUND=1
         set VERIFIED_2=1
@@ -82,7 +87,7 @@ if exist "%INSTALL_DIR_2%\%BINARY_NAME%" (
 )
 
 if exist "%INSTALL_DIR_3%\%BINARY_NAME%" (
-    "%INSTALL_DIR_3%\%BINARY_NAME%" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+    call :verify_binary "%INSTALL_DIR_3%\%BINARY_NAME%"
     if not errorlevel 1 (
         set FOUND=1
         set VERIFIED_3=1
@@ -96,7 +101,7 @@ if !FOUND!==0 (
     where wpstaging >nul 2>&1
     if not errorlevel 1 (
         for /f "delims=" %%i in ('where wpstaging 2^>nul') do (
-            "%%i" --version 2>nul | findstr /i /c:"wpstaging" /c:"wp-staging" >nul 2>&1
+            call :verify_binary "%%i"
             if not errorlevel 1 (
                 set FOUND=1
                 echo %BLUE%Found wpstaging at: %%i%NC%
@@ -248,6 +253,17 @@ if "!VERIFIED_2!"=="1" call :remove_binaries_from_dir "%INSTALL_DIR_2%"
 if "!VERIFIED_3!"=="1" call :remove_binaries_from_dir "%INSTALL_DIR_3%"
 
 goto :after_remove_binaries
+
+:verify_binary
+REM Verify a candidate binary with a 5s timeout (#295). Args: %1 = full path.
+REM Sets errorlevel 0 on verified, non-zero otherwise. Wraps PowerShell because
+REM cmd has no portable timeout primitive that survives across Windows versions.
+REM Path is passed as a PowerShell argument (param binding) rather than
+REM string-interpolated, to stay safe if %~1 ever contains a single quote.
+REM PowerShell command stays on a single line: line continuation inside an
+REM if-block fails to parse on some Windows versions.
+powershell -NoProfile -Command "& { param([string]$p) $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = $p; $psi.Arguments = '--version'; $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.CreateNoWindow = $true; try { $proc = [System.Diagnostics.Process]::Start($psi); if (-not $proc.WaitForExit(5000)) { try { $proc.Kill() } catch {}; exit 2 }; $out = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd(); if ($out -match 'wpstaging|wp[-. ]staging') { exit 0 } else { exit 1 } } catch { exit 3 } }" "%~1"
+goto :eof
 
 :remove_binaries_from_dir
 set "DIR=%~1"
@@ -401,5 +417,13 @@ echo %YELLOW%Note: You may need to restart your command prompt%NC%
 echo %YELLOW%for changes to take effect.%NC%
 echo.
 
+endlocal
+exit /b 0
+
+REM Print uninstaller build and exit. Reachable only via goto from the early
+REM short-circuit so the script never falls into it during a normal run.
+:do_print_version
+echo wpstaging uninstaller
+echo   build: %SCRIPT_VERSION%
 endlocal
 exit /b 0
