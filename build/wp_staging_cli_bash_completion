@@ -29,9 +29,6 @@ _wp_staging_cli_hint_text() {
         switch-wp)
             printf 'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
             ;;
-        reinstall-cert)
-            printf 'Examples:\n  wpstaging reinstall-cert newsite.local\n  wpstaging reinstall-cert newsite.local --reinstall-ca'
-            ;;
         enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
             printf 'Examples:\n  wpstaging %s newsite.local' "$1"
             ;;
@@ -61,13 +58,18 @@ _wp_staging_cli() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
+    # NOTE: `sudo-keepalive` is intentionally omitted. It is an internal command
+    # spawned by the CLI to refresh sudo credentials in the background and is
+    # not meant to be invoked by users -- do not add it to completion.
     commands="
         add
         clean
+        sweep-ca-trust
         compose-info
         deactivate
         del
         disable
+        docker-start
         dump-all-help
         dump-header
         dump-index
@@ -78,8 +80,10 @@ _wp_staging_cli() {
         generate-docker-file
         help
         list
+        magic-link
         reconfigure
         register
+        reinstall-ca
         reinstall-cert
         reset
         restart
@@ -96,6 +100,7 @@ _wp_staging_cli() {
         update
         update-subdomains
         update-hosts-file
+        verify-cert
     "
 
     # Clean subcommands
@@ -103,13 +108,13 @@ _wp_staging_cli() {
         all
         cache
         license
+        wpcli
     "
 
     # General options (available on all subcommands)
     general_opts="
         -l --license
-        -o --outputdir
-        --workingdir
+        --working-dir
         --skip-config
         --config
         --yes
@@ -159,16 +164,19 @@ _wp_staging_cli() {
 
     # Extract-specific options
     extract_opts="
+        -o --output-dir
         -n --normalizedb
         --site-url
         --db-prefix
         --overwrite
         --verify
         --from
+        --download-dir
     "
 
     # Restore-specific options
     restore_opts="
+        -o --output-dir
         -p --path
         --site-url
         --overwrite
@@ -194,9 +202,7 @@ _wp_staging_cli() {
         --db-ssl-cert
         --db-ssl-key
         --db-ssl-mode
-        --env-path
-        --compose-file
-        --skip-update-hosts-file
+        --download-dir
     "
 
     # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
@@ -220,6 +226,8 @@ _wp_staging_cli() {
         --disable-mailpit
         --disable-adminer
         --disable-adminer-autologin
+        --disable-magic-link
+        --magic-link-timeout
         --wp
         --db-host
         --db-name
@@ -236,20 +244,31 @@ _wp_staging_cli() {
         --from
     "
 
-    # reset: addPathOnlyFlag + --from + --wp + --disable-adminer
+    # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
     reset_opts="
         --env-path
         --from
         --wp
+        --disable-mailpit
         --disable-adminer
         --disable-adminer-autologin
+        --disable-magic-link
+        --magic-link-timeout
     "
 
-    # generate-docker-file / generate-compose-file: add path + compose + --disable-adminer
+    # generate-docker-file / generate-compose-file: add path + compose + --disable-mailpit + --disable-adminer
     generate_docker_file_opts="
         --env-path
+        --disable-mailpit
         --disable-adminer
         --disable-adminer-autologin
+        --disable-magic-link
+        --magic-link-timeout
+    "
+
+    # magic-link <hostname> [--timeout MINUTES]
+    magic_link_opts="
+        --timeout
     "
 
     # All other dockerize subcommands (except shell-db and reinstall-cert):
@@ -460,6 +479,15 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${generate_docker_file_opts}" -- "${cur}") )
             fi
             ;;
+        magic-link)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # Required first positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${magic_link_opts}" -- "${cur}") )
+            fi
+            ;;
         remove)
             COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             ;;
@@ -467,16 +495,35 @@ _wp_staging_cli() {
             COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             ;;
         reinstall-cert)
-            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            # reinstall-cert [hostname] -- hostname is optional (no hostname =
+            # apply to all sites). No hint: would imply a required positional.
             if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
-                # First positional: hostname
+                # Optional first positional: hostname
                 COMPREPLY=()
             else
-                COMPREPLY=( $(compgen -W "--env-path --reinstall-ca ${general_opts}" -- "${cur}") )
+                COMPREPLY=( $(compgen -W "--env-path --reinstall-ca --no-restart ${general_opts}" -- "${cur}") )
             fi
             ;;
+        reinstall-ca)
+            COMPREPLY=( $(compgen -W "--env-path --no-restart ${general_opts}" -- "${cur}") )
+            ;;
+        verify-cert)
+            # verify-cert [hostname] -- hostname is optional (no hostname =
+            # audit every site).
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "--env-path --live ${general_opts}" -- "${cur}") )
+            fi
+            ;;
+        sweep-ca-trust)
+            COMPREPLY=( $(compgen -W "--env-path --dry-run --include-legacy ${general_opts}" -- "${cur}") )
+            ;;
+        docker-start)
+            COMPREPLY=( $(compgen -W "--timeout --status ${general_opts}" -- "${cur}") )
+            ;;
         register)
-            COMPREPLY=( $(compgen -W "--license ${general_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "--license --status ${general_opts}" -- "${cur}") )
             ;;
         uninstall)
             COMPREPLY=( $(compgen -W "--full ${general_opts}" -- "${cur}") )
@@ -517,7 +564,7 @@ _wp_staging_cli() {
 
     # File/path suggestions
     case "${prev}" in
-        -o|--outputdir|--workingdir|-p|--path|--db-file|--db-socket|--db-ssl-ca-cert|--db-ssl-cert|--db-ssl-key|--compose-file|--env-path)
+        -o|--output-dir|--outputdir|--download-dir|--working-dir|--workingdir|-p|--path|--db-file|--db-socket|--db-ssl-ca-cert|--db-ssl-cert|--db-ssl-key|--compose-file|--env-path)
             COMPREPLY=( $(compgen -o filenames -- "${cur}") )
             return
             ;;

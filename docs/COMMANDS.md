@@ -9,6 +9,7 @@
 - [reset](#command-reset)
 - [switch-php](#command-switch-php)
 - [switch-wp](#command-switch-wp)
+- [magic-link](#command-magic-link)
 - [extract](#command-extract)
 - [restore](#command-restore)
 - [dump-header](#command-dump-header)
@@ -25,6 +26,10 @@
 - [generate-compose-file](#command-generate-compose-file)
 - [generate-docker-file](#command-generate-docker-file)
 - [reconfigure](#command-reconfigure)
+- [reinstall-cert](#command-reinstall-cert)
+- [reinstall-ca](#command-reinstall-ca)
+- [verify-cert](#command-verify-cert)
+- [docker-start](#command-docker-start)
 - [register](#command-register)
 - [update](#command-update)
 - [uninstall](#command-uninstall)
@@ -32,13 +37,15 @@
 - [clean all](#command-clean-all)
 - [clean cache](#command-clean-cache)
 - [clean license](#command-clean-license)
+- [clean wpcli](#command-clean-wpcli)
 
 **Hidden Commands:**
 - [deactivate](#hidden-command-deactivate)
 - [shell-db](#hidden-command-shell-db)
-- [dump-all-help](#hidden-command-dump-all-help)
+- [sweep-ca-trust](#hidden-command-sweep-ca-trust)
 - [compose-info](#hidden-command-compose-info)
-- [reinstall-cert](#hidden-command-reinstall-cert)
+- [dump-all-help](#hidden-command-dump-all-help)
+- [sudo-keepalive](#hidden-command-sudo-keepalive)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -68,6 +75,7 @@ Site Commands:
   reset                 Reset a WordPress site
   switch-php            Switch PHP version for a site
   switch-wp             Switch WordPress version for a site
+  magic-link            Issue a fresh wp-admin auto-login URL for a site
 
 Backup Commands:
   extract               Extract files, database, or metadata from a WP STAGING backup
@@ -88,6 +96,10 @@ Docker Commands:
   generate-compose-file Generate a docker-compose.yml file
   generate-docker-file  Generate Docker configuration files
   reconfigure           Reconfigure a site docker-related config and apply the changes
+  reinstall-cert        Reinstall WP Staging CLI SSL certificate for a site
+  reinstall-ca          Rotate the WP Staging CLI certificate authority
+  verify-cert           Audit WP Staging CLI SSL certificate trust state
+  docker-start          Start the supported Docker runtime and wait for the daemon
 
 Other Commands:
   register              Activate your WP Staging Pro license
@@ -98,10 +110,10 @@ Other Commands:
 
 Global Flags:
   -l, --license string       Provide WP Staging Pro license key for this command
-      --workingdir string    Working directory for config files
+      --working-dir string   Working directory for config files
       --skip-config          Skip loading the default config file
       --config string        Load settings from a custom config file
-      --prompt-timeout int   Timeout for user input in seconds (default "180")
+      --prompt-timeout int   Timeout for user input in seconds (0 = no timeout) (default "180")
       --yes                  Automatically confirm all prompts
   -d, --debug                Show debug messages
   -q, --quiet                Suppress all output
@@ -164,7 +176,7 @@ Env Flags:
       --db-port int                 MariaDB port (default "3306")
       --db-root string              MariaDB root password (default "123456")
       --mailpit-http-port int       Mailpit HTTP port (default "8025")
-      --disable-mailpit             Disable the Mailpit container
+      --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 WordPress Flags:
       --wp string                   WordPress version to install (default "latest")
@@ -184,6 +196,8 @@ WordPress Flags:
 Other Flags:
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
+      --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
 
 ```
@@ -286,6 +300,7 @@ Examples:
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 WordPress Flags:
       --wp string                   WordPress version to install (e.g., 6.5, latest)
@@ -294,6 +309,8 @@ Other Flags:
       --from string                 Backup file path or remote URL (http/https) to restore after reset
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
+      --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
 
 ```
 
@@ -342,6 +359,33 @@ Env Flags:
 
 ```
 
+<a name="command-magic-link"></a>
+# Command: magic-link
+
+```
+Issue a fresh wp-admin auto-login URL ("magic link") for a site.
+
+The previous URL is invalidated immediately, so a leaked or shared
+link stops working. Use --timeout to set a one-shot lifetime in
+minutes (up to 24 hours); without the flag the new link uses the
+site default from .env, or 15 minutes when the site has none. The
+site default is set with --magic-link-timeout on add/reset/reconfigure.
+
+Usage:
+  wpstaging magic-link <hostname> [flags]
+
+Examples:
+  wpstaging magic-link mysite.local
+  wpstaging magic-link mysite.local --timeout=60
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --timeout int       One-shot token lifetime in minutes (default "15")
+
+```
+
 <a name="command-extract"></a>
 # Command: extract
 
@@ -362,16 +406,17 @@ Examples:
   wpstaging extract backup.wpstg
   wpstaging extract --from=backup.wpstg
   wpstaging extract --from=https://example.com/backups/backup.wpstg
-  wpstaging extract --only-plugins --outputdir=/var/www backup.wpstg
+  wpstaging extract --only-plugins --output-dir=/var/www backup.wpstg
 
 Flags:
-  -o, --outputdir string   Directory for extracted files (default: ./wpstaging-output)
-  -n, --normalizedb        Normalize database files during extraction
-      --overwrite string   Overwrite existing extraction directory (yes/no) (default "yes")
-      --site-url string    Specify a new WordPress site URL
-      --verify             Verify integrity of extracted files
-      --db-prefix string   Specify a new WordPress database table prefix
-      --from string        Backup file path or remote URL (http/https)
+  -o, --output-dir string     Directory for extracted files (default: ./wpstaging-output)
+  -n, --normalizedb           Normalize database files during extraction
+      --overwrite string      Overwrite existing extraction directory (yes/no) (default "yes")
+      --site-url string       Specify a new WordPress site URL
+      --verify                Verify integrity of extracted files
+      --db-prefix string      Specify a new WordPress database table prefix
+      --download-dir string   Directory for downloaded backup files (default: ./wpstaging-download)
+      --from string           Backup file path or remote URL (http/https)
 
 Only-Filters Flags:
   These flags can only be used once. Pair with `--only-file` to match specific file names.
@@ -435,7 +480,7 @@ Examples:
   wpstaging restore site.local --from=https://example.com/backups/backup.wpstg
 
 Flags:
-  -o, --outputdir string          Directory for extracted files (default: ./wpstaging-output)
+  -o, --output-dir string         Directory for extracted files (default: ./wpstaging-output)
   -p, --path string               WordPress installation path (required)
       --site-url string           Target WordPress site URL (use if detection fails)
       --overwrite string          Overwrite target directory (yes/no) (default "yes")
@@ -449,6 +494,7 @@ Flags:
       --db-timeout string         Database connection timeout (default "15s")
       --verify                    Verify integrity of extracted files
       --skip-extract              Skip extraction if files already exist
+      --download-dir string       Directory for downloaded backup files (default: ./wpstaging-download)
       --from string               Backup file path or remote URL (http/https)
 
 Wordpress DB-related Flags:
@@ -509,7 +555,7 @@ Examples:
   wpstaging dump-header backup.wpstg
 
 Flags:
-  -o, --outputdir string   Directory for extracted files (default: ./wpstaging-output)
+  -o, --output-dir string   Directory for extracted files (default: ./wpstaging-output)
 
 ```
 
@@ -530,8 +576,8 @@ Examples:
   wpstaging dump-index --data backup.wpstg
 
 Flags:
-      --data               Display detailed index data
-  -o, --outputdir string   Directory for extracted files (default: ./wpstaging-output)
+      --data                Display detailed index data
+  -o, --output-dir string   Directory for extracted files (default: ./wpstaging-output)
 
 ```
 
@@ -551,7 +597,7 @@ Examples:
   wpstaging dump-metadata backup.wpstg
 
 Flags:
-  -o, --outputdir string   Directory for extracted files (default: ./wpstaging-output)
+  -o, --output-dir string   Directory for extracted files (default: ./wpstaging-output)
 
 ```
 
@@ -739,10 +785,13 @@ Examples:
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
+      --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
 
 ```
 
@@ -765,10 +814,13 @@ Examples:
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
+      --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
 
 ```
 
@@ -786,8 +838,10 @@ or to refresh the SSL certificate after the hostname list changes.
 
 You can also apply feature-toggle changes here. For example, pass
 --disable-adminer=false to re-enable the Adminer UI on a site where
-it was previously disabled, or --disable-adminer-autologin to turn
-off auto-login while keeping Adminer installed.
+it was previously disabled, --disable-adminer-autologin to turn off
+auto-login while keeping Adminer installed, --disable-mailpit=false
+to re-enable the Mailpit container, or --disable-magic-link to turn
+off wp-admin auto-login.
 
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
@@ -804,10 +858,125 @@ Examples:
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
+      --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
+      --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
+
+```
+
+<a name="command-reinstall-cert"></a>
+# Command: reinstall-cert
+
+```
+Delete and regenerate the WP Staging CLI SSL certificate for a site.
+
+If no hostname is given, the certificate is regenerated for every
+site. To rotate the certificate authority and re-sign every site's
+leaf certificate in one pass, use `wpstaging reinstall-ca`
+or pass --reinstall-ca to this command.
+
+Usage:
+  wpstaging reinstall-cert [hostname] [flags]
+
+Examples:
+  wpstaging reinstall-cert mysite.local
+  wpstaging reinstall-cert
+  wpstaging reinstall-cert --reinstall-ca
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --reinstall-ca      Alias for `wpstaging reinstall-ca`
+      --no-restart        Skip restarting running sites after regenerating the certificate
+
+```
+
+<a name="command-reinstall-ca"></a>
+# Command: reinstall-ca
+
+```
+Wipe the WP Staging CLI certificate authority, generate a fresh one,
+install it into the system trust store, and re-sign every site's SSL
+certificate against the new CA. Stale WP Staging CLI CA entries are
+removed from the system trust store afterwards.
+
+Requires elevated privileges to update the system trust store.
+
+Usage:
+  wpstaging reinstall-ca [flags]
+
+Examples:
+  wpstaging reinstall-ca
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --no-restart        Skip restarting running sites after rotating the CA
+
+```
+
+<a name="command-verify-cert"></a>
+# Command: verify-cert
+
+```
+Inspect the WP Staging CLI certificate authority across every system
+trust store and check each site's leaf certificate (chain to current CA,
+expiry buffer). Reports per-store CA presence and per-site leaf state
+without modifying anything.
+
+If a hostname is given, only that site's leaf is inspected; the CA
+section still covers every store. Use --live to add a live TLS handshake
+per site to confirm the served leaf matches the on-disk one. Use --json
+to emit a machine-readable report.
+
+Exits 0 when everything is trusted, non-zero when any leaf or trust
+store needs attention.
+
+Usage:
+  wpstaging verify-cert [hostname] [flags]
+
+Examples:
+  wpstaging verify-cert
+  wpstaging verify-cert mysite.local
+  wpstaging verify-cert --json
+  wpstaging verify-cert --live
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --live              Probe https://<host>:443 and compare the served leaf with the on-disk leaf
+
+```
+
+<a name="command-docker-start"></a>
+# Command: docker-start
+
+```
+Detect the installed Docker runtime (Docker Desktop or native
+Docker Engine), launch it, and poll the daemon until it responds
+or --timeout is reached. Use --json to emit a machine-readable
+result. Other brands (OrbStack, Rancher Desktop, Podman Desktop,
+Colima) are detected but launch is refused.
+
+Usage:
+  wpstaging docker-start [flags]
+
+Examples:
+  wpstaging docker-start
+  wpstaging docker-start --timeout=90 --json
+  wpstaging docker-start --status --json
+
+
+Other Flags:
+      --status        Report the current Docker state without trying to start it
+      --timeout int   Timeout in seconds to wait for the Docker daemon to come up (default "60")
 
 ```
 
@@ -817,6 +986,7 @@ Other Flags:
 ```
 Register your WP STAGING Pro license by entering your license key.
 The key will be validated and stored encrypted locally for future use.
+Use --status to display the registered license details.
 
 Usage:
   wpstaging register [flags]
@@ -825,12 +995,14 @@ Examples:
   wpstaging register
   wpstaging register -l=YOUR_LICENSE_KEY
   wpstaging register --license=YOUR_LICENSE_KEY
+  wpstaging register --status
 
 This will prompt you to enter your license key (or use -l/--license flag), validate it
 with WP STAGING servers, and register it for this machine.
 
 Flags:
   -l, --license string   License key to register (skips interactive prompt)
+      --status           Show the registered license details
 
 ```
 
@@ -901,6 +1073,7 @@ Available Commands:
   all         Clean up all stored resources
   cache       Clean up cache files
   license     Remove stored license key
+  wpcli       Clean up WP-CLI cache files
 
 Use "wpstaging clean [command] --help" for more information and available flags for a command.
 
@@ -919,6 +1092,9 @@ Examples:
   wpstaging clean all
 
 This will clean up all stored resources in the working directory.
+
+Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 ```
 
@@ -949,6 +1125,23 @@ Examples:
   wpstaging clean license
 
 This will remove the stored license key.
+
+```
+
+<a name="command-clean-wpcli"></a>
+# Command: clean wpcli
+
+```
+Remove WP-CLI cached downloads (plugin, core, and WP Staging Pro) shared across all sites.
+
+Usage:
+  wpstaging clean wpcli [flags]
+
+Examples:
+  wpstaging clean wpcli
+
+Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 ```
 
@@ -992,19 +1185,28 @@ Examples:
 
 ```
 
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
+<a name="hidden-command-sweep-ca-trust"></a>
+## Hidden Command: sweep-ca-trust
 
 ```
-Display help for all commands and flags
+Scan the system trust stores for WP Staging CLI SSL certificate
+authority entries whose fingerprint does not match the current rootCA.pem
+and remove only those. Third-party CAs and CAs from other WP Staging CLI
+installs are detected but never removed.
 
 Usage:
-  wpstaging dump-all-help [flags]
+  wpstaging sweep-ca-trust [flags]
 
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
+Examples:
+  wpstaging sweep-ca-trust
+  wpstaging sweep-ca-trust --dry-run
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --dry-run           List stale CA entries that would be removed without modifying any trust store
+      --include-legacy    Also remove legacy mkcert-branded CAs (asks for confirmation; risk: any third-party mkcert CAs are removed too)
 
 ```
 
@@ -1025,28 +1227,39 @@ Env Flags:
 
 ```
 
-<a name="hidden-command-reinstall-cert"></a>
-## Hidden Command: reinstall-cert
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
 
 ```
-Delete and regenerate the mkcert SSL certificate for a site.
+Display help for all commands and flags
 
 Usage:
-  wpstaging reinstall-cert <hostname> [flags]
+  wpstaging dump-all-help [flags]
 
-Examples:
-  wpstaging reinstall-cert mysite.local
-  wpstaging reinstall-cert mysite.local --reinstall-ca
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
 
-Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+```
 
-Other Flags:
-      --reinstall-ca      Also reinstall mkcert CA to system trust store (requires elevated privileges)
+<a name="hidden-command-sudo-keepalive"></a>
+## Hidden Command: sudo-keepalive
+
+```
+Internal command spawned by the CLI to keep sudo credentials warm for the
+duration of a terminal session. Not intended to be invoked directly.
+
+Usage:
+  wpstaging sudo-keepalive [flags]
+
+Flags:
+      --leader-sid int    Session leader PID to watch (default "0")
+      --pid-file string   PID file path written by the daemon
 
 ```
 
 
 ---
 
-*Generated on 2026-04-24 19:35:40 UTC*
+*Generated on 2026-05-11 15:42:37 UTC*

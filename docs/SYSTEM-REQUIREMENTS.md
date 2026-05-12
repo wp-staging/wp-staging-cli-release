@@ -54,7 +54,7 @@ wpstaging extract backup.wpstg
 wpstaging extract --normalizedb backup.wpstg
 
 # Extract with custom output directory
-wpstaging extract --outputdir=/custom/path backup.wpstg
+wpstaging extract --output-dir=/custom/path backup.wpstg
 ```
 
 ---
@@ -217,11 +217,11 @@ Some operations require elevated privileges:
 **Windows (10+ / Server 2016+ required):**
 - Requires Docker Desktop in **Linux container mode** (not Windows containers)
 - Docker Desktop defaults to Linux containers, but if switched to Windows containers, you must switch back
-- **Automatic switch:** When detected, the CLI will prompt to switch automatically:
+- **Automatic switch:** When detected, the CLI prompts to switch:
   ```
-  The next action will switch to Linux containers automatically.
-  Continue? [y/N]:
+  WP Staging requires Linux containers. Switch to Linux containers? [y/N]:
   ```
+  The prompt fires from `wpstaging docker-start`, from any dockerize/site command (`add`, `start`, `list`, `status`, ...) when the daemon is up but in Windows container mode, and from the auto-launch flow when these commands detect the daemon is down. Replying `y` runs `DockerCli.exe -SwitchLinuxEngine` and waits for the daemon to come back. JSON callers receive a typed `windows_container` prompt event (see `docs/GUI-INTEGRATION.md`).
 - Manual switch: Right-click Docker Desktop tray icon → "Switch to Linux containers..." or run:
   ```cmd
   "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
@@ -324,7 +324,7 @@ wpstaging extract --license=your-license-key backup.wpstg
 
 **"Insufficient disk space"**
 - Ensure 2x backup file size is available
-- Use `--outputdir` to specify different location with more space
+- Use `--output-dir` to specify different location with more space
 
 ### Restore Issues
 
@@ -439,4 +439,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-04-21 13:46:10 UTC
+**Last Updated:** 2026-05-07 18:28:05 UTC

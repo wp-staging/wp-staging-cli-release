@@ -1,6 +1,5 @@
 #!/bin/sh
 # WP Staging CLI Uninstaller
-# Build: 20260417-120000
 # This script uninstalls wpstaging from Linux, macOS, and WSL
 #
 # Usage:
@@ -9,6 +8,12 @@
 #
 #   Or run locally:
 #     sh uninstall.sh
+#
+#   Print uninstaller build, then exit:
+#     sh uninstall.sh --print-version
+#
+# Options:
+#   -V, --print-version      Print uninstaller build, then exit
 
 set -e
 
@@ -19,6 +24,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
+SCRIPT_VERSION="20260430-154943"
 
 # Colors for output
 RED='\033[0;31m'
@@ -50,57 +56,103 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Print uninstaller build, then exit. Used as a smoke check that the
+# downloaded uninstaller matches the just-released version.
+print_version_and_exit() {
+    echo "wpstaging uninstaller"
+    echo "  build: $SCRIPT_VERSION"
+    exit 0
+}
+
 # Verify that a binary is actually WP Staging CLI
 # Returns 0 if verified, 1 if not
 verify_binary() {
-    local binary_path="$1"
-    local output
+    _vb_binary_path="$1"
 
     # Use timeout to guard against a foreign binary that blocks on --version.
     # Prefer timeout (Linux coreutils), fall back to gtimeout (macOS Homebrew),
     # then direct execution as last resort.
     if command_exists timeout; then
-        output=$(timeout 5 "$binary_path" --version 2>/dev/null) || return 1
+        _vb_output=$(timeout 5 "$_vb_binary_path" --version 2>/dev/null) || return 1
     elif command_exists gtimeout; then
-        output=$(gtimeout 5 "$binary_path" --version 2>/dev/null) || return 1
+        _vb_output=$(gtimeout 5 "$_vb_binary_path" --version 2>/dev/null) || return 1
     else
-        output=$("$binary_path" --version 2>/dev/null) || return 1
+        _vb_output=$("$_vb_binary_path" --version 2>/dev/null) || return 1
     fi
 
-    echo "$output" | grep -Eqi "wpstaging|wp[-. ]staging"
+    echo "$_vb_output" | grep -Eqi "wpstaging|wp[-. ]staging"
 }
 
 # Remove binary and aliases from a directory
 remove_binaries() {
-    local dir="$1"
-    local use_sudo="$2"
-    local removed=false
+    _rb_dir="$1"
+    _rb_use_sudo="$2"
+    _rb_removed=false
 
-    for file in "$BINARY_NAME" "wpstg" "wp-staging"; do
-        local path="$dir/$file"
-        if [ -f "$path" ] || [ -L "$path" ]; then
-            if [ "$use_sudo" = "true" ] && command_exists sudo; then
-                sudo rm -f "$path" && removed=true
-            else
-                rm -f "$path" && removed=true
-            fi
+    # Always remove the main binary -- main() verified it before calling.
+    _rb_main_path="$_rb_dir/$BINARY_NAME"
+    if [ -f "$_rb_main_path" ] || [ -L "$_rb_main_path" ]; then
+        if [ "$_rb_use_sudo" = "true" ] && command_exists sudo; then
+            sudo rm -f "$_rb_main_path" && _rb_removed=true
+        else
+            rm -f "$_rb_main_path" && _rb_removed=true
+        fi
+    fi
+
+    # Aliases: only remove if symlinked to the verified binary, or if they
+    # themselves verify as WP Staging CLI. Avoids deleting unrelated user
+    # binaries that happen to share these names (#296).
+    for _rb_alias in "wpstg" "wp-staging"; do
+        _rb_path="$_rb_dir/$_rb_alias"
+        if [ ! -L "$_rb_path" ] && [ ! -f "$_rb_path" ]; then
+            continue
+        fi
+
+        _rb_safe=false
+
+        if [ -L "$_rb_path" ]; then
+            # readlink is non-POSIX but ubiquitous on Linux/macOS. install.sh
+            # creates these as relative links, target = "wpstaging". If
+            # readlink is missing or fails, verify_binary below is the
+            # fallback.
+            _rb_target=$(readlink "$_rb_path" 2>/dev/null || echo "")
+            case "$_rb_target" in
+                "$BINARY_NAME" | "$_rb_dir/$BINARY_NAME")
+                    _rb_safe=true
+                    ;;
+            esac
+        fi
+
+        if [ "$_rb_safe" = false ] && [ -x "$_rb_path" ] && verify_binary "$_rb_path"; then
+            _rb_safe=true
+        fi
+
+        if [ "$_rb_safe" = false ]; then
+            warning "Skipping $_rb_path: not recognised as a WP Staging CLI alias"
+            continue
+        fi
+
+        if [ "$_rb_use_sudo" = "true" ] && command_exists sudo; then
+            sudo rm -f "$_rb_path" && _rb_removed=true
+        else
+            rm -f "$_rb_path" && _rb_removed=true
         fi
     done
 
-    if [ "$removed" = true ]; then
-        success "✓ Removed binaries from $dir"
+    if [ "$_rb_removed" = true ]; then
+        success "✓ Removed binaries from $_rb_dir"
     fi
 }
 
 # Remove shell completions
 remove_completion() {
-    local removed=false
+    _rc_removed=false
 
     # Bash: User completion directory
     if [ -f "$COMPLETION_DIR_USER/$COMPLETION_NAME" ]; then
         rm -f "$COMPLETION_DIR_USER/$COMPLETION_NAME"
         success "✓ Removed bash completion from $COMPLETION_DIR_USER"
-        removed=true
+        _rc_removed=true
     fi
 
     # Bash: System completion directory
@@ -108,7 +160,7 @@ remove_completion() {
         if command_exists sudo; then
             sudo rm -f "$COMPLETION_DIR_SYSTEM/$COMPLETION_NAME"
             success "✓ Removed bash completion from $COMPLETION_DIR_SYSTEM"
-            removed=true
+            _rc_removed=true
         else
             warning "Cannot remove system bash completion (no sudo)"
         fi
@@ -122,14 +174,14 @@ remove_completion() {
         sed -i.tmp '/wp-staging-cli/d' "$HOME/.bash_completion" 2>/dev/null || true
         rm -f "$HOME/.bash_completion.tmp"
         success "✓ Removed wpstaging entries from ~/.bash_completion"
-        removed=true
+        _rc_removed=true
     fi
 
     # Zsh: User completion directory
     if [ -f "$ZSH_COMPLETION_DIR_USER/_$COMPLETION_NAME" ]; then
         rm -f "$ZSH_COMPLETION_DIR_USER/_$COMPLETION_NAME"
         success "✓ Removed zsh completion from $ZSH_COMPLETION_DIR_USER"
-        removed=true
+        _rc_removed=true
     fi
 
     # Zsh: System completion directory
@@ -137,13 +189,13 @@ remove_completion() {
         if command_exists sudo; then
             sudo rm -f "$ZSH_COMPLETION_DIR_SYSTEM/_$COMPLETION_NAME"
             success "✓ Removed zsh completion from $ZSH_COMPLETION_DIR_SYSTEM"
-            removed=true
+            _rc_removed=true
         else
             warning "Cannot remove system zsh completion (no sudo)"
         fi
     fi
 
-    if [ "$removed" = false ]; then
+    if [ "$_rc_removed" = false ]; then
         info "No shell completion files found"
     fi
 }
@@ -151,7 +203,7 @@ remove_completion() {
 # Remove PATH entries from shell RC files
 # Handles both old format (single export line) and new format (guarded case block)
 remove_from_path() {
-    local any_updated=false
+    _rfp_any_updated=false
 
     for rc_file in \
         "$HOME/.zshrc" \
@@ -203,18 +255,18 @@ remove_from_path() {
             rm -f "${rc_file}.tmp"
 
             success "✓ Removed PATH entries from $rc_file"
-            any_updated=true
+            _rfp_any_updated=true
         fi
     done
 
-    if [ "$any_updated" = false ]; then
+    if [ "$_rfp_any_updated" = false ]; then
         info "No PATH entries found in shell RC files"
     fi
 }
 
 # Remove license key from shell RC files
 remove_license_from_env() {
-    local any_updated=false
+    _rl_any_updated=false
 
     for rc_file in \
         "$HOME/.zshrc" \
@@ -250,11 +302,11 @@ remove_license_from_env() {
             rm -f "${rc_file}.tmp"
 
             success "✓ Removed license key from $rc_file"
-            any_updated=true
+            _rl_any_updated=true
         fi
     done
 
-    if [ "$any_updated" = false ]; then
+    if [ "$_rl_any_updated" = false ]; then
         info "No license key entries found in shell RC files"
     fi
 }
@@ -276,9 +328,9 @@ remove_cache() {
 # Check for existing dockerized sites and offer cleanup.
 # Uses WPSTG_BINARY env var (set by caller) to avoid running a foreign binary.
 check_and_cleanup_sites() {
-    local bin="${WPSTG_BINARY:-}"
+    _ck_bin="${WPSTG_BINARY:-}"
 
-    if [ -z "$bin" ] || [ ! -x "$bin" ]; then
+    if [ -z "$_ck_bin" ] || [ ! -x "$_ck_bin" ]; then
         info "No verified wpstaging binary, skipping site check"
         return 0
     fi
@@ -287,12 +339,11 @@ check_and_cleanup_sites() {
     echo ""
 
     # Capture site list output
-    local site_output
-    site_output=$("$bin" list 2>/dev/null) || true
+    _ck_site_output=$("$_ck_bin" list 2>/dev/null) || true
 
     # Check if there are any sites (look for "Host" followed by spaces and colon in output)
-    if echo "$site_output" | grep -q "Host[[:space:]]*:"; then
-        echo "$site_output"
+    if echo "$_ck_site_output" | grep -q "Host[[:space:]]*:"; then
+        echo "$_ck_site_output"
         echo ""
         warning "The above sites will remain on disk unless you delete them."
 
@@ -321,10 +372,10 @@ check_and_cleanup_sites() {
         case "$DELETE_SITES" in
             [Yy])
                 info "Stopping all containers first..."
-                "$bin" stop 2>/dev/null || true
+                "$_ck_bin" stop 2>/dev/null || true
 
                 info "Running wpstaging remove to remove all sites..."
-                if "$bin" remove --yes 2>/dev/null; then
+                if "$_ck_bin" remove --yes 2>/dev/null; then
                     success "✓ Sites and Docker data removed"
                 else
                     warning "Site cleanup may have encountered errors. Some files may remain."
@@ -342,6 +393,16 @@ check_and_cleanup_sites() {
 
 # Main uninstallation
 main() {
+    # Early --print-version short-circuit: print and exit before the banner so
+    # the smoke-test output stays clean for piping through grep / jq / etc.
+    for _arg in "$@"; do
+        case "$_arg" in
+            --print-version | -V)
+                print_version_and_exit
+                ;;
+        esac
+    done
+
     info "WP Staging CLI Uninstaller"
     info "==========================\n"
 
@@ -350,9 +411,9 @@ main() {
     # Entries are newline-separated (not space-separated) so paths containing
     # spaces -- e.g. macOS HOME like /Users/Jane Doe/.local/bin -- stay intact
     # when the list is iterated.
-    local found=false
-    local verified_dirs=""
-    local verified_binary=""
+    found=false
+    verified_dirs=""
+    verified_binary=""
 
     for dir in "/usr/local/bin" "/opt/homebrew/bin" "${HOME}/.local/bin" "${HOME}/bin"; do
         # Check for regular file OR symlink -- remove_binaries() handles both,
@@ -372,7 +433,6 @@ main() {
 
     if [ "$found" = false ]; then
         if command_exists wpstaging; then
-            local wpstaging_path
             wpstaging_path=$(command -v wpstaging)
             if verify_binary "$wpstaging_path"; then
                 info "Found wpstaging at: $wpstaging_path"

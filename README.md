@@ -328,6 +328,16 @@ These commands help you control Docker containers for your WordPress environment
 | `generate-compose-file` | Generate docker-compose.yml (one site or all sites) |
 | `generate-docker-file` | Generate Docker config files (one site or all sites) |
 
+**SSL & Trust Commands:**
+
+These commands manage the local SSL certificate authority and per-site leaf certificates that browsers use to trust your dockerized sites.
+
+| Command | Description |
+|----------|-------------|
+| `reinstall-cert` | Re-issue the SSL certificate for one site, or for every site when no hostname is given. Pass `--reinstall-ca` to also rotate the certificate authority (alias for `reinstall-ca`). |
+| `reinstall-ca` | Wipe the certificate authority, generate a fresh one, install it into the system trust store, and re-sign every site's certificate in one pass. |
+| `verify-cert` | Audit the SSL certificate trust state across browser trust stores and per-site leaf certificates without modifying anything. |
+
 **Other Commands:**
 
 These commands help you manage your license, updates, and cache.
@@ -345,6 +355,7 @@ These commands help you manage your license, updates, and cache.
 |----------|-------------|
 | `deactivate` | Deactivate and remove the stored license key |
 | `shell-db` | Open an interactive database shell for a site |
+| `sweep-ca-trust` | Remove stale `WP Staging CLI` certificate authority entries from the system trust store |
 
 ### Your Backup File
 `backupfile.wpstg` — The backup file you want to work with. You'll need this for `extract` and `restore` commands.
@@ -606,7 +617,7 @@ You can create a settings file to remember your preferences. This saves you from
 **Example settings:**
 ```ini
 --path /var/www/site
---outputdir /var/www/backups
+--output-dir /var/www/backups
 ```
 
 ---
