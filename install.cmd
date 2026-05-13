@@ -67,7 +67,7 @@ set LICENSE_KEY=
 set CUSTOM_BIN_DIR=
 set EXTRACT_DIR=
 set CLI_ARGS=
-set SCRIPT_VERSION=20260430-110000
+set SCRIPT_VERSION=20260513-091832
 
 REM Parse arguments
 :parse_args
@@ -168,24 +168,6 @@ if defined REQUESTED_VERSION (
     echo %BLUE%Requested version: %REQUESTED_VERSION%%NC%
     set VERSION_REF=%REQUESTED_VERSION%
     if not "!VERSION_REF:~0,1!"=="v" set VERSION_REF=v!VERSION_REF!
-
-    REM Validate version exists
-    echo %BLUE%Validating version !VERSION_REF!...%NC%
-    curl -fsSL -o nul -w "%%{http_code}" "%GITHUB_RAW_URL%/!VERSION_REF!/manifest.json" > "%TEMP%\http_code.txt" 2>nul
-    set /p HTTP_CODE=<"%TEMP%\http_code.txt"
-    del "%TEMP%\http_code.txt" >nul 2>&1
-
-    if not "!HTTP_CODE!"=="200" (
-        echo %RED%Error: Version '!VERSION_REF!' not found in release repository.%NC%
-        echo.
-        echo   Please check available versions at:
-        echo   https://github.com/wp-staging/wp-staging-cli-release/tags
-        echo.
-        echo   Or install the latest stable version by omitting the version argument.
-        echo.
-        exit /b 1
-    )
-    echo %GREEN%Version !VERSION_REF! exists%NC%
 ) else (
     REM No version specified, fetch latest stable (no beta/alpha/rc)
     echo %BLUE%Fetching latest stable version...%NC%
@@ -208,11 +190,63 @@ if defined REQUESTED_VERSION (
         )
     )
 
+    REM When the tags API is unreachable, resolve the latest stable version
+    REM from main/manifest.json instead. main is rewritten on every release,
+    REM so its manifest's version field is the canonical latest. Pinning to
+    REM that tag also keeps the binary download URL reproducible. The
+    REM v1.10.0/v1.11.0 refusal below still applies once we have a concrete
+    REM tag. Issue #333.
     if "!VERSION_REF!"=="main" (
-        echo %BLUE%Using branch: main%NC%
-    ) else (
-        echo %BLUE%Selected latest stable version: !VERSION_REF!%NC%
+        curl -fsSL "%GITHUB_RAW_URL%/main/manifest.json" -o "%TEMP%\main-manifest.json" >nul 2>&1
+        if errorlevel 1 (
+            echo %RED%Error: Cannot determine the latest stable version. Please retry, or install a specific version explicitly with --version. See https://github.com/wp-staging/wp-staging-cli-release/tags for available versions.%NC%
+            exit /b 1
+        )
+        set MAIN_VERSION=
+        for /f "delims=" %%i in ('powershell -NoProfile -Command "$m = Get-Content -Raw '%TEMP%\main-manifest.json' | ConvertFrom-Json; if ($m.version) { $m.version } else { '' }"') do set MAIN_VERSION=%%i
+        del "%TEMP%\main-manifest.json" >nul 2>&1
+        if "!MAIN_VERSION!"=="" (
+            echo %RED%Error: Cannot determine the latest stable version. Please retry, or install a specific version explicitly with --version. See https://github.com/wp-staging/wp-staging-cli-release/tags for available versions.%NC%
+            exit /b 1
+        )
+        set VERSION_REF=!MAIN_VERSION!
+        if not "!VERSION_REF:~0,1!"=="v" set VERSION_REF=v!VERSION_REF!
+        echo %BLUE%Resolved latest stable from main manifest: !VERSION_REF!%NC%
     )
+    echo %BLUE%Selected latest stable version: !VERSION_REF!%NC%
+)
+
+REM Refuse v1.10.0 and v1.11.0 regardless of how VERSION_REF was selected:
+REM their dev-version check misclassifies the release tag as a dev build
+REM (issue #328), so the installed binary cannot self-update again. The
+REM check covers the latest-stable path in case those tags ever resurface
+REM as "latest" (e.g. v1.11.1 yanked).
+set "STUCK_VERSION="
+if /i "!VERSION_REF!"=="v1.10.0" set "STUCK_VERSION=1"
+if /i "!VERSION_REF!"=="v1.11.0" set "STUCK_VERSION=1"
+if defined STUCK_VERSION (
+    echo %RED%Error: Refusing to install !VERSION_REF!: this version cannot self-update due to a known bug. Pick v1.11.1 or later.%NC%
+    exit /b 1
+)
+
+REM Validate the requested version exists (latest-stable is valid by definition)
+if defined REQUESTED_VERSION (
+    echo %BLUE%Validating version !VERSION_REF!...%NC%
+    curl -fsSL -o nul -w "%%{http_code}" "%GITHUB_RAW_URL%/!VERSION_REF!/manifest.json" > "%TEMP%\http_code.txt" 2>nul
+    set /p HTTP_CODE=<"%TEMP%\http_code.txt"
+    del "%TEMP%\http_code.txt" >nul 2>&1
+
+    if not "!HTTP_CODE!"=="200" (
+        echo %RED%Error: Version '!VERSION_REF!' not found in release repository.%NC%
+        echo.
+        echo   Please check available versions at:
+        echo   https://github.com/wp-staging/wp-staging-cli-release/tags
+        echo.
+        echo   Or install the latest stable version by omitting the version argument.
+        echo.
+        exit /b 1
+    )
+    echo %GREEN%Version !VERSION_REF! exists%NC%
 )
 
 echo.
@@ -410,6 +444,14 @@ if "!ALREADY_IN_PATH!"=="1" (
 REM Create installation directory
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
+REM Capture the existing binary's version BEFORE we overwrite it, so the
+REM post-install notice can flag a recovery from the v1.10.0/v1.11.0
+REM stuck-updater bug (issue #328).
+set EXISTING_OLD_VERSION=
+if exist "!INSTALL_DIR!\!BINARY_NAME!" (
+    for /f "tokens=3" %%v in ('"!INSTALL_DIR!\!BINARY_NAME!" --version 2^>nul ^| findstr /b /c:"wpstaging version"') do if not defined EXISTING_OLD_VERSION set EXISTING_OLD_VERSION=%%v
+)
+
 REM Copy binary
 copy /y "%TEMP_DIR%\%BINARY_NAME%" "%INSTALL_DIR%\%BINARY_NAME%" >nul
 if errorlevel 1 (
@@ -521,6 +563,18 @@ if defined OTHER_INSTALLS (
     echo %YELLOW%These may take precedence over the newly installed version.%NC%
     echo %BLUE%Consider removing old installations or adjusting your PATH order.%NC%
 )
+
+REM Recovery notice for the v1.10.0/v1.11.0 stuck-updater bug (#328).
+REM Those releases skipped their own update check, so users had to rerun this
+REM installer to upgrade. Confirm the rerun fixed it.
+if /i "!EXISTING_OLD_VERSION!"=="v1.10.0" goto :stuck_updater_notice
+if /i "!EXISTING_OLD_VERSION!"=="v1.11.0" goto :stuck_updater_notice
+goto :end_stuck_check
+:stuck_updater_notice
+echo.
+echo %BLUE%Note: this reinstall fixes the stuck-updater bug present in !EXISTING_OLD_VERSION!.%NC%
+echo %BLUE%      'wpstaging update' will work normally from this version onwards.%NC%
+:end_stuck_check
 
 REM Success message
 echo.

@@ -32,6 +32,17 @@ Built for developers and agencies who value their time.
 
 ## Installation
 
+> **Heads-up for v1.10.0 and v1.11.0 users:** The built-in `wpstaging update`
+> command is broken on these two releases and prints *"Update check skipped for
+> development version"* instead of upgrading. As a one-time fix, reinstall with
+> the official installer:
+>
+> ```bash
+> curl -fsSL https://wp-staging.com/install.sh | bash
+> ```
+>
+> From **v1.11.1** onwards `wpstaging update` works normally again.
+
 ### Quick Install (Recommended)
 
 **Linux / macOS / WSL:**
@@ -625,7 +636,7 @@ You can create a settings file to remember your preferences. This saves you from
 ## System Requirements
 
 **Minimum Requirements:**
-- **Extract/Restore:** Any modern system with 512 MB RAM and sufficient disk space (Windows 10+ required)
+- **Extract/Restore:** Any modern system with 512 MB RAM and sufficient disk space (Windows 10+ / Server 2016+ for the binary; the CMD `install.cmd` one-liner needs Windows 10 1803+ / Server 2019+ for curl, the PowerShell `irm | iex` one-liner has no curl dependency)
 - **Dockerize:** 2 CPU cores, 4 GB RAM, Docker 20.10.0+, Docker Compose 2.19.0+
 
 **License:** WP Staging Pro (Agency or Developer plan required)

@@ -1,3 +1,12 @@
+## v1.11.1 (2026-05-13)
+
+- **Enh:** Install scripts now confirm when a reinstall recovers from the v1.10.0/v1.11.0 stuck-updater bug (#329).
+- **Enh:** `update` (default, `--check`, `--version`) and install scripts refuse v1.10.0 and v1.11.0; they cannot self-update (#329).
+- **Fix:** `update` now recognises real release builds and no longer skips the check as a development version (#328).
+- **Fix:** `update` on macOS now updates the real binary when launched via a symlink, leaving the symlink intact (#331).
+- **Fix:** Install scripts now resolve the latest stable from main's manifest when GitHub's tags API is unreachable (#333).
+- **Dev:** CI smoke test guards against the v-prefixed release dev-skip regression (#329).
+
 ## v1.11.0 (2026-05-12)
 
 - **New:** Add `register --status` to display the registered license details, including customer email and plan name (#276).

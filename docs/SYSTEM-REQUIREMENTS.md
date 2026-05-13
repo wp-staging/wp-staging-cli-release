@@ -35,6 +35,8 @@ Extract backup files without any external dependencies.
 - macOS (ARM64, x86_64)
 - Windows 10+ / Server 2016+ (x86_64, i386)
 
+> **Note:** The CMD installer one-liner (`install.cmd`) uses curl, so it requires Windows 10 1803+ (April 2018) / Server 2019+. The PowerShell one-liner (`irm https://wp-staging.com/install.ps1 | iex`) downloads via the built-in `System.Net.WebClient` and works on Windows 10 / Server 2016 without curl. The `wpstaging` binary itself runs on Windows 10 / Server 2016 and later; users on earlier Windows builds can install the binary manually.
+
 ### No External Dependencies
 
 The extract operation is completely self-contained:
@@ -439,4 +441,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-05-07 18:28:05 UTC
+**Last Updated:** 2026-05-13 04:40:36 UTC

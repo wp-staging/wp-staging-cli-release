@@ -9,7 +9,7 @@
 <a name="q2"></a>
 **Q2: Which operating systems are supported?**  
 **A2:**
-Windows (10 or later), Linux, and macOS. Pre-built binaries are available for all major OSes. On Windows, the CLI requires Windows 10 / Windows Server 2016 or later. Older versions are not supported.
+Windows, Linux, and macOS. Pre-built binaries are available for all major OSes. On Windows, the `wpstaging` binary requires Windows 10 or Server 2016 or later. The CMD installer one-liner (`install.cmd`) uses curl and additionally requires Windows 10 1803 (April 2018) or Server 2019 or later. The PowerShell one-liner (`irm https://wp-staging.com/install.ps1 | iex`) uses the built-in `System.Net.WebClient` and works on Windows 10 / Server 2016 without curl. Users on earlier builds can also download the binary manually.
 
 <a name="q3"></a>
 **Q3: Do I need a license to use this tool?**  
@@ -1986,7 +1986,7 @@ The CLI also checks for updates automatically once per day and shows a notice if
 **How `update --version` works:**
 - Accepts both `1.5.0` and `v1.5.0` formats, including pre-release versions like `1.5.0-beta.1`
 - Skips fetching the latest stable tag and targets the specified version directly
-- Allows both upgrading and downgrading
+- Allows both upgrading and downgrading, except v1.10.0 and v1.11.0 which are refused (those releases have a bug that breaks the built-in update; see [Q85a](#q85a))
 - Shows a warning when downgrading to a version before v1.7.0 (where the `update` command was introduced), with instructions to upgrade again using the install script
 - Validates the version by fetching its manifest from GitHub
 - With `--check`, only checks whether the version exists without installing
@@ -2003,6 +2003,19 @@ The CLI also checks for updates automatically once per day and shows a notice if
 - `WPSTGCLI_UPDATE_TAGS_URL` — Override the GitHub tags API URL
 - `WPSTGCLI_UPDATE_MANIFEST_URL` — Override the manifest URL template (`%s` = version)
 - `WPSTGCLI_UPDATE_BINARY_URL` — Override the binary download URL template (`%s` = version, `%s` = binary name)
+
+<a name="q85a"></a>
+**Q85a: `wpstaging update` says "Update check skipped for development version" on a real release. What do I do?**  
+**A85a:**
+This affects users currently on v1.10.0 or v1.11.0. Those two releases have a bug where the built-in `update` command always reports them as a development build and refuses to check for new versions. The automatic daily update check is also affected, so no upgrade banner appears either.
+
+To recover, reinstall from the official installer one time:
+
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash
+```
+
+This overwrites the binary in place and brings you to v1.11.1 or later, where `update` works as expected. Your sites, license, and configuration are not touched. From v1.11.1 onwards the daily update check and `wpstaging update` work normally again.
 
 <a name="q86"></a>
 **Q86: Where can I report bugs or request features?**  
@@ -3563,4 +3576,4 @@ To reach the regular WordPress login form, open `/wp-login.php` directly. The au
 
 ---
 
-**Last Updated:** 2026-05-12 12:06:01 UTC
+**Last Updated:** 2026-05-13 04:40:36 UTC
