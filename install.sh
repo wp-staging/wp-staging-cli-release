@@ -53,7 +53,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
-SCRIPT_VERSION="20260430-090000"
+SCRIPT_VERSION="20260513-095342"
 
 # Colors for output
 RED='\033[0;31m'
@@ -764,18 +764,53 @@ main() {
             v*) VERSION_REF="$REQUESTED_VERSION" ;;
             *) VERSION_REF="v${REQUESTED_VERSION}" ;;
         esac
-
-        # Validate version exists
-        validate_version "$VERSION_REF"
     else
         # No version specified, fetch latest stable (no beta/alpha/rc)
         VERSION_REF=$(fetch_latest_stable_version)
 
+        # When the tags API is unreachable, resolve the latest stable version
+        # from main/manifest.json instead. main is rewritten on every release,
+        # so its manifest's version field is the canonical latest. Pinning to
+        # that tag also keeps the binary download URL reproducible. The
+        # v1.10.0/v1.11.0 refusal block below still applies once we have a
+        # concrete tag. Issue #333.
         if [ "$VERSION_REF" = "main" ]; then
-            info "Using branch: main"
-        else
-            info "Selected latest stable version: $VERSION_REF"
+            _main_manifest=""
+            if command_exists curl; then
+                _main_manifest=$(curl -fsSL "${GITHUB_RAW_URL}/main/manifest.json" 2>/dev/null) || _main_manifest=""
+            elif command_exists wget; then
+                _main_manifest=$(wget -qO- "${GITHUB_RAW_URL}/main/manifest.json" 2>/dev/null) || _main_manifest=""
+            fi
+            _main_version=""
+            if [ -n "$_main_manifest" ]; then
+                _main_version=$(parse_json "$_main_manifest" "version")
+            fi
+            if [ -z "$_main_version" ]; then
+                error "Cannot determine the latest stable version. Please retry, or install a specific version with --version <version>. See https://github.com/wp-staging/wp-staging-cli-release/tags for available versions."
+            fi
+            case "$_main_version" in
+                v*) VERSION_REF="$_main_version" ;;
+                *) VERSION_REF="v${_main_version}" ;;
+            esac
+            info "Resolved latest stable from main manifest: $VERSION_REF"
         fi
+        info "Selected latest stable version: $VERSION_REF"
+    fi
+
+    # Refuse v1.10.0 and v1.11.0 regardless of how VERSION_REF was selected:
+    # their dev-version check misclassifies the release tag as a dev build
+    # (issue #328), so the installed binary cannot self-update again. The
+    # check covers the latest-stable path in case those tags ever resurface
+    # as "latest" (e.g. v1.11.1 yanked).
+    case "$VERSION_REF" in
+        v1.10.0 | v1.11.0)
+            error "Refusing to install $VERSION_REF: this version cannot self-update due to a known bug. Pick v1.11.1 or later."
+            ;;
+    esac
+
+    # Validate the requested version exists (latest-stable is valid by definition)
+    if [ -n "$REQUESTED_VERSION" ]; then
+        validate_version "$VERSION_REF"
     fi
 
     # Build URLs based on version
@@ -926,6 +961,14 @@ main() {
         info "Installing to $INSTALL_DIR (will add to PATH)"
     fi
 
+    # Capture the existing binary's version BEFORE we overwrite it, so the
+    # post-install notice can flag a recovery from the v1.10.0/v1.11.0
+    # stuck-updater bug (issue #328).
+    EXISTING_OLD_VERSION=""
+    if [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
+        EXISTING_OLD_VERSION=$("${INSTALL_DIR}/${BINARY_NAME}" --version 2>/dev/null | awk '/^wpstaging version/ {print $NF}' | tr -d '\r' || echo "")
+    fi
+
     # Ensure directory exists
     ensure_dir "$INSTALL_DIR" "$USE_SUDO" || error "Cannot create directory: $INSTALL_DIR"
 
@@ -1011,6 +1054,17 @@ main() {
             warning "These may take precedence over the newly installed version."
             info "Consider removing old installations or adjusting your PATH order."
         fi
+
+        # Recovery notice for the v1.10.0/v1.11.0 stuck-updater bug (#328).
+        # Those releases skipped their own update check, so users had to rerun
+        # this installer to upgrade. Confirm the rerun fixed it.
+        case "$EXISTING_OLD_VERSION" in
+            v1.10.0 | v1.11.0)
+                echo ""
+                info "Note: this reinstall fixes the stuck-updater bug present in $EXISTING_OLD_VERSION."
+                info "      'wpstaging update' will work normally from this version onwards."
+                ;;
+        esac
     else
         warning "⚠ Installation complete, but '$BINARY_NAME' is not in PATH"
         info "  Run '$(get_source_command)' or restart your shell to apply changes"

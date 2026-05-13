@@ -71,7 +71,7 @@ $GitHubApiUrl = "https://api.github.com/repos/wp-staging/wp-staging-cli-release"
 $GitHubRawUrl = "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release"
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
-$ScriptVersion = "20260430-130000"
+$ScriptVersion = "20260513-091832"
 
 # Colors for output - Uses Write-Host for colored console output
 # Note: Write-Host is intentional here as we need console coloring,
@@ -379,20 +379,58 @@ function Main {
         } else {
             $versionRef = $RequestedVersion
         }
-
-        # Validate version exists
-        Test-VersionExists $versionRef | Out-Null
     }
     else {
         # No version specified, fetch latest stable (no beta/alpha/rc)
         $versionRef = Get-LatestStableVersion
 
+        # When the tags API is unreachable, resolve the latest stable version
+        # from main/manifest.json instead. main is rewritten on every release,
+        # so its manifest's version field is the canonical latest. Pinning to
+        # that tag also keeps the binary download URL reproducible. The
+        # v1.10.0/v1.11.0 refusal below still applies once we have a concrete
+        # tag. Issue #333.
         if ($versionRef -eq "main") {
-            Write-Info "Using branch: main"
+            $mainVersion = $null
+            try {
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $webClient = New-Object System.Net.WebClient
+                $webClient.Headers.Add("User-Agent", "wpstaging-installer")
+                $manifestJson = $webClient.DownloadString("$GitHubRawUrl/main/manifest.json")
+                $manifest = $manifestJson | ConvertFrom-Json
+                if ($manifest.version) {
+                    $mainVersion = $manifest.version
+                }
+            }
+            catch {
+                $mainVersion = $null
+            }
+            if (-not $mainVersion) {
+                Exit-WithError "Cannot determine the latest stable version. Please retry, or install a specific version with -Version <version>. See https://github.com/wp-staging/wp-staging-cli-release/tags for available versions."
+            }
+            if ($mainVersion -notmatch '^v') {
+                $versionRef = "v$mainVersion"
+            }
+            else {
+                $versionRef = $mainVersion
+            }
+            Write-Info "Resolved latest stable from main manifest: $versionRef"
         }
-        else {
-            Write-Info "Selected latest stable version: $versionRef"
-        }
+        Write-Info "Selected latest stable version: $versionRef"
+    }
+
+    # Refuse v1.10.0 and v1.11.0 regardless of how $versionRef was selected:
+    # their dev-version check misclassifies the release tag as a dev build
+    # (issue #328), so the installed binary cannot self-update again. The
+    # check covers the latest-stable path in case those tags ever resurface
+    # as "latest" (e.g. v1.11.1 yanked).
+    if ($versionRef -eq "v1.10.0" -or $versionRef -eq "v1.11.0") {
+        Exit-WithError "Refusing to install ${versionRef}: this version cannot self-update due to a known bug. Pick v1.11.1 or later."
+    }
+
+    # Validate the requested version exists (latest-stable is valid by definition)
+    if ($RequestedVersion) {
+        Test-VersionExists $versionRef | Out-Null
     }
 
     # Build URLs based on version
@@ -501,6 +539,23 @@ function Main {
 
         # Install binary
         $targetPath = Join-Path $InstallDir $BinaryName
+
+        # Capture the existing binary's version BEFORE we overwrite it, so the
+        # post-install notice can flag a recovery from the v1.10.0/v1.11.0
+        # stuck-updater bug (issue #328).
+        $existingOldVersion = ""
+        if (Test-Path $targetPath) {
+            try {
+                $existingVersionLine = (& $targetPath --version 2>$null | Where-Object { $_ -match '^wpstaging version' } | Select-Object -First 1)
+                if ($existingVersionLine) {
+                    $existingOldVersion = ($existingVersionLine -split '\s+')[-1]
+                }
+            }
+            catch {
+                # Ignore -- best-effort detection only
+            }
+        }
+
         Copy-Item $binaryFile $targetPath -Force
 
         Write-Success "[OK] Installed binary to $targetPath"
@@ -585,6 +640,15 @@ function Main {
                     $otherInstalls | ForEach-Object { Write-Host $_ }
                     Write-Warning "These may take precedence over the newly installed version."
                     Write-Info "Consider removing old installations or adjusting your PATH order."
+                }
+
+                # Recovery notice for the v1.10.0/v1.11.0 stuck-updater bug (#328).
+                # Those releases skipped their own update check, so users had to
+                # rerun this installer to upgrade. Confirm the rerun fixed it.
+                if ($existingOldVersion -eq "v1.10.0" -or $existingOldVersion -eq "v1.11.0") {
+                    Write-Host ""
+                    Write-Info "Note: this reinstall fixes the stuck-updater bug present in $existingOldVersion."
+                    Write-Info "      'wpstaging update' will work normally from this version onwards."
                 }
             }
             catch {
