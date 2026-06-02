@@ -137,7 +137,6 @@ Create isolated WordPress environments using Docker containers.
 |-----------|-----------------|--------------|
 | Docker | 20.10.0 | `docker version` |
 | Docker Compose | 2.19.0 | `docker compose version` or `docker-compose version` |
-| mkcert | v1.4.4 | Auto-downloaded if missing |
 
 **Docker Compose Compatibility:**
 - Docker Compose V2 (plugin): `docker compose` ✅
@@ -195,7 +194,7 @@ Some operations require elevated privileges:
 | Operation | Privilege | Platforms | Can Skip |
 |-----------|-----------|-----------|----------|
 | Update /etc/hosts | Root/Admin | All | Yes (`--skip-update-hosts-file`) |
-| Install mkcert CA | Root/Admin | Linux/macOS | Yes (browsers show warnings) |
+| Install SSL CA | Root/Admin | Linux/macOS | Yes (browsers show warnings) |
 | Bind IP aliases | Root (sudo) | **macOS only** | Yes (`--skip-macos-auto-ip`, use different ports) |
 | Docker operations | docker group | Linux | No |
 
@@ -237,7 +236,8 @@ Some operations require elevated privileges:
 |-----------|---------|--------------|
 | `~/wpstaging/sites/<hostname>/` | WordPress site files | ~500 MB per site |
 | `~/wpstaging/stack/mariadb/` | Database data | Varies |
-| `~/wpstaging/stack/mkcert/` | mkcert binary and CA | <10 MB |
+| `~/wpstaging/stack/localcert/` | SSL certificate authority (new installs) | <1 MB |
+| `~/wpstaging/stack/mkcert/` | Legacy SSL CA (kept for coexistence; safe to remove after `reinstall-ca`) | <1 MB |
 | `~/wpstaging/stack/docker/` | Shared Docker scripts | <1 MB |
 
 ### What You Can Do
@@ -373,12 +373,6 @@ wpstaging extract --license=your-license-key backup.wpstg
 - Run with `sudo` (Linux/macOS) or as Administrator (Windows)
 - Alternative: Use `--skip-update-hosts-file` and manually add entries
 
-**"mkcert download failed"**
-- Check internet connection
-- Verify GitHub access
-- Check firewall/proxy settings
-- Install mkcert manually: https://github.com/FiloSottile/mkcert
-
 **"Could not find an available IP address pool"**
 - Too many Docker networks created
 - Clean up: `docker network prune -f`
@@ -441,4 +435,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-05-13 04:40:36 UTC
+**Last Updated:** 2026-05-14 00:00:00 UTC

@@ -236,6 +236,7 @@ _wpstaging() {
         '--admin-user[WordPress admin username]:user:'
         '--admin-pass[WordPress admin password]:password:'
         '--admin-email[WordPress admin email]:email:'
+        '--label[Friendly site label (defaults to the hostname)]:label:'
         '--secure-credentials[Generate secure random credentials]'
         '--multisite[Enable WordPress Multisite]'
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
@@ -264,6 +265,18 @@ _wpstaging() {
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
         '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+    )
+
+    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast path)
+    local -a reconfigure_opts
+    reconfigure_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
+        '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
+        '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
+        '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
+        '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+        '--site-label[Update the friendly site label (empty resets to the hostname)]:label:'
     )
 
     # magic-link <hostname> [--timeout MINUTES]
@@ -448,12 +461,20 @@ _wpstaging() {
                         $general_opts \
                         $env_path_only_opts
                     ;;
-                generate-compose-file|gcf|generate-docker-file|gdf|reconfigure|rcf)
-                    # generate-*-file / reconfigure [hostname] -- hostname is optional.
+                generate-compose-file|gcf|generate-docker-file|gdf)
+                    # generate-*-file [hostname] -- hostname is optional.
                     _arguments \
                         '1::hostname:' \
                         $general_opts \
                         $generate_docker_file_opts
+                    ;;
+                reconfigure|rcf)
+                    # reconfigure [hostname] -- hostname is optional; --site-label
+                    # adds the metadata-only fast path.
+                    _arguments \
+                        '1::hostname:' \
+                        $general_opts \
+                        $reconfigure_opts
                     ;;
                 magic-link)
                     # magic-link <hostname> [--timeout MINUTES]
@@ -473,13 +494,14 @@ _wpstaging() {
                         '1::hostname:' \
                         '--env-path[Environment file path]:path:_files' \
                         '--reinstall-ca[Reinstall CA certificate]' \
-                        '--no-restart[Skip restarting running sites after regenerating]' \
+                        '--skip-restart[Skip restarting running sites after regenerating]' \
                         $general_opts
                     ;;
                 reinstall-ca)
                     _arguments \
                         '--env-path[Environment file path]:path:_files' \
-                        '--no-restart[Skip restarting running sites after rotating the CA]' \
+                        '--skip-restart[Skip restarting running sites after rotating the CA]' \
+                        '--skip-leaf[Rotate the CA without re-signing per-site certificates]' \
                         $general_opts
                     ;;
                 verify-cert)
@@ -510,8 +532,13 @@ _wpstaging() {
                     ;;
                 update)
                     _arguments \
+                        '--acks[Alias for --acknowledge]:id:' \
+                        '--acknowledge[Acknowledge an announcement by id (e.g., info-1)]:id:' \
                         '--check[Only check for updates]' \
+                        '--clear-acks[Clean up acknowledgement cache files]' \
+                        '--clear-cache[Clean up update cache files]' \
                         '--full[Update using install script]' \
+                        '--status[Show the update and announcement status]' \
                         '--version[Target a specific version]:version:' \
                         $general_opts
                     ;;

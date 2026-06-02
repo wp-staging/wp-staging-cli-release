@@ -1,3 +1,34 @@
+## v1.11.2 (2026-06-02)
+
+- **New:** Add `reinstall-ca --skip-leaf` to rotate the CA without re-signing per-site certificates (#351).
+- **New:** Add `update --clear-acks` to clean up the announcement acknowledgement cache (#351).
+- **New:** Add `update --status` to show the update and announcement status (#355).
+- **Enh:** Replace external mkcert binary with built-in SSL trust setup. First `add` no longer fetches an external tool (#302).
+- **Enh:** Show announcements from wp-staging.com on `update` and the daily update check (#334).
+- **Enh:** Add `update --acknowledge <id>` to silence a dismissible announcement (#334).
+- **Enh:** Add `update --clear-cache` flag to refresh the daily update check and announcement cache (#334).
+- **Enh:** `update --check` now always refetches the latest version and announcement, bypassing the 24h cache (#334).
+- **Enh:** `update --check` runs the latest-version and announcement fetches in parallel for a faster response (#334).
+- **Enh:** Automatic update check now caches network errors and missing files to avoid refetching on every command (#334).
+- **Enh:** Background sudo refresh now exits after 12 hours so cached sudo credentials cannot stay warm indefinitely (#339).
+- **Enh:** Add `--label` (add) and `--site-label` (reconfigure) for a friendly site label, shown by `list` (#347).
+- **Enh:** Site label validation now reports a precise error when the value is too long or contains an unsupported character (#347).
+- **Enh:** Rename `--no-restart` to `--skip-restart` on `reinstall-cert` and `reinstall-ca` (#351).
+- **Enh:** Previously dismissed announcements stay hidden after `clean cache` and across upgrades (#353).
+- **Fix:** Remote backup download via `--from=<url>` now removes partial files on terminate and rejects corrupt resumes (#349).
+- **Fix:** Remote backup download via `--from=<url>` cancels promptly even when the server has stopped responding (#349).
+- **Fix:** Remote backup download via `--from=<url>` now stops within one chunk of Ctrl+C instead of continuing for tens of MB (#345).
+- **Fix:** Daily update check no longer claims a new version is available after the user has updated to the cached latest (#338).
+- **Fix:** Windows `add` no longer prompts twice for the security certificate or leaves browsers showing "not secure" (#302).
+- **Fix:** `reconfigure <site> --disable-mailpit=false` now re-enables Mailpit on a site where it had been disabled (#343).
+- **Fix:** `reinstall-ca` now skips unrecognized site directories. The CA is still reinstalled even when no eligible sites remain (#351).
+- **Fix:** `verify-cert` now skips unrecognized site directories, matching what `list` shows (#351).
+- **Fix:** `verify-cert` now reports an unknown trust status when no browser trust stores are present to audit the CA (#351).
+- **Fix:** macOS no longer kills `wpstaging` with "Killed: 9" after reinstalling or upgrading with the install script (#358).
+- **Fix:** On macOS Docker Desktop, adding a site right after removing one with the same name no longer fails to start the mail container (#356).
+- **Dev:** New CAs land in `stack/localcert/`. Existing `stack/mkcert/` installs remain untouched until `reset` / `reinstall-ca` / `reinstall-cert --reinstall-ca` (#302).
+- **Dev:** Collapse duplicated wrappers in the env package by routing Set/Get/Enable through shared helpers (#334).
+
 ## v1.11.1 (2026-05-13)
 
 - **Enh:** Install scripts now confirm when a reinstall recovers from the v1.10.0/v1.11.0 stuck-updater bug (#329).

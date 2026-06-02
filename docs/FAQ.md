@@ -1192,62 +1192,43 @@ Memory usage is minimal (typically <100MB) even for large backups because the CL
 <a name="q57"></a>
 **Q57: Why does my browser show "Your connection is not private" or "Not Secure" warnings?**  
 **A57:**
-This warning appears when your browser doesn't trust the SSL certificate used by your local development site. There are two common scenarios:
-
-**Scenario 1: Using self-signed certificates (default without mkcert)**
-- Self-signed certificates are not trusted by browsers by default
-- You'll see warnings like "NET::ERR_CERT_AUTHORITY_INVALID"
-- You can click "Advanced" → "Proceed to site" to bypass (not recommended for production)
-
-**Scenario 2: mkcert CA not installed in system trust store**
-- The mkcert Certificate Authority (CA) needs to be installed to your system
-- This happens automatically during first setup when you confirm the installation prompt
-- If you skipped the installation, you'll still see browser warnings
+This warning appears when your browser does not trust the SSL certificate used by your local site. The most common cause is that the WP Staging CLI Certificate Authority (CA) has not been installed in your system trust store.
 
 **How to fix this:**
 
-1. **Recommended: Use mkcert (automatic when creating a site)**
+1. **Let the tool install it automatically (recommended):**
    ```bash
    wpstaging add mysite.local
    ```
-   When creating your first site, you'll be prompted to install the security certificate. Choose "Yes" to install the CA to your system trust store. This is a one-time operation that works for all future sites.
+   When you create a site, the tool prompts you to install the CA. Choose "Yes". This is a one-time operation and covers all future sites.
 
-2. **If you skipped CA installation, create another site:**
+2. **If you skipped the prompt, reinstall the CA:**
    ```bash
-   wpstaging add anothersite.local
+   wpstaging reinstall-ca
    ```
-   The tool will detect that the CA isn't installed and prompt you again.
+   This generates a fresh CA, installs it to your system trust store, and re-signs all site certificates.
 
 3. **Manual bypass (not recommended):**
-   Click "Advanced" → "Proceed to site" in your browser. This only works for the current session and doesn't actually solve the trust issue.
+   Click "Advanced" → "Proceed to site" in your browser. This only works for the current session.
 
 <a name="q58"></a>
-**Q58: What is mkcert and why does WP Staging CLI use it?**  
-**A58:** mkcert is a trusted tool for creating locally-trusted SSL certificates for development environments. WP Staging CLI uses mkcert to provide a seamless HTTPS development experience.
+**Q58: How does WP Staging CLI manage SSL certificates?**  
+**A58:**
+WP Staging CLI generates and manages SSL certificates using built-in Go code. No external tool is downloaded or required.
 
-**What mkcert does:**
-- Creates a local Certificate Authority (CA) on your computer
-- Generates SSL certificates signed by this CA
-- Installs the CA to your system's trust store (browsers, OS)
-- Makes your local sites trusted automatically - no more browser warnings
+**How it works:**
+- Generates a root Certificate Authority (CA) on your computer
+- Installs the CA to your system trust store so browsers trust it
+- Issues a per-site TLS certificate for each local site you create
+- CA and certificates are stored in `~/wpstaging/stack/localcert/`
 
-**Why we use mkcert instead of self-signed certificates:**
+**Why not self-signed certificates?**
 
-**Self-signed certificates (old approach):**
-- ❌ Browser shows scary "Not Secure" warnings
-- ❌ Requires manual bypass for every site
-- ❌ Breaks some JavaScript features requiring HTTPS
-- ❌ Service Workers and PWA features don't work
-- ❌ Different behavior from production environments
-- ❌ Chrome requires additional flags to bypass warnings
-
-**mkcert certificates (current approach):**
-- ✅ Automatically trusted by all major browsers (Chrome, Firefox, Safari, Edge)
-- ✅ No browser warnings - green padlock icon
-- ✅ Identical HTTPS behavior to production
-- ✅ Service Workers, PWA, and secure features work properly
-- ✅ Better testing environment - catches HTTPS-related issues early
-- ✅ One-time setup, works for all local sites
+Self-signed certificates require a manual browser bypass for every site and break some browser features. A local CA solves this:
+- Automatically trusted by all major browsers after a one-time install
+- No browser warnings -- green padlock icon
+- Identical HTTPS behavior to production
+- Service Workers, PWA features, and secure cookies work as expected
 
 <a name="q59"></a>
 **Q59: Why not just use HTTP instead of HTTPS for local development?**  
@@ -1288,42 +1269,38 @@ While HTTP is simpler, using HTTPS for local development is strongly recommended
 **Using mkcert solves all these issues while keeping local development simple and warning-free.**
 
 <a name="q60"></a>
-**Q60: Why does mkcert installation require sudo (Linux/macOS) or administrator permission (Windows)?**  
+**Q60: Why does CA installation require sudo (Linux/macOS) or a confirmation prompt (Windows)?**  
 **A60:**
-Installing a Certificate Authority (CA) to the system trust store is a system-level operation that requires elevated privileges. Here's why:
+Installing a Certificate Authority (CA) to the trust store is a security-sensitive operation. Linux and macOS require elevated privileges (sudo or administrator password); Windows shows a built-in security confirmation dialog before adding the CA to the current user's Trusted Root store, but no administrator elevation is needed.
 
 **What the installation does:**
-1. **Creates a root CA certificate** in `~/wpstaging-dockerize/docker/nginx/ca/`
-2. **Installs the CA to system trust stores:**
-   - **Linux:** `/usr/local/share/ca-certificates/` (requires sudo)
+1. **Creates a root CA certificate** in `~/wpstaging/stack/localcert/ca/`
+2. **Installs the CA to trust stores:**
+   - **Linux:** distro anchor directory (requires sudo), then Chrome/Firefox NSS databases (no sudo)
    - **macOS:** System Keychain (requires admin password)
-   - **Windows:** Certificate Manager (requires administrator)
-3. **Updates browser trust stores:**
-   - **Linux:** Chrome/Chromium NSS database (no sudo needed)
-   - **macOS:** Explicitly sets trustRoot policy for Firefox compatibility
-   - **Windows:** Uses Windows certificate store (all browsers)
+   - **Windows:** current-user Trusted Root store (Windows shows a confirmation dialog; no administrator required)
 
-**Why sudo/admin is required:**
-- System trust stores are protected locations
-- Modifying them affects all users on the system
-- Security measure to prevent malware from installing rogue CAs
-- One-time operation - subsequent certificate generation doesn't need sudo
+**Why this approval is required:**
+- The trust store decides which certificates your browser accepts as authentic
+- Adding a CA grants it the ability to sign certificates that look valid to your browser
+- Security measure to prevent rogue software from installing untrusted CAs
+- One-time operation -- subsequent certificate generation does not need another approval
 
 **What if I skip the sudo installation?**
 - The CA files are still created locally
 - SSL certificates are generated and used by Nginx
-- BUT: Your browser won't trust them (shows warnings)
-- You can still bypass warnings manually with "Proceed to site"
+- Your browser will not trust them and will show warnings
+- Run `wpstaging reinstall-ca` at any time to install the CA
 
-**Security note:** The CA created by mkcert is stored locally and never leaves your computer. It's only used to sign certificates for your local development sites.
+**Security note:** The CA is stored locally and never leaves your computer. It is only used to sign certificates for your local development sites.
 
 <a name="q61"></a>
-**Q61: Does the mkcert CA installation affect my system security?**  
+**Q61: Does the CA installation affect my system security?**  
 **A61:**
-The mkcert CA is designed specifically for local development and is safe to install. Here's what you should know:
+The CA is designed specifically for local development and is safe to install. Here's what you should know:
 
 **Security design:**
-- ✅ CA private key is stored locally only (`~/wpstaging/stack/mkcert/ca/rootCA-key.pem`)
+- ✅ CA private key is stored locally only (`~/wpstaging/stack/localcert/ca/rootCA-key.pem`)
 - ✅ Never transmitted over network
 - ✅ Only used for local development sites
 - ✅ Cannot be used to intercept real websites (different domains)
@@ -1368,10 +1345,11 @@ Continue to install? [y/N]:
 
 **If you choose "Yes" (recommended):**
 1. You'll be prompted for your sudo/admin password (one-time)
-2. The tool installs the mkcert CA to your system trust store (Safari/Chrome trust it immediately)
-3. Platform-specific browser support is configured automatically:
-   - **Linux:** Installs to Chrome's NSS database
-   - **macOS:** Sets trustRoot policy for Firefox (Safari/Chrome already covered by step 2)
+2. The tool installs the `WP Staging CLI development CA` to your system trust store
+3. Platform-specific browser coverage:
+   - **Linux:** Also installs into Chromium and Firefox NSS databases
+   - **macOS:** System Keychain covers Safari and Chrome
+   - **Windows:** Trusted Root Certification Authorities covers all major browsers
 4. All current and future local sites will be automatically trusted
 5. You'll see green padlock in browser - no warnings
 6. This is a one-time operation - you won't be prompted again
@@ -1385,26 +1363,30 @@ Continue to install? [y/N]:
 
 **Important:** This prompt only appears once. If the CA is already installed in your system trust store (detected via X.509 verification), the prompt is skipped automatically.
 
+**Note:** On systems with cached sudo credentials or passwordless sudo (NOPASSWD), neither the `Sudo permission is required.` line nor the password prompt appears.
+
 <a name="q63"></a>
 **Q63: My browser still shows warnings after installing the CA. What's wrong?**  
 **A63:**
 If you're still seeing warnings after confirming CA installation, try these troubleshooting steps:
 
 **1. Verify CA is actually installed:**
-- **Linux:** `ls /usr/local/share/ca-certificates/ | grep rootCA` (should show rootCA.pem)
-- **macOS:** Open Keychain Access, search for "mkcert" (should appear in System keychain)
+- **Linux:** `ls /usr/local/share/ca-certificates/ | grep -i 'WP_Staging_CLI'` (should show the CA file)
+- **macOS:** Open Keychain Access, search for "WP Staging CLI" (should appear in System keychain)
 - **Windows:** Open certmgr.msc, check "Trusted Root Certification Authorities"
 
 **2. For Chrome/Chromium on Linux specifically:**
 The CA must be installed to both the system trust store AND the NSS database. The CLI does this automatically, but you can verify:
 ```bash
-certutil -d sql:$HOME/.pki/nssdb -L | grep mkcert
+certutil -d sql:$HOME/.pki/nssdb -L | grep -E 'mkcert development CA|WP Staging CLI'
 ```
 
 If missing, the CLI should have installed it, but you can manually add:
 ```bash
-certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "mkcert CA" -i ~/wpstaging-dockerize/docker/nginx/ca/rootCA.pem
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "WP Staging CLI CA" -i ~/wpstaging/stack/localcert/ca/rootCA.pem
 ```
+
+Manually added entries are not tracked by `wpstaging sweep-ca-trust`; remove them with `certutil -D -d sql:$HOME/.pki/nssdb -n "WP Staging CLI CA"` if you ever need to clean up.
 
 **3. Restart your browser:**
 After CA installation, close and reopen your browser completely (not just the tab).
@@ -1416,7 +1398,7 @@ After CA installation, close and reopen your browser completely (not just the ta
 
 **5. Verify certificate was generated:**
 ```bash
-ls ~/wpstaging/sites/yoursite.local/config/nginx/certs/
+ls ~/wpstaging/sites/yoursite.local/docker/nginx/certs/
 ```
 Should show `yoursite.local.crt` and `yoursite.local.key` (not self-signed.crt).
 
@@ -1951,6 +1933,9 @@ wpstaging update
 # Only check for available updates
 wpstaging update --check
 
+# Show the update and announcement status
+wpstaging update --status
+
 # Update using install script (also updates current binary location)
 wpstaging update --full
 
@@ -1966,9 +1951,14 @@ wpstaging update --version 1.5.0 --check
 
 # Downgrade using install script
 wpstaging update --version 1.5.0 --full
+
+# Refresh the daily update check and announcement cache
+wpstaging update --clear-cache
 ```
 
 The CLI also checks for updates automatically once per day and shows a notice if a new version is available.
+
+Use `update --status` for a quick status view. Use `update --check` when you want to check the server for the latest version right away.
 
 **Version comparison results:**
 - If your version matches the latest release: `Already up to date (vX.Y.Z).`
@@ -1999,11 +1989,6 @@ The CLI also checks for updates automatically once per day and shows a notice if
 - Preserves original file permissions and uses sudo if needed
 - On Windows, a detached wrapper script handles the copy after the installer completes
 
-**Environment variable overrides (for development/testing):**
-- `WPSTGCLI_UPDATE_TAGS_URL` — Override the GitHub tags API URL
-- `WPSTGCLI_UPDATE_MANIFEST_URL` — Override the manifest URL template (`%s` = version)
-- `WPSTGCLI_UPDATE_BINARY_URL` — Override the binary download URL template (`%s` = version, `%s` = binary name)
-
 <a name="q85a"></a>
 **Q85a: `wpstaging update` says "Update check skipped for development version" on a real release. What do I do?**  
 **A85a:**
@@ -2016,6 +2001,12 @@ curl -fsSL https://wp-staging.com/install.sh | bash
 ```
 
 This overwrites the binary in place and brings you to v1.11.1 or later, where `update` works as expected. Your sites, license, and configuration are not touched. From v1.11.1 onwards the daily update check and `wpstaging update` work normally again.
+
+<a name="q85b"></a>
+**Q85b: What is the "Announcement" banner I sometimes see before update output?**  
+
+**A85b:**
+The CLI fetches a short notice from wp-staging.com and prints it before any update output. It is used for time-sensitive messages, such as incident alerts or guidance for a recent release. The notice is informational and never blocks the update or any other command. If the server is unreachable or no notice is published, no banner appears.
 
 <a name="q86"></a>
 **Q86: Where can I report bugs or request features?**  
@@ -2991,7 +2982,7 @@ wpstaging extract https://example.com/backups/backup.wpstg
 2. Performs a preflight check (file size and backup format validation)
 3. Displays backup information (filename, size, format type)
 4. Asks for confirmation before downloading
-5. Downloads with progress indicator (supports resume for interrupted downloads)
+5. Downloads with progress indicator; resumes interrupted downloads when safe, otherwise restarts from scratch
 6. Caches downloaded files for reuse
 
 **Supported backup formats:**
@@ -3383,7 +3374,7 @@ If you want to force a rotation early (for example, after changing the hostname)
 wpstaging reinstall-cert <hostname>
 ```
 
-The site is restarted automatically when the certificate is re-issued. Pass `--no-restart` if you want to defer the restart and apply it yourself later.
+The site is restarted automatically when the certificate is re-issued. Pass `--skip-restart` if you want to defer the restart and apply it yourself later.
 
 ---
 
@@ -3423,16 +3414,16 @@ The command exits with code `0` when everything is trusted and non-zero otherwis
 **Q124: How do I skip the auto-restart after `reinstall-cert` or `reinstall-ca`?**  
 
 **A124:**
-Pass the `--no-restart` flag. Both commands accept it:
+Pass the `--skip-restart` flag. Both commands accept it:
 
 ```bash
-wpstaging reinstall-cert <hostname> --no-restart
-wpstaging reinstall-ca --no-restart
+wpstaging reinstall-cert <hostname> --skip-restart
+wpstaging reinstall-ca --skip-restart
 ```
 
 The certificate files on disk are still regenerated as usual. The command prints a hint that tells you the exact `wpstaging restart` command to run later when you are ready.
 
-Use `--no-restart` when you want to schedule the restart yourself. For example, when you do not want to interrupt a running test, or when you plan to apply other configuration changes before bringing the containers back up.
+Use `--skip-restart` when you want to schedule the restart yourself. For example, when you do not want to interrupt a running test, or when you plan to apply other configuration changes before bringing the containers back up.
 
 <a name="q125"></a>
 **Q125: Why does `wpstaging` only ask for my sudo password once now?**  
@@ -3445,7 +3436,14 @@ The helper:
 - Runs as a detached background process tied to your terminal.
 - Refreshes the sudo timestamp every 4 minutes (sudo's own cache lasts 5 minutes by default).
 - Stops automatically when you close the terminal.
+- Stops automatically after 12 hours by default, even if the terminal is still open. After that you will be asked for your sudo password again on the next command that needs it.
 - Is skipped on Windows (Windows uses UAC dialogs instead) and when you are already running as root.
+
+To change the 12-hour limit, set the environment variable before the command. Use a duration like `6h` or `30m`:
+
+```bash
+WPSTGCLI_SUDO_KEEPALIVE_MAX_LIFETIME=6h wpstaging add example.local
+```
 
 To turn the helper off for a single command, set the environment variable before the command:
 
@@ -3476,13 +3474,14 @@ No. That is the small background helper described in [Q125](#q125). One copy run
 The full command line looks like:
 
 ```
-wpstaging sudo-keepalive --pid-file <TMPDIR>/wpstaging-sudo-keepalive-<uid>-<sid>.pid --leader-sid <pid>
+wpstaging sudo-keepalive --pid-file <TMPDIR>/wpstaging-sudo-keepalive-<uid>-<sid>.pid --leader-sid <pid> --max-lifetime 12h0m0s
 ```
 
 - `<uid>` is your Linux or macOS user ID.
 - `<sid>` and the `--leader-sid` value are the same number: the PID of your shell (the session leader of your terminal).
 - `<TMPDIR>` is your system's temporary directory. On Linux it is usually `/tmp`. On macOS it is usually under `/var/folders/...`; run `echo $TMPDIR` to see your exact path.
 - The PID file is a small marker that stops a second helper from starting in the same terminal.
+- `--max-lifetime` is the upper bound on how long the helper may run before exiting on its own (default 12 hours; see [Q125](#q125) to change it).
 
 The helper stops on its own when:
 
@@ -3500,6 +3499,18 @@ The helper stops on its own when:
   ```
 
 If you do not want the helper to start at all, see [Q125](#q125) for the `WPSTGCLI_DISABLE_SUDO_KEEPALIVE=1` environment variable.
+
+<a name="q125c"></a>
+**Q125c: After my Mac wakes from idle, `sudo` asks for my password again. Is the helper broken?**  
+
+**A125c:**
+No. macOS wipes the sudo timestamp when the system goes idle and sleeps, even though the `wpstaging sudo-keepalive` helper is still running. A manual screen lock (Ctrl+Cmd+Q, hot corner) does not wipe the timestamp — only the idle-triggered sleep does.
+
+The helper uses `sudo -n -v` in non-interactive mode (see [Q125a](#q125a)). That mode can extend an existing sudo ticket but cannot create one from scratch, so it has nothing to refresh until you authenticate again.
+
+After you enter your password (or use Touch ID) on the next `sudo` command, the timestamp comes back on the same terminal. The helper's next refresh, within 4 minutes, sees the warm ticket and starts extending it again. You will not be asked again until the next idle sleep or the 12-hour lifetime cap (see [Q125](#q125)).
+
+This is a one-time prompt per idle-sleep cycle, not a bug. macOS clears the sudo timestamp on system sleep on purpose, and a non-interactive helper has no way to re-arm it without you typing the password.
 
 ---
 
@@ -3576,4 +3587,80 @@ To reach the regular WordPress login form, open `/wp-login.php` directly. The au
 
 ---
 
-**Last Updated:** 2026-05-13 04:40:36 UTC
+<a name="q128"></a>
+**Q128: How do I give my site a friendly display name?**  
+
+**A128:**
+Pass `--label` when you create the site: `wpstaging add staging.local --label "Acme Production Staging"`. To change the label on an existing site, run `wpstaging reconfigure <hostname> --site-label "<new label>"` without restarting any container.
+
+The label appears in `wpstaging list` and in the `label` field of `wpstaging list --json`. The hostname stays as the unique identifier you use to target the site with other commands.
+
+---
+
+<a name="q129"></a>
+**Q129: How do I replace the CA without re-signing my site certificates?**  
+
+**A129:**
+Pass the `--skip-leaf` flag to `reinstall-ca`:
+
+```bash
+wpstaging reinstall-ca --skip-leaf
+```
+
+This generates a new certificate authority, installs it into your system trust stores, and stops there. Existing site certificates are not re-signed and stay on disk.
+
+Browsers will not trust the existing certificates anymore because they still chain to the old CA. To restore trust for one site, run `wpstaging reinstall-cert <hostname>`. To re-sign every site in one pass, run `wpstaging reinstall-ca` again without `--skip-leaf`.
+
+Use `--skip-leaf` when you want to install a new CA and re-sign sites on your own schedule. For example, before a planned maintenance window where you control when each site is restarted.
+
+---
+
+<a name="q130"></a>
+**Q130: How do I show announcements I previously dismissed?**  
+
+**A130:**
+Pass the `--clear-acks` flag to `update`:
+
+```bash
+wpstaging update --clear-acks
+```
+
+This clears the acknowledgement cache. Announcements you previously dismissed with `update --acknowledge <id>` or `update --acknowledge all` will re-appear on the next `update` run or daily background check.
+
+The flag does not touch the update or announcement content cache. To force a fresh fetch of announcements from `wp-staging.com`, use `update --clear-cache` instead.
+
+`wpstaging clean cache` does not clear acknowledgements either. Only `update --clear-acks` removes them.
+
+---
+
+<a name="q131"></a>
+**Q131: How do I force a reinstall of the same version of `wpstaging`?**  
+
+**A131:**
+Pass the `--force` flag to `update`. This bypasses the "already at latest" check and reinstalls the latest stable binary on top of the running one:
+
+```bash
+wpstaging update --force
+```
+
+You can also force a reinstall of a specific version:
+
+```bash
+wpstaging update --force --version <version>
+```
+
+This is an escape hatch for edge cases, for example when a previous update wrote the binary correctly but left on-disk state in a bad shape, or when you want to repeat a recent install. The CLI hides `--force` from regular `--help` output for that reason.
+
+**If `wpstaging` does not run at all** (corrupted binary, missing file, or any state that `--force` cannot work around), re-run the install script instead. It does not depend on the existing binary:
+
+```bash
+# Linux / macOS
+curl -fsSL https://wp-staging.com/install.sh | bash
+
+# Windows PowerShell
+irm https://wp-staging.com/install.ps1 | iex
+```
+
+---
+
+**Last Updated:** 2026-05-29 20:36:42 UTC
