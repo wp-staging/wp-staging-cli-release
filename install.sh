@@ -53,7 +53,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
-SCRIPT_VERSION="20260513-095342"
+SCRIPT_VERSION="20260601-163103"
 
 # Colors for output
 RED='\033[0;31m'
@@ -328,12 +328,19 @@ install_binary() {
 
     _ib_target="${_ib_install_dir}/${BINARY_NAME}"
 
+    # Install onto a fresh inode via mktemp + atomic rename. Overwriting in
+    # place keeps the inode and macOS then SIGKILLs the next run over a stale
+    # cached code signature.
     if [ "$_ib_use_sudo" = "true" ] && command_exists sudo; then
-        sudo cp "$_ib_binary" "$_ib_target" || error "Failed to install binary to $_ib_target"
-        sudo chmod +x "$_ib_target" || error "Failed to set executable permission"
+        _ib_tmp=$(sudo mktemp "${_ib_target}.XXXXXX") || error "Failed to install binary to $_ib_target"
+        sudo cp "$_ib_binary" "$_ib_tmp" || { sudo rm -f "$_ib_tmp" || true; error "Failed to install binary to $_ib_target"; }
+        sudo chmod 0755 "$_ib_tmp" || { sudo rm -f "$_ib_tmp" || true; error "Failed to set executable permission"; }
+        sudo mv -f "$_ib_tmp" "$_ib_target" || { sudo rm -f "$_ib_tmp" || true; error "Failed to install binary to $_ib_target"; }
     else
-        cp "$_ib_binary" "$_ib_target" || error "Failed to install binary to $_ib_target"
-        chmod +x "$_ib_target" || error "Failed to set executable permission"
+        _ib_tmp=$(mktemp "${_ib_target}.XXXXXX") || error "Failed to install binary to $_ib_target"
+        cp "$_ib_binary" "$_ib_tmp" || { rm -f "$_ib_tmp" || true; error "Failed to install binary to $_ib_target"; }
+        chmod 0755 "$_ib_tmp" || { rm -f "$_ib_tmp" || true; error "Failed to set executable permission"; }
+        mv -f "$_ib_tmp" "$_ib_target" || { rm -f "$_ib_tmp" || true; error "Failed to install binary to $_ib_target"; }
     fi
 
     success "✓ Installed binary to $_ib_target"

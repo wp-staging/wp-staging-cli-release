@@ -198,6 +198,7 @@ Other Flags:
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
       --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
+      --label string                Friendly site label (defaults to the hostname)
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
 
 ```
@@ -865,6 +866,7 @@ Other Flags:
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
       --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
+      --site-label string           Update the friendly site label (empty resets to the hostname)
 
 ```
 
@@ -892,7 +894,7 @@ Env Flags:
 
 Other Flags:
       --reinstall-ca      Alias for `wpstaging reinstall-ca`
-      --no-restart        Skip restarting running sites after regenerating the certificate
+      --skip-restart      Skip restarting running sites after regenerating the certificate
 
 ```
 
@@ -917,7 +919,8 @@ Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 Other Flags:
-      --no-restart        Skip restarting running sites after rotating the CA
+      --skip-restart      Skip restarting running sites after rotating the CA
+      --skip-leaf         Rotate the CA without re-signing per-site certificates
 
 ```
 
@@ -930,7 +933,7 @@ trust store and check each site's leaf certificate (chain to current CA,
 expiry buffer). Reports per-store CA presence and per-site leaf state
 without modifying anything.
 
-If a hostname is given, only that site's leaf is inspected; the CA
+If a hostname is given, only that site's leaf is inspected. The CA
 section still covers every store. Use --live to add a live TLS handshake
 per site to confirm the served leaf matches the on-disk one. Use --json
 to emit a machine-readable report.
@@ -1013,26 +1016,42 @@ Flags:
 Check for and install updates to WP Staging CLI.
 
 By default, downloads and replaces the current binary with the latest version.
-Use --check to only check for updates without installing.
+Use --check to check for updates without installing.
+Use --status to show the update and announcement status.
 Use --full to update using the install script from wp-staging.com.
 Use --version to target a specific version (upgrade or downgrade).
+
+Announcements are separate from the "Update vX available" banner. The banner
+clears after you install the new version. Use --acknowledge to dismiss an
+announcement by id, or "all" to dismiss every visible dismissible announcement.
+Critical announcements cannot be dismissed.
 
 Usage:
   wpstaging update [flags]
 
 Examples:
-  wpstaging update
-  wpstaging update --check
-  wpstaging update --full
-  wpstaging update --version 1.5.0
-  wpstaging update --version v1.5.0
-  wpstaging update --version 1.5.0 --check
-  wpstaging update --version 1.5.0 --full
+  Update:
+    wpstaging update
+    wpstaging update --check
+    wpstaging update --status
+    wpstaging update --full
+    wpstaging update --version 1.5.0
+    wpstaging update --version v1.5.0
+    wpstaging update --version 1.5.0 --check
+    wpstaging update --version 1.5.0 --full
+
+  Acknowledge announcement:
+    wpstaging update --acknowledge info-1
+    wpstaging update --acknowledge all
 
 Flags:
-      --check            Only check for updates, don't install
-      --full             Update using install script from wp-staging.com
-      --version string   Target a specific version (e.g., 1.5.0 or v1.5.0)
+      --acknowledge string   Acknowledge an announcement by id (e.g., info-1)
+      --check                Only check for updates, don't install
+      --clear-acks           Clean up acknowledgement cache files
+      --clear-cache          Clean up update cache files
+      --full                 Update using install script from wp-staging.com
+      --status               Show the update and announcement status
+      --version string       Target a specific version (e.g., 1.5.0 or v1.5.0)
 
 ```
 
@@ -1070,7 +1089,7 @@ Usage:
   wpstaging clean [command]
 
 Available Commands:
-  all         Clean up all stored resources
+  all         Clean up cache, WP-CLI cache, and stored license
   cache       Clean up cache files
   license     Remove stored license key
   wpcli       Clean up WP-CLI cache files
@@ -1083,7 +1102,7 @@ Use "wpstaging clean [command] --help" for more information and available flags 
 # Command: clean all
 
 ```
-Remove all stored resources and data used by the CLI tool.
+Remove the general cache, WP-CLI cache, and stored license. Persistent state is preserved.
 
 Usage:
   wpstaging clean all [flags]
@@ -1091,7 +1110,7 @@ Usage:
 Examples:
   wpstaging clean all
 
-This will clean up all stored resources in the working directory.
+This removes the general cache, WP-CLI cache, and stored license. Persistent state is preserved.
 
 Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -1206,7 +1225,7 @@ Env Flags:
 
 Other Flags:
       --dry-run           List stale CA entries that would be removed without modifying any trust store
-      --include-legacy    Also remove legacy mkcert-branded CAs (asks for confirmation; risk: any third-party mkcert CAs are removed too)
+      --include-legacy    Also remove legacy mkcert-branded CAs, including third-party
 
 ```
 
@@ -1250,16 +1269,21 @@ Flags:
 Internal command spawned by the CLI to keep sudo credentials warm for the
 duration of a terminal session. Not intended to be invoked directly.
 
+Environment variables:
+  WPSTGCLI_SUDO_KEEPALIVE_MAX_LIFETIME  Override the 12h lifetime cap (e.g. 30m, 6h).
+  WPSTGCLI_DISABLE_SUDO_KEEPALIVE       Skip the daemon entirely.
+
 Usage:
   wpstaging sudo-keepalive [flags]
 
 Flags:
-      --leader-sid int    Session leader PID to watch (default "0")
-      --pid-file string   PID file path written by the daemon
+      --leader-sid int          Session leader PID to watch (default "0")
+      --max-lifetime duration   Absolute cap on daemon lifetime. Exits cleanly when reached (default "12h0m0s")
+      --pid-file string         PID file path written by the daemon
 
 ```
 
 
 ---
 
-*Generated on 2026-05-11 15:42:37 UTC*
+*Generated on 2026-05-29 20:26:14 UTC*

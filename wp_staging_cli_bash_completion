@@ -238,6 +238,7 @@ _wp_staging_cli() {
         --admin-user
         --admin-pass
         --admin-email
+        --label
         --secure-credentials
         --multisite
         --subdomains
@@ -264,6 +265,17 @@ _wp_staging_cli() {
         --disable-adminer-autologin
         --disable-magic-link
         --magic-link-timeout
+    "
+
+    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast path)
+    reconfigure_opts="
+        --env-path
+        --disable-mailpit
+        --disable-adminer
+        --disable-adminer-autologin
+        --disable-magic-link
+        --magic-link-timeout
+        --site-label
     "
 
     # magic-link <hostname> [--timeout MINUTES]
@@ -468,8 +480,8 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             fi
             ;;
-        generate-compose-file|gcf|generate-docker-file|gdf|reconfigure|rcf)
-            # generate-*-file / reconfigure [hostname] -- hostname is optional
+        generate-compose-file|gcf|generate-docker-file|gdf)
+            # generate-*-file [hostname] -- hostname is optional
             # (no hostname = apply to all sites). No hint: would imply a
             # required positional.
             if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
@@ -477,6 +489,15 @@ _wp_staging_cli() {
                 COMPREPLY=()
             else
                 COMPREPLY=( $(compgen -W "${general_opts} ${generate_docker_file_opts}" -- "${cur}") )
+            fi
+            ;;
+        reconfigure|rcf)
+            # reconfigure [hostname] -- hostname is optional (no hostname = apply
+            # to all sites). Adds --site-label for the metadata-only fast path.
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${reconfigure_opts}" -- "${cur}") )
             fi
             ;;
         magic-link)
@@ -501,11 +522,11 @@ _wp_staging_cli() {
                 # Optional first positional: hostname
                 COMPREPLY=()
             else
-                COMPREPLY=( $(compgen -W "--env-path --reinstall-ca --no-restart ${general_opts}" -- "${cur}") )
+                COMPREPLY=( $(compgen -W "--env-path --reinstall-ca --skip-restart ${general_opts}" -- "${cur}") )
             fi
             ;;
         reinstall-ca)
-            COMPREPLY=( $(compgen -W "--env-path --no-restart ${general_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "--env-path --skip-restart --skip-leaf ${general_opts}" -- "${cur}") )
             ;;
         verify-cert)
             # verify-cert [hostname] -- hostname is optional (no hostname =
@@ -529,7 +550,7 @@ _wp_staging_cli() {
             COMPREPLY=( $(compgen -W "--full ${general_opts}" -- "${cur}") )
             ;;
         update)
-            COMPREPLY=( $(compgen -W "--check --full --version ${general_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "--acks --acknowledge --check --clear-acks --clear-cache --full --status --version ${general_opts}" -- "${cur}") )
             ;;
         deactivate|unregister|clean)
             COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
