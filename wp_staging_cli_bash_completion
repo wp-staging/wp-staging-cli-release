@@ -243,6 +243,7 @@ _wp_staging_cli() {
         --multisite
         --subdomains
         --from
+        --skip-warmup
     "
 
     # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
@@ -255,6 +256,13 @@ _wp_staging_cli() {
         --disable-adminer-autologin
         --disable-magic-link
         --magic-link-timeout
+        --skip-warmup
+    "
+
+    # start / up / restart: addPathAndComposeOnlyFlag (hidden) + --skip-warmup
+    start_opts="
+        --env-path
+        --skip-warmup
     "
 
     # generate-docker-file / generate-compose-file: add path + compose + --disable-mailpit + --disable-adminer
@@ -267,7 +275,8 @@ _wp_staging_cli() {
         --magic-link-timeout
     "
 
-    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast path)
+    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast
+    # path) and --install-wp-staging-pro (install Pro on an existing site)
     reconfigure_opts="
         --env-path
         --disable-mailpit
@@ -276,6 +285,8 @@ _wp_staging_cli() {
         --disable-magic-link
         --magic-link-timeout
         --site-label
+        --install-wp-staging-pro
+        --skip-warmup
     "
 
     # magic-link <hostname> [--timeout MINUTES]
@@ -462,7 +473,16 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             fi
             ;;
-        start|up|stop|down|restart)
+        start|up|restart)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${start_opts}" -- "${cur}") )
+            fi
+            ;;
+        stop|down)
             _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
             if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
                 # First positional: hostname

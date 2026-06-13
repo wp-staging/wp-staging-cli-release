@@ -1,3 +1,19 @@
+## v1.11.3 (2026-06-13)
+
+- **Enh:** Add `reconfigure --install-wp-staging-pro` to install the WP Staging Pro plugin on an existing site without reinstalling WordPress (#360).
+- **Enh:** `list --json` now reports a per-site `magic_link_supported` flag so the desktop app can tell which sites support auto-login (#366).
+- **Enh:** License checks now require a signed reply from wp-staging.com and reject any unsigned, fake, or changed reply (#378).
+- **Enh:** Warm up each site after it starts so the first page load is fast instead of slow. Use `--skip-warmup` to skip (#379).
+- **Enh:** Tune OPcache (more cache, fewer file checks) so sites respond faster after they start (#379).
+- **Fix:** Site deletion now clears leftover WP Staging Pro license files so they no longer build up over time (#362).
+- **Fix:** `del` and `update-subdomains` now reliably show their completion message and finish cleanup before updating the hosts file (#363).
+- **Fix:** Repair auto-login on sites created before the feature existed. Clicking the auto-login link no longer returns a 403 error after running `reconfigure` (#366).
+- **Fix:** Turning auto-login off with `reconfigure --disable-magic-link` no longer fails on macOS when leftover login files cannot be removed (#366).
+- **Fix:** `start` and `restart` now recreate missing auto-login and Adminer files instead of failing with a Docker bind mount error on pre-existing sites (#368).
+- **Fix:** Subdomain multisite subsites are now created with `https://` instead of `http://`, matching the main site (#369).
+- **Fix:** Cached license checks now re-verify the stored signature for the current machine, so only a genuine signed activation is accepted (#376).
+- **Fix:** Release builds now always download updates from the official WP Staging source and cannot be redirected to another server (#375).
+
 ## v1.11.2 (2026-06-02)
 
 - **New:** Add `reinstall-ca --skip-leaf` to rotate the CA without re-signing per-site certificates (#351).
