@@ -46,6 +46,7 @@
 - [compose-info](#hidden-command-compose-info)
 - [dump-all-help](#hidden-command-dump-all-help)
 - [sudo-keepalive](#hidden-command-sudo-keepalive)
+- [verify-token](#hidden-command-verify-token)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -198,6 +199,7 @@ Other Flags:
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
       --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
+      --skip-warmup                 Skip warming up the site after it starts
       --label string                Friendly site label (defaults to the hostname)
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
 
@@ -307,6 +309,7 @@ WordPress Flags:
       --wp string                   WordPress version to install (e.g., 6.5, latest)
 
 Other Flags:
+      --skip-warmup                 Skip warming up the site after it starts
       --from string                 Backup file path or remote URL (http/https) to restore after reset
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
@@ -624,6 +627,9 @@ Examples:
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
 
+Other Flags:
+      --skip-warmup       Skip warming up the site after it starts
+
 ```
 
 <a name="command-stop"></a>
@@ -668,6 +674,9 @@ Examples:
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --skip-warmup       Skip warming up the site after it starts
 
 ```
 
@@ -862,10 +871,12 @@ Env Flags:
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
+      --install-wp-staging-pro      Download and install WP Staging Pro on the site
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
       --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
+      --skip-warmup                 Skip warming up the site after it starts
       --site-label string           Update the friendly site label (empty resets to the hostname)
 
 ```
@@ -1283,7 +1294,37 @@ Flags:
 
 ```
 
+<a name="hidden-command-verify-token"></a>
+## Hidden Command: verify-token
+
+```
+Internal command for the first-party desktop client. Without --handshake,
+it checks a free-tier token against this build and reports the verdict as
+JSON. The token is read from --license or the WPSTGPRO_LICENSE environment
+variable, and the check runs locally with no network call.
+
+With --handshake, it runs the one-time token exchange on stdin and stdout
+to create a new token for this device.
+
+Neither mode prompts, so an automated caller cannot block. For the check,
+the verdict is in data.valid, and a rejected token also carries a
+machine-readable data.reason code.
+
+Usage:
+  wpstaging verify-token [flags]
+
+Examples:
+  wpstaging verify-token --license=YOUR_TOKEN --json
+  WPSTGPRO_LICENSE=YOUR_TOKEN wpstaging verify-token --json
+  wpstaging verify-token --handshake
+
+
+Flags:
+      --handshake   Run the free-tier token exchange on stdin and stdout
+
+```
+
 
 ---
 
-*Generated on 2026-05-29 20:26:14 UTC*
+*Generated on 2026-06-12 13:33:38 UTC*

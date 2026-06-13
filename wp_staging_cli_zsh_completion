@@ -241,6 +241,7 @@ _wpstaging() {
         '--multisite[Enable WordPress Multisite]'
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--skip-warmup[Skip warming up the site after it starts]'
     )
 
     # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
@@ -254,6 +255,14 @@ _wpstaging() {
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
         '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+        '--skip-warmup[Skip warming up the site after it starts]'
+    )
+
+    # start / up / restart: addPathAndComposeOnlyFlag (hidden) + --skip-warmup
+    local -a start_opts
+    start_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--skip-warmup[Skip warming up the site after it starts]'
     )
 
     # generate-docker-file / generate-compose-file: path flags + --disable-mailpit + --disable-adminer
@@ -267,7 +276,8 @@ _wpstaging() {
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
     )
 
-    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast path)
+    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast
+    # path) and --install-wp-staging-pro (install Pro on an existing site)
     local -a reconfigure_opts
     reconfigure_opts=(
         '--env-path[Environment file path]:path:_files'
@@ -277,6 +287,8 @@ _wpstaging() {
         '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
         '--site-label[Update the friendly site label (empty resets to the hostname)]:label:'
+        '--install-wp-staging-pro[Download and install WP Staging Pro on the site]'
+        '--skip-warmup[Skip warming up the site after it starts]'
     )
 
     # magic-link <hostname> [--timeout MINUTES]
@@ -438,7 +450,13 @@ _wpstaging() {
                         $general_opts \
                         $env_path_only_opts
                     ;;
-                start|up|stop|down|restart)
+                start|up|restart)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $start_opts
+                    ;;
+                stop|down)
                     _arguments \
                         '1:hostname:_wpstaging_hint' \
                         $general_opts \
