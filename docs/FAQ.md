@@ -2008,6 +2008,8 @@ This overwrites the binary in place and brings you to v1.11.1 or later, where `u
 **A85b:**
 The CLI fetches a short notice from wp-staging.com and prints it before any update output. It is used for time-sensitive messages, such as incident alerts or guidance for a recent release. The notice is informational and never blocks the update or any other command. If the server is unreachable or no notice is published, no banner appears.
 
+If a notice can be dismissed, the banner shows the command to hide it (`wpstaging update --acknowledge <id>`, or `--acknowledge all` for every message). Critical notices cannot be dismissed. Separately, on the automatic daily check every notice -- dismissible or critical -- shows at most once a day, not after every command; running `wpstaging update` yourself always shows it.
+
 <a name="q86"></a>
 **Q86: Where can I report bugs or request features?**  
 **A86:**
@@ -3663,4 +3665,4 @@ irm https://wp-staging.com/install.ps1 | iex
 
 ---
 
-**Last Updated:** 2026-05-29 20:36:42 UTC
+**Last Updated:** 2026-07-01 20:31:33 UTC

@@ -62,6 +62,7 @@ _wpstaging() {
         'compose-info:Show Docker Compose information'
         'deactivate:Deactivate license from this machine'
         'del:Delete a dockerized site'
+        'diagnostics:Print setup and site details for support'
         'disable:Disable a site (stop and prevent auto-start)'
         'docker-start:Start the installed Docker runtime and wait for the daemon'
         'dump-all-help:Dump help for all commands'
@@ -382,6 +383,11 @@ _wpstaging() {
                         '--timeout[Timeout in seconds to wait for the daemon]:seconds:' \
                         '--status[Report the current Docker state without starting it]' \
                         $general_opts
+                    ;;
+                diagnostics)
+                    _arguments \
+                        $general_opts \
+                        $env_path_only_opts
                     ;;
                 add)
                     _arguments \

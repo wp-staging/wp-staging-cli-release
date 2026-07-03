@@ -30,6 +30,7 @@
 - [reinstall-ca](#command-reinstall-ca)
 - [verify-cert](#command-verify-cert)
 - [docker-start](#command-docker-start)
+- [diagnostics](#command-diagnostics)
 - [register](#command-register)
 - [update](#command-update)
 - [uninstall](#command-uninstall)
@@ -101,6 +102,7 @@ Docker Commands:
   reinstall-ca          Rotate the WP Staging CLI certificate authority
   verify-cert           Audit WP Staging CLI SSL certificate trust state
   docker-start          Start the supported Docker runtime and wait for the daemon
+  diagnostics           Print setup and site details for support
 
 Other Commands:
   register              Activate your WP Staging Pro license
@@ -994,6 +996,27 @@ Other Flags:
 
 ```
 
+<a name="command-diagnostics"></a>
+# Command: diagnostics
+
+```
+Collect the facts support needs into one bundle: WP Staging CLI
+version and build time, license registration status, operating
+system and architecture, Docker status, the state of the directories,
+and a secret-free view of each local site. Use --json for a structured bundle.
+
+Usage:
+  wpstaging diagnostics [flags]
+
+Examples:
+  wpstaging diagnostics
+  wpstaging diagnostics --json
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
 <a name="command-register"></a>
 # Command: register
 
@@ -1327,4 +1350,4 @@ Flags:
 
 ---
 
-*Generated on 2026-06-12 13:33:38 UTC*
+*Generated on 2026-06-24 04:12:24 UTC*

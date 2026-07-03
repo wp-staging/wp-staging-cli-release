@@ -68,6 +68,7 @@ _wp_staging_cli() {
         compose-info
         deactivate
         del
+        diagnostics
         disable
         docker-start
         dump-all-help
@@ -562,6 +563,9 @@ _wp_staging_cli() {
             ;;
         docker-start)
             COMPREPLY=( $(compgen -W "--timeout --status ${general_opts}" -- "${cur}") )
+            ;;
+        diagnostics)
+            COMPREPLY=( $(compgen -W "--env-path ${general_opts}" -- "${cur}") )
             ;;
         register)
             COMPREPLY=( $(compgen -W "--license --status ${general_opts}" -- "${cur}") )
