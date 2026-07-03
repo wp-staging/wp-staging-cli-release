@@ -1,3 +1,10 @@
+## v1.12.0 (2026-07-03)
+
+- **Enh:** Add a `diagnostics` command that gathers a secret-free bundle to share with support (#386).
+- **Enh:** Allow the first-party desktop client to restore from a local backup file (#381).
+- **Enh:** Shorten the first-party desktop client token lifetime to one day for tighter security (#382).
+- **Enh:** Terminal announcements now show the command to dismiss them and appear at most once a day instead of after every command (#388).
+
 ## v1.11.3 (2026-06-13)
 
 - **Enh:** Add `reconfigure --install-wp-staging-pro` to install the WP Staging Pro plugin on an existing site without reinstalling WordPress (#360).
