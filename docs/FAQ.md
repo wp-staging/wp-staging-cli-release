@@ -2010,6 +2010,22 @@ The CLI fetches a short notice from wp-staging.com and prints it before any upda
 
 If a notice can be dismissed, the banner shows the command to hide it (`wpstaging update --acknowledge <id>`, or `--acknowledge all` for every message). Critical notices cannot be dismissed. Separately, on the automatic daily check every notice -- dismissible or critical -- shows at most once a day, not after every command; running `wpstaging update` yourself always shows it.
 
+<a name="q85c"></a>
+**Q85c: I built the CLI from source. Why does it say "Update check skipped for development version" and never show an update banner?**  
+
+**A85c:**
+This is on purpose. A binary you compile yourself reports its version as `0.0.0-dev` (or `unknown` when you run it with `go run`). On such a build, both the automatic daily update check and the `wpstaging update` command are turned off.
+
+There are three reasons for this:
+
+1. **No real version to compare.** A development build has no release version number, so it cannot be measured against the latest release. It would always look out of date and show the update banner after every command.
+2. **It protects your own build.** The `update` command replaces the running binary. On a build you compiled yourself, that would overwrite your local binary with an official release and lose your work.
+3. **Development builds are for testing.** They are not meant to be kept up to date like an installed release.
+
+If you want to test the update flow on a development build, run `wpstaging update --force`. The `--force` flag bypasses the skip and runs the full update. You can also build with a real version number instead of the default `0.0.0-dev`.
+
+This is different from [Q85a](#q85a). Q85a is a bug in the real v1.10.0 and v1.11.0 releases, which were wrongly treated as development builds. The behavior described here is the normal, intended behavior for a binary you build yourself.
+
 <a name="q86"></a>
 **Q86: Where can I report bugs or request features?**  
 **A86:**
@@ -3665,4 +3681,29 @@ irm https://wp-staging.com/install.ps1 | iex
 
 ---
 
-**Last Updated:** 2026-07-01 20:31:33 UTC
+<a name="q132"></a>
+**Q132: On Windows my new site's files are in a Docker volume instead of a normal folder. What is "fast mode" and how do I turn it off?**  
+**A132:**
+On Windows, Docker Desktop shares host files into containers over a slow bridge (NTFS through 9p), which makes creating and running sites far slower than on macOS or Linux. To avoid this, `wpstaging` turns on **fast mode** by default on Windows: it stores the WordPress webroot in a fast Docker volume (on the WSL2 Linux filesystem) so the container reads and writes at native speed, and it runs a small sidecar container that mirrors that volume to the browsable folder at `sites/<hostname>/www`. You still edit your themes and plugins in that folder in Explorer as usual — your changes sync into the volume, and files WordPress writes (uploads, cache) appear back in the folder.
+
+Fast mode is Windows only. macOS and Linux are unaffected (their bind mounts are already fast), so the flag has no effect there.
+
+To create a site **without** fast mode (a classic bind mount, files stored directly in `sites/<hostname>/www`), pass `--fast-mode=false`:
+
+```bash
+wpstaging add mysite.local --fast-mode=false
+```
+
+The choice is saved per site (as `FAST_MODE` in the site's `.env`), so `start`, `restart`, and `reconfigure` keep it. It only applies when the site is created — there is no in-place switch, so to change an existing site's mode you recreate it.
+
+To check whether a site uses fast mode and whether its file sync is running:
+
+```bash
+wpstaging sync-status mysite.local
+```
+
+Tip: for the fastest sync, exclude the site's synced folder from Windows Defender real-time scanning. The CLI prints the exact `Add-MpPreference` command after it creates a fast-mode site.
+
+---
+
+**Last Updated:** 2026-07-05 17:45:00 UTC

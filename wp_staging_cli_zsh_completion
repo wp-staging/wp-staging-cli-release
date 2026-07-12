@@ -64,6 +64,7 @@ _wpstaging() {
         'del:Delete a dockerized site'
         'diagnostics:Print setup and site details for support'
         'disable:Disable a site (stop and prevent auto-start)'
+        'docker-image:Check and pull the Docker images required to run a site'
         'docker-start:Start the installed Docker runtime and wait for the daemon'
         'dump-all-help:Dump help for all commands'
         'dump-header:Dump backup file header'
@@ -76,6 +77,7 @@ _wpstaging() {
         'help:Show help for a command'
         'list:List all dockerized sites'
         'magic-link:Issue a fresh wp-admin auto-login URL for a site'
+        'open:Open a site'\''s files in the file manager'
         'reconfigure:Reconfigure a site and apply the changes'
         'register:Register license key'
         'reinstall-ca:Rotate the certificate authority'
@@ -90,6 +92,7 @@ _wpstaging() {
         'stop:Stop site containers'
         'switch-php:Switch PHP version for a site'
         'switch-wp:Switch WordPress version for a site'
+        'sync-status:Show a fast-mode site'\''s file sync status'
         'remove:Stop containers and remove all Docker data'
         'uninstall:Uninstall WP Staging CLI from the system'
         'update:Update WP Staging CLI to latest version'
@@ -243,6 +246,7 @@ _wpstaging() {
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
         '--skip-warmup[Skip warming up the site after it starts]'
+        '--fast-mode[Windows: fast Docker-volume webroot mirrored to a browsable folder (on by default on Windows; =false to opt out)]'
     )
 
     # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
@@ -382,6 +386,12 @@ _wpstaging() {
                     _arguments \
                         '--timeout[Timeout in seconds to wait for the daemon]:seconds:' \
                         '--status[Report the current Docker state without starting it]' \
+                        $general_opts
+                    ;;
+                docker-image)
+                    _arguments \
+                        '--status[Report which required images are present without pulling]' \
+                        '--php[PHP version to check or pull]:PHP version:(7.4 8.1 8.2 8.3 8.4)' \
                         $general_opts
                     ;;
                 diagnostics)

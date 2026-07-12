@@ -10,6 +10,8 @@
 - [switch-php](#command-switch-php)
 - [switch-wp](#command-switch-wp)
 - [magic-link](#command-magic-link)
+- [sync-status](#command-sync-status)
+- [open](#command-open)
 - [extract](#command-extract)
 - [restore](#command-restore)
 - [dump-header](#command-dump-header)
@@ -30,6 +32,7 @@
 - [reinstall-ca](#command-reinstall-ca)
 - [verify-cert](#command-verify-cert)
 - [docker-start](#command-docker-start)
+- [docker-image](#command-docker-image)
 - [diagnostics](#command-diagnostics)
 - [register](#command-register)
 - [update](#command-update)
@@ -47,7 +50,6 @@
 - [compose-info](#hidden-command-compose-info)
 - [dump-all-help](#hidden-command-dump-all-help)
 - [sudo-keepalive](#hidden-command-sudo-keepalive)
-- [verify-token](#hidden-command-verify-token)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -78,6 +80,8 @@ Site Commands:
   switch-php            Switch PHP version for a site
   switch-wp             Switch WordPress version for a site
   magic-link            Issue a fresh wp-admin auto-login URL for a site
+  sync-status           Show a fast-mode site's file sync status
+  open                  Open a site's files in the file manager
 
 Backup Commands:
   extract               Extract files, database, or metadata from a WP STAGING backup
@@ -102,6 +106,7 @@ Docker Commands:
   reinstall-ca          Rotate the WP Staging CLI certificate authority
   verify-cert           Audit WP Staging CLI SSL certificate trust state
   docker-start          Start the supported Docker runtime and wait for the daemon
+  docker-image          Check and pull the Docker images required to run a site
   diagnostics           Print setup and site details for support
 
 Other Commands:
@@ -202,6 +207,7 @@ Other Flags:
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
       --magic-link-timeout int      Default magic-link lifetime in minutes (default "15")
       --skip-warmup                 Skip warming up the site after it starts
+      --fast-mode                   Windows only: speed up the webroot with a Docker volume synced to a browsable directory (on by default)
       --label string                Friendly site label (defaults to the hostname)
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
 
@@ -389,6 +395,44 @@ Env Flags:
 
 Other Flags:
       --timeout int       One-shot token lifetime in minutes (default "15")
+
+```
+
+<a name="command-sync-status"></a>
+# Command: sync-status
+
+```
+Show the file sync status for a Windows fast-mode site.
+
+Reports whether the browsable directory is in sync with the site's webroot volume.
+
+Usage:
+  wpstaging sync-status <hostname> [flags]
+
+Examples:
+  wpstaging sync-status mysite.local
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
+<a name="command-open"></a>
+# Command: open
+
+```
+Open a site's webroot directory (sites/<hostname>/www) in the system file manager.
+
+For a Windows fast-mode site this is the browsable mirror of the webroot volume.
+
+Usage:
+  wpstaging open <hostname> [flags]
+
+Examples:
+  wpstaging open mysite.local
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 ```
 
@@ -852,8 +896,9 @@ You can also apply feature-toggle changes here. For example, pass
 --disable-adminer=false to re-enable the Adminer UI on a site where
 it was previously disabled, --disable-adminer-autologin to turn off
 auto-login while keeping Adminer installed, --disable-mailpit=false
-to re-enable the Mailpit container, or --disable-magic-link to turn
-off wp-admin auto-login.
+to re-enable the Mailpit container, --disable-magic-link to turn
+off wp-admin auto-login, or --skip-warmup=false to turn warmup back
+on for a site where it is skipped by default (Windows).
 
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
@@ -993,6 +1038,32 @@ Examples:
 Other Flags:
       --status        Report the current Docker state without trying to start it
       --timeout int   Timeout in seconds to wait for the Docker daemon to come up (default "60")
+
+```
+
+<a name="command-docker-image"></a>
+# Command: docker-image
+
+```
+Check whether the Docker images required to run a site are present
+locally and pull the missing ones. Use --status to report without
+pulling, --php to select one or more PHP images, and --json for
+machine output.
+
+Usage:
+  wpstaging docker-image [flags]
+
+Examples:
+  wpstaging docker-image --status --json
+  wpstaging docker-image --yes --json
+  wpstaging docker-image --php 8.1
+  wpstaging docker-image --php 8.1,8.3
+
+Env Flags:
+      --php stringSlice   PHP version(s) to check or pull, comma-separated (supported: 7.4, 8.1, 8.2, 8.3, 8.4) (default "[8.1]")
+
+Other Flags:
+      --status            Report which required images are present without pulling
 
 ```
 
@@ -1317,37 +1388,7 @@ Flags:
 
 ```
 
-<a name="hidden-command-verify-token"></a>
-## Hidden Command: verify-token
-
-```
-Internal command for the first-party desktop client. Without --handshake,
-it checks a free-tier token against this build and reports the verdict as
-JSON. The token is read from --license or the WPSTGPRO_LICENSE environment
-variable, and the check runs locally with no network call.
-
-With --handshake, it runs the one-time token exchange on stdin and stdout
-to create a new token for this device.
-
-Neither mode prompts, so an automated caller cannot block. For the check,
-the verdict is in data.valid, and a rejected token also carries a
-machine-readable data.reason code.
-
-Usage:
-  wpstaging verify-token [flags]
-
-Examples:
-  wpstaging verify-token --license=YOUR_TOKEN --json
-  WPSTGPRO_LICENSE=YOUR_TOKEN wpstaging verify-token --json
-  wpstaging verify-token --handshake
-
-
-Flags:
-      --handshake   Run the free-tier token exchange on stdin and stdout
-
-```
-
 
 ---
 
-*Generated on 2026-06-24 04:12:24 UTC*
+*Generated on 2026-07-10 19:10:53 UTC*
