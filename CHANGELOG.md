@@ -1,3 +1,19 @@
+## v1.13.0 (2026-07-12)
+
+- **New:** Add an `open <site>` command that opens a site's files in your system file manager (#394).
+- **New:** Windows sites now default to a fast Docker volume, still editable from Explorer. Use `--fast-mode=false` to opt out (#394).
+- **New:** Add a `docker-image` command to check which Docker images are installed and pull any that are not (#414).
+- **Enh:** Show the version number in the help header, the about screen, and the command reference title.
+- **Enh:** `stop`, `stop-all`, and `disable` now pause Windows fast-mode file sync. `start`, `start-all`, `enable`, and `restart` resume it (#394).
+- **Fix:** `uninstall` and `uninstall --full` now remove the binary and finish reliably on Windows (#401).
+- **Fix:** `update` now actually replaces the binary on Windows instead of reporting success without doing so (#403).
+- **Fix:** `del`, `remove`, and `restore` no longer hang or fail to remove site files with certain names on Windows (#408).
+- **Fix:** `del` no longer fails to remove Windows fast-mode site files still in use by the background file sync (#394).
+- **Fix:** Restoring a backup no longer corrupts saved code or text when a backslash appears before certain letters (#407).
+- **Fix:** Manually added hosts file entries no longer conflict with a site's managed entry and cause certificate errors (#405).
+- **Fix:** Creating a site on Linux with Docker Desktop no longer fails when Docker Desktop is already running (#396).
+- **Dev:** `list --json` now reports a per-site `fast_mode` flag, and `sync-status --json` returns structured sync state (#394).
+
 ## v1.12.0 (2026-07-03)
 
 - **Enh:** Add a `diagnostics` command that gathers a secret-free bundle to share with support (#386).

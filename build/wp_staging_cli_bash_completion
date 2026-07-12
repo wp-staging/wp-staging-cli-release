@@ -70,6 +70,7 @@ _wp_staging_cli() {
         del
         diagnostics
         disable
+        docker-image
         docker-start
         dump-all-help
         dump-header
@@ -82,6 +83,7 @@ _wp_staging_cli() {
         help
         list
         magic-link
+        open
         reconfigure
         register
         reinstall-ca
@@ -96,6 +98,7 @@ _wp_staging_cli() {
         stop
         switch-php
         switch-wp
+        sync-status
         remove
         uninstall
         update
@@ -245,6 +248,7 @@ _wp_staging_cli() {
         --subdomains
         --from
         --skip-warmup
+        --fast-mode
     "
 
     # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
@@ -563,6 +567,9 @@ _wp_staging_cli() {
             ;;
         docker-start)
             COMPREPLY=( $(compgen -W "--timeout --status ${general_opts}" -- "${cur}") )
+            ;;
+        docker-image)
+            COMPREPLY=( $(compgen -W "--status --php ${general_opts}" -- "${cur}") )
             ;;
         diagnostics)
             COMPREPLY=( $(compgen -W "--env-path ${general_opts}" -- "${cur}") )

@@ -1,31 +1,31 @@
 {
   "name": "wpstaging",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "copyright": "Copyright (c) 2025-present WP STAGING -- https://wp-staging.com",
-  "generated": "2026-07-03T09:46:17Z",
+  "generated": "2026-07-12T14:35:40Z",
   "platforms": {
     "linux_amd64": {
-      "checksum": "14f4efd4ade87363163c75e69f73de6d8e6d7fa732c838d76859808c6cd88fc3",
+      "checksum": "eed47a91de6f086fab8de67be47d231c55a129effa670aee45b3225b2b5623c6",
       "binary": "linux_amd64/wpstaging"
     },
     "macos_amd64": {
-      "checksum": "c80f94b88f4d947b0aa4b5dd0b690be81604be0e13aab95f192e4512d20ff2ab",
+      "checksum": "07e4bc5accdad072395784e200320815009b866a2dcea33dea4ab5c65d190de1",
       "binary": "macos_amd64/wpstaging"
     },
     "macos_arm64": {
-      "checksum": "e4ddd4c236d0b0e81e46aacf2b77726ad69a2671e6a4ff5f667ad68f068b6100",
+      "checksum": "e7003b178a19831ea7cc22593c6fb41ba07278ed9427ea21505239f4f55907b7",
       "binary": "macos_arm64/wpstaging"
     },
     "macos_universal": {
-      "checksum": "b22e521e0a9cb6ac104e58bde107e9e5f27d1543736a9d5358c6cb0c1d4ff862",
+      "checksum": "1fefa5d97f041d7afc1921a5f011b45260b5bd772cbf6b06e56bfd1db12480e4",
       "binary": "macos_universal/wpstaging"
     },
     "windows_amd64": {
-      "checksum": "2e8f0ec8f947417abf5f947af86a9a863f383d023fe1950c353abc47885420ff",
+      "checksum": "36bc35819f16c9aedd07f0fc8d7f20e0b3453919723d1cb428b29d4df8a2f029",
       "binary": "windows_amd64/wpstaging.exe"
     },
     "windows_386": {
-      "checksum": "bbc9220797b234546e708a32ff563880602a6049612681d9f769c1502b241ee6",
+      "checksum": "b6d3328eb5e21ad0639f94f1ef2222b93ee3fce693d133423b26c7e79aecab6a",
       "binary": "windows_i386/wpstaging.exe"
     }
 
