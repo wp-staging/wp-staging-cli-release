@@ -40,6 +40,10 @@ REM   -d, --bin-dir DIR        Install binary to custom directory
 REM   -e, --extract DIR        Extract all files to directory (no installation)
 REM   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
 REM
+REM Environment variables (for testing only -- do not set in production):
+REM   GITHUB_API_URL    Override GitHub API base URL
+REM   GITHUB_RAW_URL    Override GitHub raw content base URL
+REM
 REM Examples:
 REM   install.cmd -v 1.4.0-beta.1           # Install version 1.4.0-beta.1
 REM   install.cmd -v 1.3.5                  # Install version 1.3.5
@@ -58,8 +62,8 @@ set "YELLOW=%ESC%[93m"
 set "BLUE=%ESC%[96m"
 set "NC=%ESC%[0m"
 
-set GITHUB_API_URL=https://api.github.com/repos/wp-staging/wp-staging-cli-release
-set GITHUB_RAW_URL=https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release
+if not defined GITHUB_API_URL set GITHUB_API_URL=https://api.github.com/repos/wp-staging/wp-staging-cli-release
+if not defined GITHUB_RAW_URL set GITHUB_RAW_URL=https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release
 set BINARY_NAME=wpstaging.exe
 set APP_NAME=wpstaging
 set REQUESTED_VERSION=
@@ -67,7 +71,7 @@ set LICENSE_KEY=
 set CUSTOM_BIN_DIR=
 set EXTRACT_DIR=
 set CLI_ARGS=
-set SCRIPT_VERSION=20260513-091832
+set SCRIPT_VERSION=20260713-161931
 
 REM Parse arguments
 :parse_args
@@ -320,9 +324,10 @@ if errorlevel 1 (
 echo %GREEN%Downloaded binary%NC%
 echo.
 
-REM Verify checksum
+REM Verify checksum. Get-FileHash needs PowerShell 4.0+. Fall back to .NET for downlevel PowerShell.
 echo %BLUE%Verifying checksum...%NC%
-for /f "delims=" %%i in ('powershell -NoProfile -Command "(Get-FileHash '%TEMP_DIR%\%BINARY_NAME%' -Algorithm SHA256).Hash.ToLower()"') do set ACTUAL_CHECKSUM=%%i
+set "HASH_TARGET=%TEMP_DIR%\%BINARY_NAME%"
+for /f "delims=" %%i in ('powershell -NoProfile -Command "$f=$env:HASH_TARGET; if (Get-Command Get-FileHash -EA SilentlyContinue) { (Get-FileHash $f -Algorithm SHA256).Hash.ToLower() } else { ([BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes($f))) -replace '-','').ToLower() }"') do set "ACTUAL_CHECKSUM=%%i"
 
 if /i not "%ACTUAL_CHECKSUM%"=="%CHECKSUM%" (
     echo %RED%Error: Checksum mismatch!%NC%

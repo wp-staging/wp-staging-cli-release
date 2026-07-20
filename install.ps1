@@ -28,6 +28,10 @@
 #                            PowerShell cannot, because -v is already the install-version
 #                            short flag and PowerShell aliases are case-insensitive.)
 #
+# Environment variables (for testing only -- do not set in production):
+#   GITHUB_API_URL    Override GitHub API base URL
+#   GITHUB_RAW_URL    Override GitHub raw content base URL
+#
 # Examples:
 #   -v "1.4.0-beta.1"                    # Install version 1.4.0-beta.1
 #   -v "1.3.5"                           # Install version 1.3.5
@@ -67,11 +71,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$GitHubApiUrl = "https://api.github.com/repos/wp-staging/wp-staging-cli-release"
-$GitHubRawUrl = "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release"
+$GitHubApiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https://api.github.com/repos/wp-staging/wp-staging-cli-release" }
+$GitHubRawUrl = if ($env:GITHUB_RAW_URL) { $env:GITHUB_RAW_URL } else { "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release" }
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
-$ScriptVersion = "20260513-091832"
+$ScriptVersion = "20260713-155841"
 
 # Colors for output - Uses Write-Host for colored console output
 # Note: Write-Host is intentional here as we need console coloring,
@@ -145,8 +149,20 @@ function Verify-Checksum($file, $expectedChecksum) {
     }
 
     try {
-        $hash = Get-FileHash -Path $file -Algorithm SHA256
-        $actualChecksum = $hash.Hash.ToLower()
+        if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
+            $actualChecksum = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLower()
+        } else {
+            # Get-FileHash needs PowerShell 4.0+, absent in the downlevel detached update --full console. .NET works everywhere.
+            $sha256 = [System.Security.Cryptography.SHA256]::Create()
+            try {
+                $stream = [System.IO.File]::OpenRead($file)
+                $actualChecksum = ([System.BitConverter]::ToString($sha256.ComputeHash($stream)) -replace '-', '').ToLower()
+            }
+            finally {
+                if ($stream) { $stream.Dispose() }
+                $sha256.Dispose()
+            }
+        }
 
         if ($actualChecksum -ne $expectedChecksum) {
             Exit-WithError "Checksum verification failed!`n  Expected: $expectedChecksum`n  Got:      $actualChecksum"
