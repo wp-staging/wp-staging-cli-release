@@ -1126,6 +1126,10 @@ Use --status to show the update and announcement status.
 Use --full to update using the install script from wp-staging.com.
 Use --version to target a specific version (upgrade or downgrade).
 
+You can also update by running the official installer directly:
+    Linux/macOS: curl -fsSL https://wp-staging.com/install.sh | bash
+        Windows: irm https://wp-staging.com/install.ps1 | iex
+
 Announcements are separate from the "Update vX available" banner. The banner
 clears after you install the new version. Use --acknowledge to dismiss an
 announcement by id, or "all" to dismiss every visible dismissible announcement.
@@ -1170,6 +1174,10 @@ By default, deactivates the license, removes the binary, shell completion
 files, and PATH entries from shell RC files.
 Use --full to run the full uninstall script from wp-staging.com,
 which additionally removes cache and Docker sites.
+
+You can also uninstall by running the official uninstaller directly:
+    Linux/macOS: curl -fsSL https://wp-staging.com/uninstall.sh | bash
+        Windows: irm https://wp-staging.com/uninstall.ps1 | iex
 
 Usage:
   wpstaging uninstall [flags]
@@ -1391,4 +1399,4 @@ Flags:
 
 ---
 
-*Generated on 2026-07-10 19:10:53 UTC*
+*Generated on 2026-07-14 13:54:00 UTC*

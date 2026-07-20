@@ -1,3 +1,12 @@
+## v1.13.1 (2026-07-20)
+
+- **Enh:** The update notice now also shows a one-line install command as another way to update (#418).
+- **Fix:** On Windows, `update` no longer installs older versions with a broken self-update (#417).
+- **Fix:** On Windows, `update --full` now completes instead of failing while verifying the download (#417).
+- **Fix:** Restoring a multisite network backup now migrates the hostname of every subsite, not just the primary site (#421).
+- **Fix:** Database restore no longer treats the database file size as zero when calculating restore progress (#421).
+- **Fix:** `add` no longer lets two different site names share the same Docker files and database (#422).
+
 ## v1.13.0 (2026-07-12)
 
 - **New:** Add an `open <site>` command that opens a site's files in your system file manager (#394).
