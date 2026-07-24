@@ -1,3 +1,7 @@
+## v1.13.2 (2026-07-24)
+
+- **Enh:** After a hosts file update, the output now lists every local domain that was written. This makes it easy to see when a multisite subsite domain is missing (#427).
+
 ## v1.13.1 (2026-07-20)
 
 - **Enh:** The update notice now also shows a one-line install command as another way to update (#418).
