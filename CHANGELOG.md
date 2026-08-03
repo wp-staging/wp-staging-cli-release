@@ -1,3 +1,16 @@
+## v1.13.3 (2026-08-03)
+
+- **Enh:** Restoring a multisite network now gives subsites shorter local domains (#429).
+- **Enh:** Skipped subsites during a multisite restore now show as warnings, so the reason is easy to spot (#430).
+- **Enh:** Multisite warnings now carry a code in JSON output, so the first-party desktop client can group them (#440).
+- **Enh:** Introduce the `--force-download` flag to download a backup URL again instead of using the local copy (#442).
+- **Enh:** Local sites now record whether the terminal or the first-party desktop client manages them (#445).
+- **Fix:** `add` no longer reuses another site's container IP when another program is already using one of its ports (#434).
+- **Fix:** `restart` and re-adding a site no longer miss a stopped site's claimed container IP (#435).
+- **Fix:** Multisite restore onto a site running on a different port now finds all subsites instead of skipping them (#437).
+- **Fix:** Custom domain subsites on a multisite network stay logged in when the site runs on a different port (#438).
+- **Fix:** Beta and release candidate builds no longer show an update notice for an older stable release (#444).
+
 ## v1.13.2 (2026-07-24)
 
 - **Enh:** After a hosts file update, the output now lists every local domain that was written. This makes it easy to see when a multisite subsite domain is missing (#427).

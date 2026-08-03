@@ -173,6 +173,7 @@ _wpstaging() {
         '--overwrite[Overwrite existing files]:overwrite:(yes no all)'
         '--verify[Verify extracted files]'
         '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
+        '--force-download[Download the backup again instead of using the cached file]'
     )
 
     local -a restore_opts
@@ -193,6 +194,7 @@ _wpstaging() {
         '--verify[Verify extracted files]'
         '--skip-extract[Skip extraction]'
         '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
+        '--force-download[Download the backup again instead of using the cached file]'
         '--db-host[Database host]:host:'
         '--db-name[Database name]:name:'
         '--db-user[Database user]:user:'
@@ -245,6 +247,7 @@ _wpstaging() {
         '--multisite[Enable WordPress Multisite]'
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--force-download[Download the backup again instead of using the cached file]'
         '--skip-warmup[Skip warming up the site after it starts]'
         '--fast-mode[Windows: fast Docker-volume webroot mirrored to a browsable folder (on by default on Windows; =false to opt out)]'
     )
@@ -254,6 +257,7 @@ _wpstaging() {
     reset_opts=(
         '--env-path[Environment file path]:path:_files'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--force-download[Download the backup again instead of using the cached file]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'

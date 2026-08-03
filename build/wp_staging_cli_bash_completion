@@ -176,6 +176,7 @@ _wp_staging_cli() {
         --verify
         --from
         --download-dir
+        --force-download
     "
 
     # Restore-specific options
@@ -207,6 +208,7 @@ _wp_staging_cli() {
         --db-ssl-key
         --db-ssl-mode
         --download-dir
+        --force-download
     "
 
     # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
@@ -247,6 +249,7 @@ _wp_staging_cli() {
         --multisite
         --subdomains
         --from
+        --force-download
         --skip-warmup
         --fast-mode
     "
@@ -255,6 +258,7 @@ _wp_staging_cli() {
     reset_opts="
         --env-path
         --from
+        --force-download
         --wp
         --disable-mailpit
         --disable-adminer

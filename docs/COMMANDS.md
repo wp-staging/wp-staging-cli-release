@@ -210,6 +210,7 @@ Other Flags:
       --fast-mode                   Windows only: speed up the webroot with a Docker volume synced to a browsable directory (on by default)
       --label string                Friendly site label (defaults to the hostname)
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
+      --force-download              Download the backup again instead of using the cached file
 
 ```
 
@@ -319,6 +320,7 @@ WordPress Flags:
 Other Flags:
       --skip-warmup                 Skip warming up the site after it starts
       --from string                 Backup file path or remote URL (http/https) to restore after reset
+      --force-download              Download the backup again instead of using the cached file
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
@@ -466,6 +468,7 @@ Flags:
       --verify                Verify integrity of extracted files
       --db-prefix string      Specify a new WordPress database table prefix
       --download-dir string   Directory for downloaded backup files (default: ./wpstaging-download)
+      --force-download        Download the backup again instead of using the cached file
       --from string           Backup file path or remote URL (http/https)
 
 Only-Filters Flags:
@@ -545,6 +548,7 @@ Flags:
       --verify                    Verify integrity of extracted files
       --skip-extract              Skip extraction if files already exist
       --download-dir string       Directory for downloaded backup files (default: ./wpstaging-download)
+      --force-download            Download the backup again instead of using the cached file
       --from string               Backup file path or remote URL (http/https)
 
 Wordpress DB-related Flags:
@@ -1399,4 +1403,4 @@ Flags:
 
 ---
 
-*Generated on 2026-07-14 13:54:00 UTC*
+*Generated on 2026-07-29 08:11:23 UTC*
