@@ -1809,6 +1809,13 @@ Public TLDs (`.com`, `.org`, etc.) are not supported. The tool is designed for l
 **A74f:**
 Yes. The `reset` command reads `IS_SUBDOMAIN_MULTISITE` and `SUBDOMAIN_HOSTNAMES` from the site's `.env` file and reinstalls WordPress with the same subdomain multisite configuration.
 
+<a name="q74g"></a>
+**Q74g: What local domains do subsites get when I restore a multisite network?**  
+**A74g:**
+When you restore a full network backup, each subsite gets a short local domain that keeps its own name. For a backup of `main.example.test` restored to `main.example.local`, the subsite `shop.example.test` becomes `shop.example.local`, and the subdomain `blog.main.example.test` becomes `blog.main.example.local`.
+
+If a subsite's local domain would match the main site, another subsite, or a site you already have on this machine, the CLI keeps the full old domain so no two sites use the same local domain. In that case `shop.example.test` becomes `shop.example.test.main.example.local`.
+
 <a name="q75"></a>
 **Q75: Can I restore only the database without files?**  
 **A75:**
@@ -1920,6 +1927,15 @@ Yes, use `--download-dir` on commands that take a remote backup URL (`extract`, 
 wpstaging extract --download-dir=/custom/path --from=https://example.com/backup.wpstg
 ```
 Files land in a `wpstaging-download` folder under the path you pass (`/custom/path/wpstaging-download/`) so downloaded backups stay separate from other files in the path you supply.
+
+<a name="q84b"></a>
+**Q84b: How do I download a remote backup again instead of using the local copy?**  
+**A84b:**
+Add `--force-download`:
+```bash
+wpstaging add site.local --from=https://example.com/backup.wpstg --force-download
+```
+The CLI normally reuses a backup it already downloaded. With `--force-download` it fetches the file again and replaces the local copy. Works on `extract`, `restore`, `add`, and `reset`.
 
 <a name="q85"></a>
 **Q85: How do I update the CLI to the latest version?**  
@@ -2842,12 +2858,16 @@ When an external service (like nginx or Apache) binds to `0.0.0.0:80` or `*:443`
 - Tests if the port responds on both `127.0.0.1` and another IP (like `127.3.2.1`)
 - If both respond, it's a wildcard binding
 
-**Behavior when wildcard is detected:**
-- Port rotation is triggered (not IP rotation, since IP rotation won't help)
+**Behavior when choosing a container IP:**
+
+When choosing a container IP (for example, when running `add` or `restart`), a wildcard bind answers on every candidate IP. The CLI does not treat this as a reason to move to a different IP. It still checks for other real conflicts before picking an IP, such as another site's `.env` file or a port already used by something else on that specific IP.
+
+**Behavior when starting containers:**
+
+Port rotation is triggered instead (not IP rotation, since IP rotation cannot help):
 - Enhanced message indicates the wildcard binding:
 ```
-HTTP port 80 is in use by external service bound to all interfaces (*:80).
-Switching to port 8844.
+HTTP port 80 is in use by external service bound to all interfaces (*:80). Automatically switching to port 8844.
 ```
 
 **Common causes:**
@@ -3001,7 +3021,7 @@ wpstaging extract https://example.com/backups/backup.wpstg
 3. Displays backup information (filename, size, format type)
 4. Asks for confirmation before downloading
 5. Downloads with progress indicator; resumes interrupted downloads when safe, otherwise restarts from scratch
-6. Caches downloaded files for reuse
+6. Caches downloaded files for reuse. Use `--force-download` to fetch the file again
 
 **Supported backup formats:**
 - WP Staging Backup v1
@@ -3706,4 +3726,4 @@ Tip: for the fastest sync, exclude the site's synced folder from Windows Defende
 
 ---
 
-**Last Updated:** 2026-07-05 17:45:00 UTC
+**Last Updated:** 2026-07-29 08:10:42 UTC
