@@ -90,6 +90,7 @@ _wpstaging() {
         'start:Start site containers'
         'status:Show site status'
         'stop:Stop site containers'
+        'sudo-rules:Allow hosts file, network and Docker changes without a password'
         'switch-php:Switch PHP version for a site'
         'switch-wp:Switch WordPress version for a site'
         'sync-status:Show a fast-mode site'\''s file sync status'
@@ -189,7 +190,9 @@ _wpstaging() {
         '--db-innodb-strict-mode[Enable InnoDB strict mode]'
         '--db-file[Database SQL file]:file:_files -g "*.sql"'
         '--db-batch-size[Insert batch size]:size:'
+        '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
         '--db-insert-single[Use single-row inserts]'
+        '--db-count-queries[Count all queries first to show the total]'
         '--db-timeout[Database timeout]:timeout:'
         '--verify[Verify extracted files]'
         '--skip-extract[Skip extraction]'
@@ -247,6 +250,10 @@ _wpstaging() {
         '--multisite[Enable WordPress Multisite]'
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--db-batch-size[Insert batch size]:size:'
+        '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
+        '--db-insert-single[Use single-row inserts]'
+        '--db-count-queries[Count all queries first to show the total]'
         '--force-download[Download the backup again instead of using the cached file]'
         '--skip-warmup[Skip warming up the site after it starts]'
         '--fast-mode[Windows: fast Docker-volume webroot mirrored to a browsable folder (on by default on Windows; =false to opt out)]'
@@ -257,6 +264,10 @@ _wpstaging() {
     reset_opts=(
         '--env-path[Environment file path]:path:_files'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
+        '--db-batch-size[Insert batch size]:size:'
+        '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
+        '--db-insert-single[Use single-row inserts]'
+        '--db-count-queries[Count all queries first to show the total]'
         '--force-download[Download the backup again instead of using the cached file]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
@@ -555,6 +566,13 @@ _wpstaging() {
                         '--env-path[Environment file path]:path:_files' \
                         '--dry-run[List stale CA entries without removing them]' \
                         '--include-legacy[Also remove legacy mkcert-branded CAs]' \
+                        $general_opts
+                    ;;
+                sudo-rules)
+                    _arguments \
+                        '--dry-run[Print what would change without changing anything]' \
+                        '--remove[Remove the sudo configuration file]' \
+                        '--status[Show whether the sudo configuration file is installed]' \
                         $general_opts
                     ;;
                 register)

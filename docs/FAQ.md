@@ -478,7 +478,7 @@ After creating a site, use `wpstaging list` to see all your sites and their port
 Use `--container-ip=<ipv4>` when creating a site. If you don't specify an IP, the CLI automatically assigns the next available IP from the range **127.3.2.1 - 127.3.2.254**:
 
 - **Linux/Windows:** Automatic IP allocation — loopback IPs are always available, no sudo required
-- **macOS:** Automatic IP alias binding enabled by default — requires sudo (passwordless sudo recommended, see [Q87](#q87)). Use `--skip-macos-auto-ip` to disable and bind IPs manually with `ifconfig lo0 alias`
+- **macOS:** Automatic IP alias binding enabled by default — requires sudo (run `wpstaging sudo-rules` once to avoid the prompt, see [Q87](#q87)). Use `--skip-macos-auto-ip` to disable and bind IPs manually with `ifconfig lo0 alias`
 
 **Important:** When you explicitly specify `--container-ip` with an IP that's already used by another site, the CLI will show an error and suggest the next available IP:
 ```
@@ -499,7 +499,7 @@ The limit depends on how you allocate IPs:
 - Maximum **254 sites** — limited by our loopback IP range 127.3.2.1 - 127.3.2.254
 - Each site gets its own IP automatically:
   - **Linux/Windows:** No sudo required (loopback IPs always available)
-  - **macOS:** Automatic IP binding with sudo (passwordless sudo recommended - see [Q87](#q87))
+  - **macOS:** Automatic IP binding with sudo (run `wpstaging sudo-rules` once to avoid the prompt - see [Q87](#q87))
 - All sites can use the same ports (e.g., all on port 80/443) since they're on different IPs
 
 **With shared IPs (using `--container-ip` to reuse IPs):**
@@ -1694,7 +1694,7 @@ wpstaging add site2.local
 **Fallback:** If daemon installation fails, the CLI falls back to creating a single IP alias for the current site (as before).
 
 **Passwordless sudo (recommended for macOS):**
-On macOS, the LaunchDaemon install requires one sudo prompt. To avoid the prompt, see [Q87](#q87) for passwordless sudo setup.
+On macOS, the LaunchDaemon install requires one sudo prompt. To avoid the prompt, run `wpstaging sudo-rules` once, see [Q87](#q87).
 
 **Summary:** On macOS, a LaunchDaemon reads site configurations and creates loopback aliases only for existing sites at boot. One-time sudo on first `add`, aliases survive reboots. Linux/Windows don't need this because loopback IPs are always available. Use `--skip-macos-auto-ip` on macOS to skip daemon installation.
 
@@ -1712,7 +1712,7 @@ sudo ifconfig lo0 alias 127.3.2.2 netmask 255.255.255.255
 # ... and so on for each site
 ```
 
-**Note:** With automatic IP binding enabled (default), passwordless sudo is highly recommended for the best experience. See [Q87](#q87) for setup instructions.
+**Note:** With automatic IP binding enabled (default), run `wpstaging sudo-rules` once so the CLI does not ask for your password each time. See [Q87](#q87).
 
 ## Database Operations Questions
 
@@ -2048,68 +2048,104 @@ This is different from [Q85a](#q85a). Q85a is a bug in the real v1.10.0 and v1.1
 Visit the official WP Staging support at https://wp-staging.com/support/ or check the CLI documentation for the issue tracker URL.
 
 <a name="q87"></a>
-**Q87: How do I set up passwordless sudo for the wpstaging binary?**  
+**Q87: How do I stop wpstaging asking for my sudo password?**  
 **A87:**
-The wpstaging binary uses sudo for these operations:
-1. **Updating /etc/hosts file** - Adding hostname entries for local sites (all platforms)
-2. **LaunchDaemon install/remove** - Installing persistent loopback IP daemon (macOS only, one-time)
-3. **IP alias binding** - Creating loopback IP aliases if daemon install fails (macOS only, fallback)
+Run this once:
 
-To set up passwordless sudo:
+```bash
+wpstaging sudo-rules
+```
 
-1. **Find the wpstaging binary path:**
-   ```bash
-   which wpstaging
-   # Or if installed manually:
-   /path/to/wpstaging
-   ```
+It asks for your password one time, then writes a small file at `/etc/sudoers.d/wpstaging`. After that, wpstaging can update the hosts file without asking again. On macOS it can also create the loopback addresses each site needs. On Linux it can also start the Docker service.
 
-2. **Create a sudo configuration file:**
-   ```bash
-   sudo visudo -f /etc/sudoers.d/wpstaging
-   ```
+To see the file before installing it:
 
-3. **Add the following lines (replace `username` and `/path/to/wpstaging`):**
-   ```
-   # Hosts file update (all platforms)
-   username ALL=(ALL) NOPASSWD: /path/to/wpstaging update-hosts-file*
+```bash
+wpstaging sudo-rules --dry-run
+```
 
-   # LaunchDaemon and loopback IP alias (macOS only - skip these lines on Linux)
-   username ALL=(ALL) NOPASSWD: /bin/cp /tmp/com.wp-staging.cli-loopback-*.plist /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /usr/sbin/chown root\:wheel /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/chmod 644 /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.wp-staging.cli-loopback
-   username ALL=(ALL) NOPASSWD: /bin/launchctl load -w /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/launchctl unload /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/rm -f /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   username ALL=(ALL) NOPASSWD: /bin/bash -c *ifconfig lo0*
-   username ALL=(ALL) NOPASSWD: /sbin/ifconfig lo0 alias 127.3.2.* netmask 255.255.255.255
-   ```
+To check whether it is installed, and see the rules your machine needs:
 
-   For example:
-   ```
-   bob ALL=(ALL) NOPASSWD: /usr/local/bin/wpstaging update-hosts-file*
-   bob ALL=(ALL) NOPASSWD: /bin/cp /tmp/com.wp-staging.cli-loopback-*.plist /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /usr/sbin/chown root\:wheel /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/chmod 644 /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/launchctl bootout system/com.wp-staging.cli-loopback
-   bob ALL=(ALL) NOPASSWD: /bin/launchctl load -w /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/launchctl unload /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/rm -f /Library/LaunchDaemons/com.wp-staging.cli-loopback.plist
-   bob ALL=(ALL) NOPASSWD: /bin/bash -c *ifconfig lo0*
-   bob ALL=(ALL) NOPASSWD: /sbin/ifconfig lo0 alias 127.3.2.* netmask 255.255.255.255
-   ```
+```bash
+wpstaging sudo-rules --status
+```
 
-4. **Save and exit the editor**
+It prints the file path, whether it is installed, your user account, and the rules. On macOS the list holds the loopback rules in place of the Docker one:
 
-**Alternative:** If you cannot set up passwordless sudo or prefer not to, you can use the `--skip-update-hosts-file` flag:
+```
+File  : /etc/sudoers.d/wpstaging
+Status: Installed
+User  : username
+Rules :
+    username ALL=(root) NOPASSWD: /usr/bin/cp /etc/hosts /etc/hosts.bak
+    username ALL=(root) NOPASSWD: /usr/bin/tee /etc/hosts
+    username ALL=(root) NOPASSWD: /usr/bin/test -f /etc/sudoers.d/wpstaging
+    username ALL=(root) NOPASSWD: /usr/bin/systemctl start docker
+```
+
+When the file is not there, `Status` reads `Not installed`, and the rules are the ones it would install.
+
+To undo it:
+
+```bash
+wpstaging sudo-rules --remove
+```
+
+**What it allows**
+
+Only the exact commands needed, and only for your user account:
+
+- Copy `/etc/hosts` to `/etc/hosts.bak`, and write `/etc/hosts`.
+- Check whether this file itself is there. Some systems keep `/etc/sudoers.d` closed to normal users, so `--status` and `--remove` need this to see it.
+- On macOS only, add or remove loopback addresses in the `127.3.2.x` range.
+- On Linux only, start the Docker service with `systemctl start docker`. Docker Desktop starts without a password, so it needs no rule.
+
+Nothing else gains extra permissions. Installing a certificate into your system trust store is not included, so the first site you create still asks for your password once. On macOS, installing the LaunchDaemon that restores the loopback addresses after a restart also asks once.
+
+**If it says your system does not read `/etc/sudoers.d`**
+
+Before it writes anything, `wpstaging sudo-rules` checks that your `/etc/sudoers` file loads that folder. It looks for a line like this:
+
+```
+#includedir /etc/sudoers.d
+```
+
+The line can start with `#includedir` or `@includedir`. Both mean the same thing to sudo. On macOS the line names the full path instead, `#includedir /private/etc/sudoers.d`. All of these work.
+
+If your system has no such line, the command stops and installs nothing, because sudo would ignore the file. Add the line with `sudo visudo`, then run `wpstaging sudo-rules` again.
+
+**If you set this up by hand before**
+
+Earlier versions of this page asked you to add rules by hand, including this line:
+
+```
+username ALL=(ALL) NOPASSWD: /bin/bash -c *ifconfig lo0*
+```
+
+Please remove that line. The `*` matches spaces as well as letters, so the rule allows **any** command to run as root without a password, not only `ifconfig`. The same applies to any hand-written rule that copies a file into `/Library/LaunchDaemons`.
+
+Open the file and delete those lines:
+
+```bash
+sudo visudo -f /etc/sudoers.d/wpstaging
+```
+
+Or remove the whole file and start again:
+
+```bash
+wpstaging sudo-rules --remove
+wpstaging sudo-rules
+```
+
+**If you prefer not to install it**
+
+Use the `--skip-update-hosts-file` flag:
+
 ```bash
 wpstaging add https://mysite.local --skip-update-hosts-file
 ```
 
-Note: When using `--skip-update-hosts-file`, you will need to manually add entries to your `/etc/hosts` file for local development.
+You then need to add the entries to your hosts file yourself.
 
 ---
 
@@ -3726,4 +3762,4 @@ Tip: for the fastest sync, exclude the site's synced folder from Windows Defende
 
 ---
 
-**Last Updated:** 2026-07-29 08:10:42 UTC
+**Last Updated:** 2026-08-09 17:31:05 UTC

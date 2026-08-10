@@ -10,8 +10,8 @@
 - [switch-php](#command-switch-php)
 - [switch-wp](#command-switch-wp)
 - [magic-link](#command-magic-link)
-- [sync-status](#command-sync-status)
 - [open](#command-open)
+- [sync-status](#command-sync-status)
 - [extract](#command-extract)
 - [restore](#command-restore)
 - [dump-header](#command-dump-header)
@@ -34,6 +34,7 @@
 - [docker-start](#command-docker-start)
 - [docker-image](#command-docker-image)
 - [diagnostics](#command-diagnostics)
+- [sudo-rules](#command-sudo-rules)
 - [register](#command-register)
 - [update](#command-update)
 - [uninstall](#command-uninstall)
@@ -48,8 +49,8 @@
 - [shell-db](#hidden-command-shell-db)
 - [sweep-ca-trust](#hidden-command-sweep-ca-trust)
 - [compose-info](#hidden-command-compose-info)
-- [dump-all-help](#hidden-command-dump-all-help)
 - [sudo-keepalive](#hidden-command-sudo-keepalive)
+- [dump-all-help](#hidden-command-dump-all-help)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -80,8 +81,8 @@ Site Commands:
   switch-php            Switch PHP version for a site
   switch-wp             Switch WordPress version for a site
   magic-link            Issue a fresh wp-admin auto-login URL for a site
-  sync-status           Show a fast-mode site's file sync status
   open                  Open a site's files in the file manager
+  sync-status           Show a fast-mode site's file sync status
 
 Backup Commands:
   extract               Extract files, database, or metadata from a WP STAGING backup
@@ -108,6 +109,7 @@ Docker Commands:
   docker-start          Start the supported Docker runtime and wait for the daemon
   docker-image          Check and pull the Docker images required to run a site
   diagnostics           Print setup and site details for support
+  sudo-rules            Allow hosts file, network and Docker changes without a password
 
 Other Commands:
   register              Activate your WP Staging Pro license
@@ -210,6 +212,10 @@ Other Flags:
       --fast-mode                   Windows only: speed up the webroot with a Docker volume synced to a browsable directory (on by default)
       --label string                Friendly site label (defaults to the hostname)
       --from string                 Backup file path or remote URL (http/https) to restore after site creation
+      --db-batch-size int           Database insert batch size (default "1000")
+      --db-commit-mb int            Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
+      --db-insert-single            Use single-row INSERT statement per query
+      --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --force-download              Download the backup again instead of using the cached file
 
 ```
@@ -320,6 +326,10 @@ WordPress Flags:
 Other Flags:
       --skip-warmup                 Skip warming up the site after it starts
       --from string                 Backup file path or remote URL (http/https) to restore after reset
+      --db-batch-size int           Database insert batch size (default "1000")
+      --db-commit-mb int            Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
+      --db-insert-single            Use single-row INSERT statement per query
+      --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --force-download              Download the backup again instead of using the cached file
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
@@ -400,25 +410,6 @@ Other Flags:
 
 ```
 
-<a name="command-sync-status"></a>
-# Command: sync-status
-
-```
-Show the file sync status for a Windows fast-mode site.
-
-Reports whether the browsable directory is in sync with the site's webroot volume.
-
-Usage:
-  wpstaging sync-status <hostname> [flags]
-
-Examples:
-  wpstaging sync-status mysite.local
-
-Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
-
-```
-
 <a name="command-open"></a>
 # Command: open
 
@@ -432,6 +423,25 @@ Usage:
 
 Examples:
   wpstaging open mysite.local
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
+<a name="command-sync-status"></a>
+# Command: sync-status
+
+```
+Show the file sync status for a Windows fast-mode site.
+
+Reports whether the browsable directory is in sync with the site's webroot volume.
+
+Usage:
+  wpstaging sync-status <hostname> [flags]
+
+Examples:
+  wpstaging sync-status mysite.local
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
@@ -543,7 +553,9 @@ Flags:
       --db-innodb-strict-mode     Enable InnoDB strict mode (off by default during restore)
       --db-file string            Use the extracted backup SQL file to resume database restoration
       --db-batch-size int         Database insert batch size (default "1000")
+      --db-commit-mb int          Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
       --db-insert-single          Use single-row INSERT statement per query
+      --db-count-queries          Count all queries first to show the total in progress output (slower start)
       --db-timeout string         Database connection timeout (default "15s")
       --verify                    Verify integrity of extracted files
       --skip-extract              Skip extraction if files already exist
@@ -1092,6 +1104,37 @@ Env Flags:
 
 ```
 
+<a name="command-sudo-rules"></a>
+# Command: sudo-rules
+
+```
+Install a sudo configuration file so WP Staging CLI can update the
+hosts file without asking for a password each time. On macOS it also
+covers the loopback addresses, and on Linux starting the Docker service.
+Installing it asks for your password once.
+
+Only the exact commands needed are allowed, and only for your user.
+Any program running as your user can then change those files without
+a password. Use --dry-run to see the file first, --status to check
+whether it is installed, and --remove to undo it.
+
+Usage:
+  wpstaging sudo-rules [flags]
+
+Examples:
+  wpstaging sudo-rules
+  wpstaging sudo-rules --dry-run
+  wpstaging sudo-rules --status
+  wpstaging sudo-rules --remove
+
+
+Other Flags:
+      --dry-run   Print what would change without changing anything
+      --remove    Remove the sudo configuration file
+      --status    Show whether the sudo configuration file is installed
+
+```
+
 <a name="command-register"></a>
 # Command: register
 
@@ -1363,22 +1406,6 @@ Env Flags:
 
 ```
 
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
-
-```
-Display help for all commands and flags
-
-Usage:
-  wpstaging dump-all-help [flags]
-
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
-
-```
-
 <a name="hidden-command-sudo-keepalive"></a>
 ## Hidden Command: sudo-keepalive
 
@@ -1400,7 +1427,23 @@ Flags:
 
 ```
 
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
+
+```
+Display help for all commands and flags
+
+Usage:
+  wpstaging dump-all-help [flags]
+
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
+
+```
+
 
 ---
 
-*Generated on 2026-07-29 08:11:23 UTC*
+*Generated on 2026-08-10 11:29:47 UTC*
