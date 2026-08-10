@@ -96,6 +96,7 @@ _wp_staging_cli() {
         start
         status
         stop
+        sudo-rules
         switch-php
         switch-wp
         sync-status
@@ -191,7 +192,9 @@ _wp_staging_cli() {
         --db-innodb-strict-mode
         --db-file
         --db-batch-size
+        --db-commit-mb
         --db-insert-single
+        --db-count-queries
         --db-timeout
         --verify
         --skip-extract
@@ -249,6 +252,10 @@ _wp_staging_cli() {
         --multisite
         --subdomains
         --from
+        --db-batch-size
+        --db-commit-mb
+        --db-insert-single
+        --db-count-queries
         --force-download
         --skip-warmup
         --fast-mode
@@ -258,6 +265,10 @@ _wp_staging_cli() {
     reset_opts="
         --env-path
         --from
+        --db-batch-size
+        --db-commit-mb
+        --db-insert-single
+        --db-count-queries
         --force-download
         --wp
         --disable-mailpit
@@ -569,6 +580,9 @@ _wp_staging_cli() {
         sweep-ca-trust)
             COMPREPLY=( $(compgen -W "--env-path --dry-run --include-legacy ${general_opts}" -- "${cur}") )
             ;;
+        sudo-rules)
+            COMPREPLY=( $(compgen -W "--dry-run --remove --status ${general_opts}" -- "${cur}") )
+            ;;
         docker-start)
             COMPREPLY=( $(compgen -W "--timeout --status ${general_opts}" -- "${cur}") )
             ;;
@@ -606,6 +620,10 @@ _wp_staging_cli() {
             ;;
         --php)
             COMPREPLY=( $(compgen -W "7.4 8.1 8.2 8.3 8.4" -- "${cur}") )
+            return
+            ;;
+        --db-commit-mb)
+            COMPREPLY=( $(compgen -W "2 8 16 32 64" -- "${cur}") )
             return
             ;;
         --db-ssl-mode)

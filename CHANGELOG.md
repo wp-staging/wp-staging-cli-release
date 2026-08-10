@@ -1,3 +1,17 @@
+## v1.14.0 (2026-08-10)
+
+- **New:** Introduce the `sudo-rules` command to stop password prompts when adding sites or starting Docker (#456).
+- **New:** Add `--db-count-queries` to show the total query count in restore progress (#450).
+- **New:** Add `--db-commit-mb` to set how much data a database restore writes before each commit (#450).
+- **Enh:** The update notice in JSON output now lists the current and latest version as separate fields (#448).
+- **Enh:** Speed up database restores by removing the file scan and redrawing progress less often (#450).
+- **Enh:** Add `--db-batch-size`, `--db-insert-single`, and `--db-count-queries` to `add` and `reset` for backup restores (#450).
+- **Enh:** Adding a subsite manually in WordPress now shows a notice with the next step (#455).
+- **Fix:** The FAQ steps for passwordless sudo allowed more than needed and now use the `sudo-rules` command (#456).
+- **Fix:** `reconfigure` and `generate-docker-file` now keep the subsite domains of a multisite network (#452).
+- **Fix:** Adminer and subsite addresses now point to the right site when one site name ends with another (#461).
+- **Dev:** The User-Agent header now reports the operating system and architecture the CLI runs on (#448).
+
 ## v1.13.3 (2026-08-03)
 
 - **Enh:** Restoring a multisite network now gives subsites shorter local domains (#429).

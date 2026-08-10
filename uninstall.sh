@@ -18,13 +18,14 @@
 set -e
 
 # Configuration
+SUDO_RULES_FILE="/etc/sudoers.d/wpstaging"
 COMPLETION_DIR_USER="${HOME}/.local/share/bash-completion/completions"
 COMPLETION_DIR_SYSTEM="/etc/bash_completion.d"
 ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
-SCRIPT_VERSION="20260430-154943"
+SCRIPT_VERSION="20260808-193532"
 
 # Colors for output
 RED='\033[0;31m'
@@ -325,6 +326,24 @@ remove_cache() {
     done
 }
 
+# Remove the sudoers drop-in written by `wpstaging sudo-rules`.
+remove_sudo_rules() {
+    [ -f "$SUDO_RULES_FILE" ] || return 0
+
+    # set -e is active, so a failed removal must not abort the uninstaller.
+    if [ "$(id -u)" = "0" ]; then
+        rm -f "$SUDO_RULES_FILE" 2>/dev/null || true
+    elif command_exists sudo; then
+        sudo rm -f "$SUDO_RULES_FILE" 2>/dev/null || true
+    fi
+
+    if [ -f "$SUDO_RULES_FILE" ]; then
+        warning "Could not remove $SUDO_RULES_FILE. Remove it manually."
+    else
+        success "✓ Removed sudo configuration file: $SUDO_RULES_FILE"
+    fi
+}
+
 # Check for existing dockerized sites and offer cleanup.
 # Uses WPSTG_BINARY env var (set by caller) to avoid running a foreign binary.
 check_and_cleanup_sites() {
@@ -554,6 +573,11 @@ main() {
     # Remove cache
     info "Removing cache and working directories..."
     remove_cache
+
+    echo ""
+
+    info "Removing sudo configuration file..."
+    remove_sudo_rules
 
     echo ""
 
