@@ -23,6 +23,9 @@ _wp_staging_cli_hint_text() {
         shell-db)
             printf 'Examples:\n  wpstaging shell-db newsite.local\n  wpstaging shell-db newsite.local root'
             ;;
+        wp)
+            printf 'Examples:\n  wpstaging wp newsite.local plugin list --format=json\n  wpstaging wp newsite.local option get siteurl'
+            ;;
         switch-php)
             printf 'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
@@ -106,6 +109,7 @@ _wp_staging_cli() {
         update-subdomains
         update-hosts-file
         verify-cert
+        wp
     "
 
     # Clean subcommands
@@ -195,6 +199,7 @@ _wp_staging_cli() {
         --db-commit-mb
         --db-insert-single
         --db-count-queries
+        --subsite-map
         --db-timeout
         --verify
         --skip-extract
@@ -256,6 +261,7 @@ _wp_staging_cli() {
         --db-commit-mb
         --db-insert-single
         --db-count-queries
+        --subsite-map
         --force-download
         --skip-warmup
         --fast-mode
@@ -269,6 +275,7 @@ _wp_staging_cli() {
         --db-commit-mb
         --db-insert-single
         --db-count-queries
+        --subsite-map
         --force-download
         --wp
         --disable-mailpit
@@ -309,9 +316,10 @@ _wp_staging_cli() {
         --skip-warmup
     "
 
-    # magic-link <hostname> [--timeout MINUTES]
+    # magic-link <hostname> [--timeout MINUTES] [--redirect PAGE]
     magic_link_opts="
         --timeout
+        --redirect
     "
 
     # All other dockerize subcommands (except shell-db and reinstall-cert):
@@ -473,6 +481,18 @@ _wp_staging_cli() {
             else
                 # All dockerize flags hidden in Go; only general opts apply.
                 COMPREPLY=( $(compgen -W "${general_opts}" -- "${cur}") )
+            fi
+            ;;
+        wp)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # First positional: hostname
+                COMPREPLY=()
+            elif [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            else
+                # Everything after the hostname belongs to WP-CLI.
+                COMPREPLY=()
             fi
             ;;
         reset)

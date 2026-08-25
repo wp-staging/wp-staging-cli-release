@@ -35,6 +35,7 @@
 - [docker-image](#command-docker-image)
 - [diagnostics](#command-diagnostics)
 - [sudo-rules](#command-sudo-rules)
+- [wp](#command-wp)
 - [register](#command-register)
 - [update](#command-update)
 - [uninstall](#command-uninstall)
@@ -49,8 +50,8 @@
 - [shell-db](#hidden-command-shell-db)
 - [sweep-ca-trust](#hidden-command-sweep-ca-trust)
 - [compose-info](#hidden-command-compose-info)
-- [sudo-keepalive](#hidden-command-sudo-keepalive)
 - [dump-all-help](#hidden-command-dump-all-help)
+- [sudo-keepalive](#hidden-command-sudo-keepalive)
 
 <a name="root-command"></a>
 # Root Command Help
@@ -110,6 +111,7 @@ Docker Commands:
   docker-image          Check and pull the Docker images required to run a site
   diagnostics           Print setup and site details for support
   sudo-rules            Allow hosts file, network and Docker changes without a password
+  wp                    Run one WP-CLI command in a site and exit
 
 Other Commands:
   register              Activate your WP Staging Pro license
@@ -216,6 +218,7 @@ Other Flags:
       --db-commit-mb int            Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
       --db-insert-single            Use single-row INSERT statement per query
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
+      --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
       --force-download              Download the backup again instead of using the cached file
 
 ```
@@ -330,6 +333,7 @@ Other Flags:
       --db-commit-mb int            Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
       --db-insert-single            Use single-row INSERT statement per query
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
+      --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
       --force-download              Download the backup again instead of using the cached file
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
@@ -395,18 +399,24 @@ minutes (up to 24 hours); without the flag the new link uses the
 site default from .env, or 15 minutes when the site has none. The
 site default is set with --magic-link-timeout on add/reset/reconfigure.
 
+Use --redirect to land on a wp-admin page instead of the dashboard.
+The value is a page path relative to wp-admin, such as
+admin.php?page=wpstg_backup.
+
 Usage:
   wpstaging magic-link <hostname> [flags]
 
 Examples:
   wpstaging magic-link mysite.local
   wpstaging magic-link mysite.local --timeout=60
+  wpstaging magic-link mysite.local --redirect='admin.php?page=wpstg_backup'
 
 Env Flags:
       --env-path string   Path to store docker environments (default: ~/wpstaging)
 
 Other Flags:
       --timeout int       One-shot token lifetime in minutes (default "15")
+      --redirect string   Open a wp-admin page instead of the dashboard (e.g. admin.php?page=wpstg_backup)
 
 ```
 
@@ -562,6 +572,7 @@ Flags:
       --download-dir string       Directory for downloaded backup files (default: ./wpstaging-download)
       --force-download            Download the backup again instead of using the cached file
       --from string               Backup file path or remote URL (http/https)
+      --subsite-map stringArray   Set a subsite's destination host, repeatable (old.example.com=new.example.local)
 
 Wordpress DB-related Flags:
   This flags overrides the DB-related configuration parsed from the wp-config.php file.
@@ -1135,6 +1146,37 @@ Other Flags:
 
 ```
 
+<a name="command-wp"></a>
+# Command: wp
+
+```
+Run a single WP-CLI command inside the site's PHP container and exit.
+
+Everything after the hostname is passed to WP-CLI unchanged, so flags written
+there belong to WP-CLI. Flags written before the hostname belong to
+WP Staging CLI.
+
+Standard output carries only WP-CLI output, so it can be read by another
+program. Errors go to standard error, and the exit code is the one WP-CLI
+returned.
+
+The site must be running. Start it with `wpstaging start <hostname>`.
+
+Usage:
+  wpstaging wp [flags] <hostname> [wp-cli arguments...]
+
+Examples:
+  wpstaging wp mysite.local plugin list --format=json
+  wpstaging wp mysite.local option get siteurl
+  wpstaging wp mysite.local db query "SELECT COUNT(*) FROM wp_posts"
+  wpstaging wp mysite.local --url=sub.mysite.local plugin list
+  wpstaging wp --env-path /custom/path mysite.local core version
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+```
+
 <a name="command-register"></a>
 # Command: register
 
@@ -1406,6 +1448,22 @@ Env Flags:
 
 ```
 
+<a name="hidden-command-dump-all-help"></a>
+## Hidden Command: dump-all-help
+
+```
+Display help for all commands and flags
+
+Usage:
+  wpstaging dump-all-help [flags]
+
+Flags:
+  -h, --help       help for dump-all-help
+      --html       Output in HTML format
+      --markdown   Output in Markdown format
+
+```
+
 <a name="hidden-command-sudo-keepalive"></a>
 ## Hidden Command: sudo-keepalive
 
@@ -1427,23 +1485,7 @@ Flags:
 
 ```
 
-<a name="hidden-command-dump-all-help"></a>
-## Hidden Command: dump-all-help
-
-```
-Display help for all commands and flags
-
-Usage:
-  wpstaging dump-all-help [flags]
-
-Flags:
-  -h, --help       help for dump-all-help
-      --html       Output in HTML format
-      --markdown   Output in Markdown format
-
-```
-
 
 ---
 
-*Generated on 2026-08-10 11:29:47 UTC*
+*Generated on 2026-08-17 15:31:48 UTC*

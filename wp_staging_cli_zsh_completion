@@ -34,6 +34,9 @@ _wpstaging_hint() {
         shell-db)
             _message -r $'Examples:\n  wpstaging shell-db newsite.local\n  wpstaging shell-db newsite.local root'
             ;;
+        wp)
+            _message -r $'Examples:\n  wpstaging wp newsite.local plugin list --format=json\n  wpstaging wp newsite.local option get siteurl'
+            ;;
         switch-php)
             _message -r $'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
@@ -100,6 +103,7 @@ _wpstaging() {
         'update-subdomains:Sync subdomain multisite hostnames from WordPress'
         'update-hosts-file:Update /etc/hosts'
         'verify-cert:Audit SSL certificate trust state'
+        'wp:Run one WP-CLI command in a site and exit'
     )
 
     local -a clean_subcommands
@@ -193,6 +197,7 @@ _wpstaging() {
         '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
+        '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--db-timeout[Database timeout]:timeout:'
         '--verify[Verify extracted files]'
         '--skip-extract[Skip extraction]'
@@ -254,6 +259,7 @@ _wpstaging() {
         '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
+        '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--force-download[Download the backup again instead of using the cached file]'
         '--skip-warmup[Skip warming up the site after it starts]'
         '--fast-mode[Windows: fast Docker-volume webroot mirrored to a browsable folder (on by default on Windows; =false to opt out)]'
@@ -268,6 +274,7 @@ _wpstaging() {
         '--db-commit-mb[Commit size in megabytes]:mb:(2 8 16 32 64)'
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
+        '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--force-download[Download the backup again instead of using the cached file]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
@@ -311,10 +318,11 @@ _wpstaging() {
         '--skip-warmup[Skip warming up the site after it starts]'
     )
 
-    # magic-link <hostname> [--timeout MINUTES]
+    # magic-link <hostname> [--timeout MINUTES] [--redirect PAGE]
     local -a magic_link_opts
     magic_link_opts=(
         '--timeout[One-shot token lifetime in minutes]:minutes:'
+        '--redirect[Open a wp-admin page instead of the dashboard]:page:'
     )
 
     # All other dockerize subcommands (except shell-db and reinstall-cert):
@@ -469,6 +477,14 @@ _wpstaging() {
                         '2::root:(root)' \
                         $general_opts
                     ;;
+                wp)
+                    # Everything after the hostname belongs to WP-CLI.
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        '*::wp-cli arguments:' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
                 reset)
                     _arguments \
                         '1:hostname:_wpstaging_hint' \
@@ -526,7 +542,7 @@ _wpstaging() {
                         $reconfigure_opts
                     ;;
                 magic-link)
-                    # magic-link <hostname> [--timeout MINUTES]
+                    # magic-link <hostname> [--timeout MINUTES] [--redirect PAGE]
                     _arguments \
                         '1:hostname:' \
                         $general_opts \
