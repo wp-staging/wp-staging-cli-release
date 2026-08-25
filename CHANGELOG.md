@@ -1,3 +1,14 @@
+## v1.15.0 (2026-08-25)
+
+- **New:** Add the `wp` command to run a single WP-CLI command in a site and read its output from a script (#460).
+- **Enh:** `list --json` now reports each site's container names and the WordPress path inside the container (#460).
+- **Enh:** Add `--redirect` to `magic-link` so the link opens a wp-admin page instead of the dashboard (#459).
+- **Fix:** A site now switches to a free IP address when a container outside WP Staging has taken the saved address (#466).
+- **Fix:** A network restore now stops with a clear message when the destination uses an IP address instead of a hostname (#468).
+- **Fix:** Set a destination host for each subsite with the new `--subsite-map` option on restore, add, and reset (#468).
+- **Fix:** Restoring a backup into a multisite network now keeps the tables and views of the other subsites (#470).
+- **Dev:** The macOS-only code paths can now be switched on and off in tests, so the unit tests give the same result on macOS and on Linux.
+
 ## v1.14.0 (2026-08-10)
 
 - **New:** Introduce the `sudo-rules` command to stop password prompts when adding sites or starting Docker (#456).

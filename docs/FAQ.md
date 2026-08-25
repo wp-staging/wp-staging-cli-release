@@ -1816,6 +1816,43 @@ When you restore a full network backup, each subsite gets a short local domain t
 
 If a subsite's local domain would match the main site, another subsite, or a site you already have on this machine, the CLI keeps the full old domain so no two sites use the same local domain. In that case `shop.example.test` becomes `shop.example.test.main.example.local`.
 
+<a name="q74h"></a>
+**Q74h: Can I choose the local domain for a subsite myself?**  
+**A74h:**
+Yes. Use `--subsite-map` to set the local domain for one subsite. Write the old domain, an equals sign, then the new domain:
+
+```bash
+wpstaging restore --path=/var/www/html \
+  --subsite-map shop.example.com=shop.local \
+  --subsite-map eu.example.com=eu.local \
+  backup.wpstg
+```
+
+Repeat the flag once per subsite. A comma-separated list does not work. The flag also works with `add --from` and `reset --from`. Domains are matched without regard to upper or lower case.
+
+Any subsite you do not list keeps the local domain the CLI picks for it. See [Q74g](#q74g) for how that domain is built. You choose these domains yourself, so make sure each one resolves on your machine.
+
+Every subsite needs its own domain. The CLI stops with an error if you point two subsites at the same domain, or at a domain the main site or another site on your machine already uses.
+
+To see the subsite domains stored in a backup, run:
+
+```bash
+wpstaging dump-metadata backup.wpstg
+```
+
+The `sites` list shows one `domain` per subsite. The first entry is the main site and does not need `--subsite-map`.
+
+<a name="q74i"></a>
+**Q74i: My network restore stopped and said the destination uses an address. Why?**  
+**A74i:**
+A subsite domain cannot be built from an IP address, so the restore stops instead of writing broken domains. This happens when the WordPress network you restore into uses an address such as `127.3.2.5` as its own domain, instead of a name.
+
+Your existing database tables are not changed. Files from the backup are already restored at that point.
+
+The message lists every subsite that needs a domain. Give each one a domain with `--subsite-map`, then run the command again. See [Q74h](#q74h).
+
+Sites created with `wpstaging add` always use a local domain name, so this does not happen to them.
+
 <a name="q75"></a>
 **Q75: Can I restore only the database without files?**  
 **A75:**
@@ -3762,4 +3799,40 @@ Tip: for the fastest sync, exclude the site's synced folder from Windows Defende
 
 ---
 
-**Last Updated:** 2026-08-09 17:31:05 UTC
+<a name="q133"></a>
+**Q133: How do I run a single WP-CLI command on a site?**  
+**A133:**
+Use the `wp` command. Everything after the hostname goes to WP-CLI unchanged:
+
+```bash
+wpstaging wp mysite.local plugin list --format=json
+wpstaging wp mysite.local option get siteurl
+wpstaging wp mysite.local db query "SELECT COUNT(*) FROM wp_posts"
+```
+
+Standard output carries only WP-CLI output, so you can read the result in a script:
+
+```bash
+plugins=$(wpstaging wp mysite.local plugin list --format=json)
+```
+
+Errors go to standard error, and the exit code is the one WP-CLI returned. There is no time limit, so a long `db export` or `search-replace` runs to the end.
+
+The site must be running first. The `wp` command never starts it for you:
+
+```bash
+wpstaging start mysite.local
+```
+
+Flags before the hostname belong to `wpstaging`. Flags after it belong to WP-CLI. This matters when both accept the same name, such as `--quiet`:
+
+```bash
+wpstaging wp --env-path /custom/path mysite.local plugin list   # --env-path is wpstaging's
+wpstaging wp mysite.local plugin list --quiet                   # --quiet is WP-CLI's
+```
+
+For an interactive session with many commands, use `wpstaging shell mysite.local` instead.
+
+---
+
+**Last Updated:** 2026-08-17 16:39:03 UTC
