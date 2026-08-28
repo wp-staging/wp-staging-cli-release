@@ -232,6 +232,12 @@ List WordPress sites in the Docker environment.
 If hostnames are provided, shows details for those specific sites.
 If no hostname is provided, lists all sites with their status.
 
+--filter keeps the sites matching a term, ignoring case. A plain term is
+searched in the host name, label, address, status, PHP version, site type,
+and subsites. A term written as field:value searches one field only: name,
+label, url, path, status, php, type, and the on/off fields enabled,
+running, adminer, mailpit, and magic-link. Repeat --filter to narrow further.
+
 Usage:
   wpstaging list [hostname...] [flags]
 
@@ -239,9 +245,15 @@ Examples:
   wpstaging list                           # List all sites
   wpstaging list mysite.local              # Show details for specific site
   wpstaging list site1.local site2.local   # Show details for multiple sites
+  wpstaging list --filter=shop             # Show sites matching "shop"
+  wpstaging list --filter=status:stopped   # Show stopped sites only
+  wpstaging list --filter=shop --filter=adminer:off
 
 Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+      --env-path string      Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --filter stringArray   Show only the sites matching a term, e.g. shop or status:stopped (repeat to narrow)
 
 ```
 
@@ -762,6 +774,11 @@ Display the status of Docker containers.
 If hostnames are provided, shows status for those specific sites.
 If no hostname is provided, shows status for all sites.
 
+--filter keeps the containers matching a term, ignoring case. A plain term
+is searched in the container name, status, and ports. A term written as
+field:value searches one field only: name, status, or ports. Repeat
+--filter to narrow further.
+
 Usage:
   wpstaging status [hostname...] [flags]
 
@@ -769,9 +786,14 @@ Examples:
   wpstaging status                           # Show all sites status
   wpstaging status mysite.local              # Show specific site status
   wpstaging status site1.local site2.local   # Show status for multiple sites
+  wpstaging status --filter=nginx            # Show nginx containers only
+  wpstaging status --filter=status:stopped   # Show stopped containers only
 
 Env Flags:
-      --env-path string   Path to store docker environments (default: ~/wpstaging)
+      --env-path string      Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --filter stringArray   Show only the containers matching a term, e.g. nginx or status:running (repeat to narrow)
 
 ```
 
@@ -1488,4 +1510,4 @@ Flags:
 
 ---
 
-*Generated on 2026-08-17 15:31:48 UTC*
+*Generated on 2026-08-24 17:09:16 UTC*

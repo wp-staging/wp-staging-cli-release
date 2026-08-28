@@ -1461,10 +1461,13 @@ wpstaging add site2.local
 wpstaging list                           # List all sites
 wpstaging list site1.local               # Show details for one site
 wpstaging list site1.local site2.local   # Show details for multiple sites
+wpstaging list --filter=shop             # Show only the sites matching "shop"
+wpstaging list --filter=status:stopped   # Show only the stopped sites
 
 # Check status
 wpstaging status                           # Show all sites status
 wpstaging status site1.local site2.local   # Show status for specific sites
+wpstaging status --filter=nginx            # Show only the nginx containers
 
 # Manage individual sites
 wpstaging stop site1.local
@@ -3835,4 +3838,4 @@ For an interactive session with many commands, use `wpstaging shell mysite.local
 
 ---
 
-**Last Updated:** 2026-08-17 16:39:03 UTC
+**Last Updated:** 2026-08-24 17:09:25 UTC
