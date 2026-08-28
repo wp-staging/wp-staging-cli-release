@@ -55,7 +55,7 @@ _wp_staging_cli_maybe_hint() {
 
 _wp_staging_cli() {
     local cur prev commands general_opts restore_opts only_opts skip_opts
-    local add_opts reset_opts env_path_only_opts root_only_opts
+    local add_opts reset_opts env_path_only_opts root_only_opts filter_opts
     COMPREPLY=()
 
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -322,6 +322,9 @@ _wp_staging_cli() {
         --redirect
     "
 
+    # list/status [--filter TERM]
+    filter_opts="--filter"
+
     # All other dockerize subcommands (except shell-db and reinstall-cert):
     # only --env-path is visible. Other registered flags (--compose-file,
     # --container-ip, --skip-update-hosts-file, etc.) are hidden in Go.
@@ -424,11 +427,11 @@ _wp_staging_cli() {
         list)
             # list [hostname...] — hostname is optional (no hostname = all).
             # No hint: the command runs with zero args, so flag completion must work.
-            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts} ${filter_opts}" -- "${cur}") )
             ;;
         status)
             # status [hostname...] — hostname is optional (no hostname = all).
-            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts} ${filter_opts}" -- "${cur}") )
             ;;
         update-subdomains|usub)
             _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return

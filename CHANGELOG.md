@@ -1,8 +1,18 @@
+## v1.15.1 (2026-08-28)
+
+- **Fix:** A restore now keeps email addresses that use the site domain (#483).
+- **Fix:** A network restore now uses the bare hostname only for the rows that store one (#486).
+- **Fix:** `--php` now only accepts a PHP version that WP Staging offers (#481).
+- **Fix:** A failed image download now shows the reason from the registry (#481).
+- **Fix:** `list` now shows the correct directory for each site when several site names are given (#484).
+- **Dev:** The unit tests now run on macOS as well as Linux, so a macOS-only failure is caught before a release (#479).
+
 ## v1.15.0 (2026-08-25)
 
 - **New:** Add the `wp` command to run a single WP-CLI command in a site and read its output from a script (#460).
 - **Enh:** `list --json` now reports each site's container names and the WordPress path inside the container (#460).
 - **Enh:** Add `--redirect` to `magic-link` so the link opens a wp-admin page instead of the dashboard (#459).
+- **Enh:** Add `--filter` to `list` and `status` to show only the sites or containers matching a term (#471).
 - **Fix:** A site now switches to a free IP address when a container outside WP Staging has taken the saved address (#466).
 - **Fix:** A network restore now stops with a clear message when the destination uses an IP address instead of a hostname (#468).
 - **Fix:** Set a destination host for each subsite with the new `--subsite-map` option on restore, add, and reset (#468).

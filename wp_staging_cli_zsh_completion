@@ -325,6 +325,12 @@ _wpstaging() {
         '--redirect[Open a wp-admin page instead of the dashboard]:page:'
     )
 
+    # list/status [--filter TERM]
+    local -a filter_opts
+    filter_opts=(
+        '*--filter[Show only the entries matching a term]:term:'
+    )
+
     # All other dockerize subcommands (except shell-db and reinstall-cert):
     # only --env-path is visible. Other registered flags (--compose-file,
     # --container-ip, --skip-update-hosts-file, etc.) are hidden in Go.
@@ -447,14 +453,16 @@ _wpstaging() {
                     _arguments \
                         '*:hostname:' \
                         $general_opts \
-                        $env_path_only_opts
+                        $env_path_only_opts \
+                        $filter_opts
                     ;;
                 status)
                     # status [hostname...] — hostname is optional.
                     _arguments \
                         '*:hostname:' \
                         $general_opts \
-                        $env_path_only_opts
+                        $env_path_only_opts \
+                        $filter_opts
                     ;;
                 del)
                     # del [hostname...] — hostname is optional (no hostname = delete all).
