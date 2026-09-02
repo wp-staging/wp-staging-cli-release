@@ -25,6 +25,10 @@
 #   -e, --extract DIR        Extract all files to directory (no installation)
 #   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
 #   -V, --print-version      Print installer build and latest release version, then exit
+#   -h, --help               Print the supported options, then exit
+#
+# An unknown option is an error: the installer prints the option it did not
+# recognize and exits without installing anything.
 #
 # Environment variables (for testing only — do not set in production):
 #   GITHUB_API_URL    Override GitHub API base URL
@@ -53,7 +57,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
-SCRIPT_VERSION="20260601-163103"
+SCRIPT_VERSION="20260829-151332"
 
 # Colors for output
 RED='\033[0;31m'
@@ -101,6 +105,36 @@ print_version_and_exit() {
     else
         echo "  latest release: unknown (could not fetch from GitHub)"
     fi
+
+    exit 0
+}
+
+print_usage_and_exit() {
+    cat <<'USAGE'
+WP Staging CLI Installer
+
+Usage:
+  curl -fsSL https://wp-staging.com/install.sh | sh
+  curl -fsSL https://wp-staging.com/install.sh | sh -s -- [options]
+  sh install.sh [options]
+
+Options:
+  -v, --version VERSION    Install a specific version (e.g. 1.4.0, 1.4.0-beta.1)
+  -l, --license KEY        Register a license key after installation
+  -d, --bin-dir DIR        Install the binary to a custom directory
+  -e, --extract DIR        Extract all files to a directory, without installing
+  -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
+  -V, --print-version      Print the installer build and the latest release, then exit
+  -h, --help               Print this help, then exit
+
+--bin-dir and --extract cannot be used together.
+
+Examples:
+  sh -s -- -v 1.4.0                     Install version 1.4.0
+  sh -s -- -l YOUR_LICENSE_KEY          Install the latest version and register a license
+  sh -s -- -d /opt/mytools              Install the binary to /opt/mytools
+  sh -s -- -e /tmp/wpstaging-files      Extract the files without installing them
+USAGE
 
     exit 0
 }
@@ -683,8 +717,20 @@ validate_version() {
 main() {
     # Early --print-version short-circuit: print and exit before the banner so
     # the smoke-test output stays clean for piping through grep / jq / etc.
+    _skip_value=false
     for _arg in "$@"; do
+        if [ "$_skip_value" = true ]; then
+            _skip_value=false
+            continue
+        fi
+
         case "$_arg" in
+            --license | -l | --version | -v | --bin-dir | -d | --extract | -e | --cli-args | -a)
+                _skip_value=true
+                ;;
+            --help | -h)
+                print_usage_and_exit
+                ;;
             --print-version | -V)
                 print_version_and_exit
                 ;;
@@ -703,6 +749,9 @@ main() {
 
     while [ $# -gt 0 ]; do
         case "$1" in
+            --help | -h)
+                print_usage_and_exit
+                ;;
             --print-version | -V)
                 print_version_and_exit
                 ;;
@@ -747,12 +796,10 @@ main() {
                 shift 2
                 ;;
             -*)
-                warning "Unknown option: $1"
-                shift
+                error "Unknown option: $1. Run with --help to see the supported options."
                 ;;
             *)
-                warning "Unknown argument: $1"
-                shift
+                error "Unexpected argument: $1. Run with --help to see the supported options."
                 ;;
         esac
     done

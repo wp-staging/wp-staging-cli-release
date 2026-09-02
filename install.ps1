@@ -27,6 +27,7 @@
 #                           (Note: bash and cmd installers also accept the short form -V;
 #                            PowerShell cannot, because -v is already the install-version
 #                            short flag and PowerShell aliases are case-insensitive.)
+#   -h, -Help               Print the supported options, then exit
 #
 # Environment variables (for testing only -- do not set in production):
 #   GITHUB_API_URL    Override GitHub API base URL
@@ -65,7 +66,11 @@ param(
     [string]$CliArgs = "",
 
     [Parameter(Mandatory=$false)]
-    [switch]$PrintVersion
+    [switch]$PrintVersion,
+
+    [Parameter(Mandatory=$false)]
+    [Alias("h")]
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,7 +80,7 @@ $GitHubApiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https:/
 $GitHubRawUrl = if ($env:GITHUB_RAW_URL) { $env:GITHUB_RAW_URL } else { "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release" }
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
-$ScriptVersion = "20260713-155841"
+$ScriptVersion = "20260828-150951"
 
 # Colors for output - Uses Write-Host for colored console output
 # Note: Write-Host is intentional here as we need console coloring,
@@ -729,6 +734,38 @@ function Main {
             Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
+}
+
+# Early -Help short-circuit: print the supported options and exit before any
+# install actions. PowerShell rejects an unknown parameter on its own, so this
+# only has to cover the case where help was asked for.
+if ($Help) {
+    Write-Output @"
+WP Staging CLI Installer
+
+Usage:
+  irm https://wp-staging.com/install.ps1 | iex
+  .\install.ps1 [options]
+
+Options:
+  -v, -Version VERSION    Install a specific version, e.g. 1.4.0 or 1.4.0-beta.1
+  -l, -License KEY        Register a license key after installation
+  -d, -BinDir DIR         Install the binary to a custom directory
+  -e, -Extract DIR        Extract all files to a directory, without installing
+  -a, -CliArgs ARGS       Extra arguments passed to every wpstaging binary call
+  -PrintVersion           Print the installer build and the latest release, then exit
+  -h, -Help               Print this help, then exit
+
+-BinDir and -Extract cannot be used together.
+
+Examples:
+  .\install.ps1 -v "1.4.0"
+  .\install.ps1 -l "YOUR_LICENSE_KEY"
+  .\install.ps1 -d "C:\mytools"
+  .\install.ps1 -e "C:\tmp\wpstaging-files"
+"@
+
+    exit 0
 }
 
 # Early -PrintVersion short-circuit: print build stamp + latest release, then

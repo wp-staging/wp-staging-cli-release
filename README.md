@@ -88,6 +88,28 @@ curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd -v 1
 
 **Available versions**: See all releases at [GitHub Releases](https://github.com/wp-staging/wp-staging-cli-release/tags)
 
+### See the Installer Options
+
+Run the installer with `--help` to print the options it accepts. Nothing is installed:
+
+**Linux / macOS / WSL:**
+```bash
+curl -fsSL https://wp-staging.com/install.sh | bash -s -- --help
+```
+
+**Windows (PowerShell):**
+```powershell
+& ([scriptblock]::Create((irm https://wp-staging.com/install.ps1))) -Help
+```
+
+**Windows (CMD):**
+```cmd
+curl -fsSL https://wp-staging.com/install.cmd -o install.cmd && install.cmd --help && del install.cmd
+```
+
+An option the installer does not know stops the run with an error, so a typo such as
+`--bindir` never installs to the wrong place.
+
 ### Install to a Custom Directory
 
 Use the `--bin-dir` (`-d`) flag to install the binary to a specific directory instead of the auto-detected location:
