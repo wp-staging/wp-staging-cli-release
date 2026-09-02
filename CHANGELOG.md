@@ -1,3 +1,8 @@
+## v1.15.2 (2026-09-02)
+
+- **New:** The installer now prints the available options when you run it with `--help`. Nothing is installed (#493).
+- **Fix:** The installer now stops with an error when an option is not recognized, instead of installing anyway (#493).
+
 ## v1.15.1 (2026-08-28)
 
 - **Fix:** A restore now keeps email addresses that use the site domain (#483).

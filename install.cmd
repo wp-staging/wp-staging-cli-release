@@ -39,6 +39,11 @@ REM   -l, --license KEY        Register license key after installation
 REM   -d, --bin-dir DIR        Install binary to custom directory
 REM   -e, --extract DIR        Extract all files to directory (no installation)
 REM   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
+REM   -V, --print-version      Print installer build and latest release version, then exit
+REM   -h, --help, -?, /?       Print the supported options, then exit
+REM
+REM An unknown option is an error: the installer prints the option it did not
+REM recognize and exits without installing anything.
 REM
 REM Environment variables (for testing only -- do not set in production):
 REM   GITHUB_API_URL    Override GitHub API base URL
@@ -71,13 +76,17 @@ set LICENSE_KEY=
 set CUSTOM_BIN_DIR=
 set EXTRACT_DIR=
 set CLI_ARGS=
-set SCRIPT_VERSION=20260713-161931
+set SCRIPT_VERSION=20260829-151332
 
 REM Parse arguments
 :parse_args
 if "%~1"=="" goto :done_args
 if "%~1"=="--print-version" goto :do_print_version
 if "%~1"=="-V" goto :do_print_version
+if "%~1"=="--help" goto :do_print_usage
+if "%~1"=="-h" goto :do_print_usage
+if "%~1"=="-?" goto :do_print_usage
+if "%~1"=="/?" goto :do_print_usage
 if "%~1"=="--license" (
     set LICENSE_KEY=%~2
     shift
@@ -138,10 +147,13 @@ if "%~1"=="-a" (
     shift
     goto :parse_args
 )
-REM Unknown argument - show warning and skip
-echo %YELLOW%Warning: Unknown argument: %~1%NC% >&2
-shift
-goto :parse_args
+REM Unknown argument - refuse to install rather than guess what was meant.
+REM The value is echoed through a variable so its metacharacters stay inert.
+set "BAD_ARG=%~1"
+echo(%RED%Error: Unknown option: !BAD_ARG!%NC% >&2
+echo(%YELLOW%Run with --help to see the supported options.%NC% >&2
+endlocal
+exit /b 1
 :done_args
 
 REM Validate CLI_ARGS for unsafe CMD metacharacters to prevent command injection
@@ -652,6 +664,34 @@ echo %BLUE%Documentation:%NC%
 echo   https://github.com/wp-staging/wp-staging-cli-release
 echo.
 
+endlocal
+exit /b 0
+
+REM Print the supported options, then exit. Reachable only via goto from
+REM :parse_args so that the script never falls into it during an install run.
+:do_print_usage
+echo WP Staging CLI Installer
+echo.
+echo Usage:
+echo   curl -fsSL https://wp-staging.com/install.cmd -o install.cmd ^&^& install.cmd [options]
+echo   install.cmd [options]
+echo.
+echo Options:
+echo   -v, --version VERSION    Install a specific version, e.g. 1.4.0 or 1.4.0-beta.1
+echo   -l, --license KEY        Register a license key after installation
+echo   -d, --bin-dir DIR        Install the binary to a custom directory
+echo   -e, --extract DIR        Extract all files to a directory, without installing
+echo   -a, --cli-args ARGS      Extra arguments passed to every wpstaging binary call
+echo   -V, --print-version      Print the installer build and the latest release, then exit
+echo   -h, --help, -?, /?       Print this help, then exit
+echo.
+echo --bin-dir and --extract cannot be used together.
+echo.
+echo Examples:
+echo   install.cmd -v 1.4.0
+echo   install.cmd -l YOUR_LICENSE_KEY
+echo   install.cmd -d C:\mytools
+echo   install.cmd -e C:\tmp\wpstaging-files
 endlocal
 exit /b 0
 
