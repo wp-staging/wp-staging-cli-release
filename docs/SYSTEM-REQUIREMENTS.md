@@ -169,16 +169,18 @@ The following Docker images will be downloaded automatically:
 | Service | Image | Default Version | Configurable |
 |---------|-------|-----------------|--------------|
 | PHP | wpstaging/dockerize | php-8.1 | Yes (`--php`): 7.4, 8.1, 8.2, 8.3, 8.4 |
-| Nginx | nginx | stable-alpine-slim | No |
-| MariaDB | mariadb | 11.8 | No |
+| Nginx (default web server) | nginx | stable-alpine-slim | No |
+| Apache (sites added with `--use-apache`) | httpd | 2.4-alpine | No |
+| MariaDB (default database) | mariadb | 11.8 | Yes (`--db-version`): 10.11, 11.4, 11.8 |
+| MySQL (sites added with `--use-mysql`) | mysql | 8.4 | Yes (`--db-version`): 5.7, 8.4 |
 | Mailpit | axllent/mailpit | latest | No |
 
 ### Network Ports
 
 | Service | Default Port | Purpose | Configurable |
 |---------|--------------|---------|--------------|
-| HTTP (Nginx) | 80 | Web access | `--http-port` |
-| HTTPS (Nginx) | 443 | Secure web access | `--https-port` |
+| Web server HTTP | 80 | Web access | `--http-port` |
+| Web server HTTPS | 443 | Secure web access | `--https-port` |
 | MariaDB | 3306 | Database access | `--db-port` |
 | Mailpit | 8025 | Mail testing UI | `--mailpit-http-port` |
 
@@ -235,9 +237,8 @@ Some operations require elevated privileges:
 | Directory | Purpose | Typical Size |
 |-----------|---------|--------------|
 | `~/wpstaging/sites/<hostname>/` | WordPress site files | ~500 MB per site |
-| `~/wpstaging/stack/mariadb/` | Database data | Varies |
-| `~/wpstaging/stack/localcert/` | SSL certificate authority (new installs) | <1 MB |
-| `~/wpstaging/stack/mkcert/` | Legacy SSL CA (kept for coexistence; safe to remove after `reinstall-ca`) | <1 MB |
+| `~/wpstaging/sites/<hostname>/data/mariadb/` | Database data | Varies |
+| `~/wpstaging/stack/localcert/` | SSL certificate authority | <1 MB |
 | `~/wpstaging/stack/docker/` | Shared Docker scripts | <1 MB |
 
 ### What You Can Do
@@ -435,4 +436,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-05-14 00:00:00 UTC
+**Last Updated:** 2026-09-14 15:09:24 UTC

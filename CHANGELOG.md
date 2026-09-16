@@ -1,3 +1,17 @@
+## v1.16.0 (2026-09-16)
+
+- **New:** Run a site on Apache instead of nginx with `--use-apache` (#495).
+- **New:** Choose the database server with `--use-mysql` and `--db-version` when you add or reset a site (#428).
+- **New:** MariaDB 10.11, 11.4, 11.8 and MySQL 5.7, 8.4 are available. MariaDB 11.8 stays the default (#428).
+- **Enh:** Update the bundled Adminer database UI to v6.0.2, which brings several security fixes (#498).
+- **Enh:** The Adminer database UI no longer checks adminer.org for a newer release, and shows only the bundled version (#498).
+- **Enh:** The older `--nginx-*`, `--mysql-*` and `--mariadb-*` option names were removed (#495).
+- **Fix:** A new site no longer falls back to a self-signed certificate when the local CA key file does not exist (#496).
+- **Fix:** `reinstall-cert` and `reinstall-ca` now fix a site that shows a browser security warning (#496).
+- **Fix:** On Windows, a MySQL site now applies the bundled database settings, including the packet size and the site certificates (#501).
+- **Fix:** `remove`, `reinstall-ca`, `sweep-ca-trust` and `update-hosts-file` now stop with an error when a hostname is given (#502).
+- **Fix:** On Windows, `list` now shows the WordPress version a site runs, instead of `latest` (#503).
+
 ## v1.15.2 (2026-09-02)
 
 - **New:** The installer now prints the available options when you run it with `--help`. Nothing is installed (#493).
