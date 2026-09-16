@@ -232,6 +232,9 @@ _wp_staging_cli() {
         --compose-file
         --container-ip
         --php
+        --use-apache
+        --use-mysql
+        --db-version
         --http-port
         --https-port
         --db-port
@@ -267,7 +270,7 @@ _wp_staging_cli() {
         --fast-mode
     "
 
-    # reset: addPathOnlyFlag + --from + --wp + --disable-mailpit + --disable-adminer
+    # reset: addPathOnlyFlag + --from + --wp + --db-version + --use-mysql + --disable-*
     reset_opts="
         --env-path
         --from
@@ -278,6 +281,8 @@ _wp_staging_cli() {
         --subsite-map
         --force-download
         --wp
+        --db-version
+        --use-mysql
         --disable-mailpit
         --disable-adminer
         --disable-adminer-autologin
@@ -302,8 +307,9 @@ _wp_staging_cli() {
         --magic-link-timeout
     "
 
-    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast
-    # path) and --install-wp-staging-pro (install Pro on an existing site)
+    # reconfigure: generate_docker_file_opts plus --use-apache, --site-label
+    # (label-only fast path), --install-wp-staging-pro (install Pro on an
+    # existing site) and --skip-warmup
     reconfigure_opts="
         --env-path
         --disable-mailpit
@@ -311,6 +317,7 @@ _wp_staging_cli() {
         --disable-adminer-autologin
         --disable-magic-link
         --magic-link-timeout
+        --use-apache
         --site-label
         --install-wp-staging-pro
         --skip-warmup
@@ -610,7 +617,7 @@ _wp_staging_cli() {
             COMPREPLY=( $(compgen -W "--timeout --status ${general_opts}" -- "${cur}") )
             ;;
         docker-image)
-            COMPREPLY=( $(compgen -W "--status --php ${general_opts}" -- "${cur}") )
+            COMPREPLY=( $(compgen -W "--status --php --db-version ${general_opts}" -- "${cur}") )
             ;;
         diagnostics)
             COMPREPLY=( $(compgen -W "--env-path ${general_opts}" -- "${cur}") )
@@ -643,6 +650,10 @@ _wp_staging_cli() {
             ;;
         --php)
             COMPREPLY=( $(compgen -W "7.4 8.1 8.2 8.3 8.4" -- "${cur}") )
+            return
+            ;;
+        --db-version)
+            COMPREPLY=( $(compgen -W "10.11 11.4 11.8 5.7 8.4" -- "${cur}") )
             return
             ;;
         --db-commit-mb)

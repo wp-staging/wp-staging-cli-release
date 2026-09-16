@@ -168,6 +168,9 @@ Environment Variables:
 Add a new WordPress site to the Docker environment.
 
 Use --from to restore from a WP STAGING backup file after creating the site.
+Use --use-apache to run the site on Apache instead of nginx.
+Use --use-mysql to run the site on MySQL instead of MariaDB.
+Use --db-version to pick the database version (supported: MariaDB 10.11, 11.4, 11.8; MySQL 5.7, 8.4).
 
 Usage:
   wpstaging add <site-url> [flags]
@@ -177,16 +180,22 @@ Examples:
   wpstaging add newsite.local
   wpstaging add newsite.local --from=backup.wpstg
   wpstaging add newsite.local --from=https://example.com/backup.wpstg
+  wpstaging add newsite.local --use-apache
+  wpstaging add newsite.local --use-mysql
+  wpstaging add newsite.local --db-version=10.11
 
 Env Flags:
       --php string                  PHP version to use (default "8.1")
       --env-path string             Path to store docker environments (default: ~/wpstaging)
       --compose-file string         File path to docker-compose.yml (default: ~/wpstaging/sites/<hostname>/docker-compose.yml)
       --container-ip string         Container IP address (default "127.3.2.1")
-      --http-port int               NGINX HTTP port (default "80")
-      --https-port int              NGINX HTTPS port (default "443")
-      --db-port int                 MariaDB port (default "3306")
-      --db-root string              MariaDB root password (default "123456")
+      --http-port int               Web server HTTP port (default "80")
+      --https-port int              Web server HTTPS port (default "443")
+      --use-apache                  Use Apache instead of nginx as the web server (use =false to switch back to nginx)
+      --db-port int                 Database port (default "3306")
+      --db-root string              Database root password (default "123456")
+      --db-version string           Database version to use (default: 11.8, or 8.4 with --use-mysql)
+      --use-mysql                   Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)
       --mailpit-http-port int       Mailpit HTTP port (default "8025")
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
@@ -321,6 +330,9 @@ Reset a WordPress site in the Docker environment.
 
 Use --from to restore from a WP STAGING backup file after resetting the site.
 Use --wp to specify a different WordPress version to install.
+Use --db-version or --use-mysql to rebuild the site on a different database
+server. The current database files are removed, because the two servers cannot
+read each other's files.
 
 Usage:
   wpstaging reset <hostname> [flags]
@@ -330,9 +342,13 @@ Examples:
   wpstaging reset mysite.local --wp=6.5
   wpstaging reset mysite.local --from=backup.wpstg
   wpstaging reset mysite.local --from=https://example.com/backup.wpstg
+  wpstaging reset mysite.local --db-version=11.4
+  wpstaging reset mysite.local --use-mysql --from=backup.wpstg
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --db-version string           Rebuild the site on this database version (discards the current database files)
+      --use-mysql                   Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 WordPress Flags:
@@ -834,7 +850,7 @@ Env Flags:
 # Command: update-subdomains
 
 ```
-Query WordPress for all subsites and update Nginx, SSL certificates, and /etc/hosts
+Query WordPress for all subsites and update the web server, SSL certificates, and /etc/hosts
 with discovered hostnames. Run this after creating or mapping subsites in wp-admin.
 
 Usage:
@@ -934,7 +950,7 @@ Other Flags:
 
 ```
 Update a site's Docker setup and apply the changes without reinstalling.
-Regenerates the site's configuration files (compose, nginx, PHP, SSL,
+Regenerates the site's configuration files (compose, web server, PHP, SSL,
 Adminer) and relaunches the site. WordPress files and the database are
 preserved.
 
@@ -949,6 +965,11 @@ to re-enable the Mailpit container, --disable-magic-link to turn
 off wp-admin auto-login, or --skip-warmup=false to turn warmup back
 on for a site where it is skipped by default (Windows).
 
+Pass --use-apache to move the site to Apache, or --use-apache=false to
+move it back to nginx. On Apache, the WordPress block in .htaccess is
+updated and lines Apache cannot use become comments. Other .htaccess
+rules stay in place.
+
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
 
@@ -960,10 +981,12 @@ Aliases:
 
 Examples:
   wpstaging reconfigure mysite.local
+  wpstaging reconfigure mysite.local --use-apache
   wpstaging reconfigure
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --use-apache                  Use Apache instead of nginx as the web server (use =false to switch back to nginx)
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
@@ -1109,10 +1132,11 @@ Examples:
   wpstaging docker-image --php 8.1,8.3
 
 Env Flags:
-      --php stringSlice   PHP version(s) to check or pull, comma-separated (supported: 7.4, 8.1, 8.2, 8.3, 8.4) (default "[8.1]")
+      --php stringSlice          PHP version(s) to check or pull, comma-separated (supported: 7.4, 8.1, 8.2, 8.3, 8.4) (default "[8.1]")
+      --db-version stringSlice   Database version(s) to check or pull, comma-separated (supported: MariaDB 10.11, 11.4, 11.8; MySQL 5.7, 8.4) (default "[11.8]")
 
 Other Flags:
-      --status            Report which required images are present without pulling
+      --status                   Report which required images are present without pulling
 
 ```
 
@@ -1417,7 +1441,7 @@ This will deactivate your license on WP STAGING servers and remove the stored li
 ## Hidden Command: shell-db
 
 ```
-Open an interactive shell in the MariaDB container. Use 'shell-db <hostname> root' to open as root.
+Open an interactive shell in the database container. Use 'shell-db <hostname> root' to open as root.
 
 Usage:
   wpstaging shell-db <hostname> [root] [flags]
@@ -1510,4 +1534,4 @@ Flags:
 
 ---
 
-*Generated on 2026-08-24 17:09:16 UTC*
+*Generated on 2026-09-14 17:31:54 UTC*

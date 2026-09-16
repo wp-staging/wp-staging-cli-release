@@ -433,13 +433,13 @@ Use the `add` command to create a new WordPress site with its own isolated Docke
 2. **Generates configuration files:**
    - `docker-compose.yml` with site-specific containers
    - PHP configuration (php.ini, PHP-FPM pool settings)
-   - Nginx configuration (server block, SSL certificates)
+   - Web server configuration (nginx by default, or Apache with `--use-apache`) and SSL certificates
    - MariaDB configuration
    - WP-CLI installation
 
 3. **Pulls required Docker images** (if not already cached):
    - PHP-FPM (version specified with `--php`, default: 8.1)
-   - Nginx (stable-alpine-slim)
+   - Nginx (stable-alpine-slim), or Apache (httpd 2.4-alpine) for a site added with `--use-apache`
    - MariaDB (latest, unless `--external-db`)
    - Mailpit (latest, unless `--disable-mailpit`)
 
@@ -491,6 +491,7 @@ You can either:
 
 Without `--container-ip`, the CLI automatically finds the next available IP without errors.
 
+<a name="q26"></a>
 **Q26: How many sites can I create? What's the maximum limit?**  
 **A26:**
 The limit depends on how you allocate IPs:
@@ -568,10 +569,32 @@ wpstaging restart mysite.local
 **Note:** Port settings can only be set during initial creation or by editing `.env` manually. PHP version can be changed at any time using the `switch-php` command. WordPress version can be changed using the `switch-wp` command.
 
 <a name="q28"></a>
-**Q28: How do I configure MariaDB?**  
+**Q28: How do I configure the database server?**  
 **A28:**
-You can set `--db-port=<port>` (default `3306`) and `--db-root=<password>` for root password (default `123456`). Database credentials use default values (admin/123456) unless you specify `--secure-credentials` which generates cryptographically secure random passwords. All credentials are stored in the site's `.env` file. You can also use an external database with `--external-db` which disables the MariaDB container.
+You can set `--db-port=<port>` (default `3306`) and `--db-root=<password>` for root password (default `123456`). Database credentials use default values (admin/123456) unless you specify `--secure-credentials` which generates cryptographically secure random passwords. All credentials are stored in the site's `.env` file. You can also use an external database with `--external-db` which disables the database container.
 
+Use `--db-version` to pick the version, and `--use-mysql` to run MySQL instead of MariaDB:
+
+```bash
+wpstaging add mysite.local --db-version=10.11
+wpstaging add mysite.local --use-mysql
+```
+
+Available versions are MariaDB 10.11, 11.4 and 11.8, and MySQL 5.7 and 8.4. New sites use MariaDB 11.8, or MySQL 8.4 with `--use-mysql`.
+
+<a name="q28b"></a>
+**Q28b: Can I change the database server of an existing site?**  
+**A28b:**
+Yes, with the `reset` command and the same two options. The site is rebuilt and the current database files are removed, because the two servers cannot read each other's files. Add `--from=<backup file>` to restore your content after the rebuild.
+
+```bash
+wpstaging reset mysite.local --db-version=11.4
+wpstaging reset mysite.local --use-mysql --from=backup.wpstg
+```
+
+No other command changes the database server. A plain `reset` leaves it as it is.
+
+<a name="q29"></a>
 **Q29: Can I modify or use a custom docker-compose.yml file?**  
 **A29:**
 The `docker-compose.yml` file is **auto-generated** and recreated when:
@@ -812,6 +835,7 @@ wpstaging add mysite.local --external-db \
 | `CREATE command denied` | Missing privilege | Grant CREATE privilege or pre-create DB |
 | `Connection refused` | Network/firewall issue | Ensure DB is accessible from Docker network |
 
+<a name="q34"></a>
 **Q34: How do I connect to SSL-enabled external databases?**  
 **A34:**
 The CLI automatically handles SSL-enabled external databases with certificate verification disabled for development environments. If your external database has SSL enabled:
@@ -848,6 +872,7 @@ The CLI creates wrapper scripts for `mysql`, `mariadb`, and `mysqldump` commands
 
 For production environments requiring proper certificate validation, configure the database server with trusted certificates and provide the CA certificate to WordPress.
 
+<a name="q35"></a>
 **Q35: Can I switch from external database to internal database?**  
 **A35:**
 Yes, but you must use the `reset` command to properly reconfigure the site. Simply changing `EXTERNAL_DB=false` in the `.env` file will not work.
@@ -970,8 +995,8 @@ When you run `add` or `start` commands, the CLI automatically:
 
 | Service | Default | Fallback Ports | Count | Random Range |
 |---------|---------|----------------|-------|--------------|
-| HTTP (Nginx) | 80 | 8844, 8845, 8846, 8855, 8866, 8888, 8899, 8877, 8878, 8879, 8889 | 10 | 49152-65535 |
-| HTTPS (Nginx) | 443 | 4444, 4445, 4446, 4455, 4466, 4488, 4499, 4456, 4467, 4468, 4477 | 10 | 49152-65535 |
+| Web server HTTP | 80 | 8844, 8845, 8846, 8855, 8866, 8888, 8899, 8877, 8878, 8879, 8889 | 10 | 49152-65535 |
+| Web server HTTPS | 443 | 4444, 4445, 4446, 4455, 4466, 4488, 4499, 4456, 4467, 4468, 4477 | 10 | 49152-65535 |
 | MariaDB | 3306 | 3344, 3345, 3346, 3355, 3366, 3388, 3399, 3356, 3357, 3358, 3359, 3360, 3370 | 10 | 49152-65535 |
 | Mailpit | 8025 | 8044, 8045, 8046, 8055, 8066, 8088, 8099, 8056, 8067, 8077 | 10 | 49152-65535 |
 
@@ -984,7 +1009,7 @@ HTTPS port 443 is already in use. Automatically switching to port 4444.
 
 You can specify custom ports when creating a new site using the `add` command. Each site has its own configuration, so you can customize ports per site.
 
-**For NGINX (HTTP/HTTPS):**
+**For the web server (HTTP/HTTPS):**
 ```bash
 wpstaging add mysite.local --http-port=8080 --https-port=8443
 ```
@@ -1058,6 +1083,7 @@ Flags like `--site-url`, `--db-prefix`, `--normalizedb`, and `--verify` are comm
 **Docker-specific flags**:
 - `--env-path`, `--compose-file`, `--container-ip`, `--php`, `--http-port`, `--https-port`, `--wp-site-url`, etc.
 
+<a name="q46"></a>
 **Q46: Are there short aliases for common flags?**  
 **A46:**
 Yes, several flags have convenient aliases:
@@ -1266,7 +1292,7 @@ While HTTP is simpler, using HTTPS for local development is strongly recommended
 - Can't properly test HTTPS redirects and headers over HTTP
 - Performance testing differs (HTTP/2, TLS overhead)
 
-**Using mkcert solves all these issues while keeping local development simple and warning-free.**
+**The built-in local Certificate Authority (CA) solves all these issues and keeps local development simple and warning-free.**
 
 <a name="q60"></a>
 **Q60: Why does CA installation require sudo (Linux/macOS) or a confirmation prompt (Windows)?**  
@@ -1321,7 +1347,7 @@ The CA is designed specifically for local development and is safe to install. He
    ```bash
    wpstaging sweep-ca-trust --include-legacy
    ```
-   This removes both current `WP Staging CLI development CA` entries and any legacy `mkcert development CA` entries left by older builds. See [Q120](#q120).
+   This removes both current `WP Staging CLI development CA` entries and any legacy CA entries left by older builds. See [Q120](#q120).
 
    To remove manually, look for `WP Staging CLI development CA` in:
    - Linux: `/usr/local/share/ca-certificates/` (system) and `~/.pki/nssdb/` (Chrome)
@@ -1378,7 +1404,7 @@ If you're still seeing warnings after confirming CA installation, try these trou
 **2. For Chrome/Chromium on Linux specifically:**
 The CA must be installed to both the system trust store AND the NSS database. The CLI does this automatically, but you can verify:
 ```bash
-certutil -d sql:$HOME/.pki/nssdb -L | grep -E 'mkcert development CA|WP Staging CLI'
+wpstaging verify-cert
 ```
 
 If missing, the CLI should have installed it, but you can manually add:
@@ -1396,11 +1422,12 @@ After CA installation, close and reopen your browser completely (not just the ta
 - View certificate details
 - Verify the certificate includes your site's hostname and the container IP
 
-**5. Verify certificate was generated:**
+**5. Verify certificate was generated (nginx and Apache sites use the same directory):**
 ```bash
 ls ~/wpstaging/sites/yoursite.local/docker/nginx/certs/
 ```
 Should show `yoursite.local.crt` and `yoursite.local.key` (not self-signed.crt).
+If `yoursite.local.crt` is not in the list, run `wpstaging reinstall-ca`. It creates a new certificate for every site and points the web server at it.
 
 **6. Recreate the site to regenerate everything:**
 ```bash
@@ -1413,22 +1440,22 @@ wpstaging add yoursite.local
 - **Firefox:** Settings → Privacy & Security → Certificates → View Certificates → Servers → Delete cached certificates
 
 <a name="q64"></a>
-**Q64: Can I use my own SSL certificates instead of mkcert?**  
+**Q64: Can I use my own SSL certificates?**  
 **A64:**
 Yes, but it's not recommended for local development. If you still want to use custom certificates:
 
 **Option 1: Replace generated certificates**
-After creating a site, replace the certificate files:
+After creating a site, replace the certificate files. Sites on nginx and Apache both use the `docker/nginx/certs` directory:
 ```bash
-cp your-cert.crt ~/wpstaging/sites/yoursite.local/config/nginx/certs/yoursite.local.crt
-cp your-key.key ~/wpstaging/sites/yoursite.local/config/nginx/certs/yoursite.local.key
+cp your-cert.crt ~/wpstaging/sites/yoursite.local/docker/nginx/certs/yoursite.local.crt
+cp your-key.key ~/wpstaging/sites/yoursite.local/docker/nginx/certs/yoursite.local.key
 wpstaging restart yoursite.local
 ```
 
-**Option 2: Disable mkcert (use self-signed fallback)**
-If mkcert download or CA installation fails, the CLI automatically falls back to self-signed certificates. You'll see browser warnings but the site will still work.
+**Option 2: Self-signed fallback**
+If the site certificate cannot be created, the CLI falls back to a self-signed certificate. The site still works, but the browser shows a warning. The CLI also prints a warning that tells you to run `wpstaging reinstall-ca`.
 
-**Why mkcert is better:**
+**Why the built-in local CA is better:**
 - No manual certificate generation or management
 - Automatic trust - no browser warnings
 - Per-site certificates with proper SANs (hostname + IPs)
@@ -1701,6 +1728,7 @@ On macOS, the LaunchDaemon install requires one sudo prompt. To avoid the prompt
 
 **Summary:** On macOS, a LaunchDaemon reads site configurations and creates loopback aliases only for existing sites at boot. One-time sudo on first `add`, aliases survive reboots. Linux/Windows don't need this because loopback IPs are always available. Use `--skip-macos-auto-ip` on macOS to skip daemon installation.
 
+<a name="q73"></a>
 **Q73: How can I disable automatic IP alias binding on macOS?**  
 **A73:**
 Automatic IP alias binding from the loopback range **127.3.2.1 - 127.3.2.254** is enabled by default on macOS (Linux/Windows don't need this since loopback IPs are always available). If you prefer manual IP alias binding without sudo requirements, use the `--skip-macos-auto-ip` flag:
@@ -2294,8 +2322,8 @@ Docker Desktop routes host-to-container connections through the bridge network. 
 
 **Solution:**
 This issue was fixed by:
-1. Using MariaDB 11.8 image (`mariadb:11.8`) instead of `latest`
-2. Adding `MARIADB_ROOT_HOST=%` environment variable to allow root connections from any host
+1. Using a pinned database image (`mariadb:11.8`) instead of `latest`
+2. Adding the `MYSQL_ROOT_HOST=%` environment variable to allow root connections from any host
 
 If you encounter this error with an older version:
 1. Update to the latest version of WP Staging CLI
@@ -2312,14 +2340,14 @@ The new site will use MariaDB 11.8 with the correct configuration.
 <a name="q89c"></a>
 **Q89c: I get "Access denied for user 'root'@'localhost'" on Docker Desktop. What's wrong?**  
 **A89c:**
-This error can occur on Docker Desktop (Windows, macOS, or Linux with Docker Desktop) when MariaDB fails to set the root password from the `MARIADB_ROOT_PASSWORD` environment variable during first initialization.
+This error can occur on Docker Desktop (Windows, macOS, or Linux with Docker Desktop) when the database server fails to set the root password from the `MYSQL_ROOT_PASSWORD` environment variable during first initialization.
 
 **Cause:**
-Docker Desktop has a known issue where MariaDB may not properly initialize the root password from environment variables if the data directory is not completely empty at startup.
+Docker Desktop has a known issue where the database server may not properly initialize the root password from environment variables if the data directory is not completely empty at startup.
 
 **How WP Staging CLI handles this:**
 The CLI automatically detects Docker Desktop and applies two fixes:
-1. **Clears MariaDB data directory** before first WordPress installation to ensure fresh initialization
+1. **Clears the database data directory** before first WordPress installation to ensure fresh initialization
 2. **Uses init SQL script** in `/docker-entrypoint-initdb.d/` as a backup mechanism to set the root password
 
 **If you still encounter this error:**
@@ -2441,7 +2469,7 @@ wpstaging reset <hostname>
 <a name="q90"></a>
 **Q90: Browser shows "Your connection is not private" or certificate not trusted. How do I fix this?**  
 **A90:**
-This happens when the mkcert Certificate Authority (CA) is not installed in your system trust store. This can occur if you declined the CA installation prompt during site setup.
+This happens when the WP Staging CLI Certificate Authority (CA) is not installed in your system trust store. This can occur if you declined the CA installation prompt during site setup.
 
 **Symptoms:**
 - Browser shows "Your connection is not private"
@@ -2461,21 +2489,12 @@ wpstaging reinstall-cert <hostname> --reinstall-ca
 # Running sites are restarted automatically after the rotation.
 ```
 
-**Solution 2: Delete CA and re-add site**
-```bash
-# Delete CA to trigger re-prompt
-rm -rf ~/wpstaging/stack/mkcert/ca/
-
-# Add a new site and accept the CA installation prompt
-wpstaging add newsite.local
-```
-
-**Solution 3: Manually install existing CA**
+**Solution 2: Manually install existing CA**
 
 **Linux (Chrome/Chromium):**
 ```bash
-certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "mkcert CA" \
-  -i ~/wpstaging/stack/mkcert/ca/rootCA.pem
+certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "WP Staging CLI CA" \
+  -i ~/wpstaging/stack/localcert/ca/rootCA.pem
 
 # Restart Chrome
 killall chrome
@@ -2484,90 +2503,40 @@ killall chrome
 **Linux (Firefox):**
 ```bash
 PROFILE=$(find ~/.mozilla/firefox -name "*.default*" | head -1)
-certutil -d sql:$PROFILE -A -t "C,," -n "mkcert CA" \
-  -i ~/wpstaging/stack/mkcert/ca/rootCA.pem
+certutil -d sql:$PROFILE -A -t "C,," -n "WP Staging CLI CA" \
+  -i ~/wpstaging/stack/localcert/ca/rootCA.pem
 ```
 
 **macOS:**
 ```bash
 sudo security add-trusted-cert -d -r trustRoot \
   -k /Library/Keychains/System.keychain \
-  ~/wpstaging/stack/mkcert/ca/rootCA.pem
+  ~/wpstaging/stack/localcert/ca/rootCA.pem
 ```
 
 **Windows (PowerShell as Administrator):**
 ```powershell
-certutil -addstore -f "ROOT" $env:USERPROFILE\wpstaging\stack\mkcert\ca\rootCA.pem
+certutil -addstore -f "ROOT" $env:USERPROFILE\wpstaging\stack\localcert\ca\rootCA.pem
 ```
 
 ---
 
 <a name="q91"></a>
-**Q91: How do I check if the mkcert CA is installed correctly?**  
+**Q91: How do I check if the CA is installed correctly?**  
 **A91:**
-Use these commands to verify CA installation:
+Run `wpstaging verify-cert`. It checks the CA in every browser trust store and checks each site certificate. See [Q123](#q123).
 
-**Linux (Chrome NSS database):**
 ```bash
-certutil -d sql:$HOME/.pki/nssdb -L | grep mkcert
-```
-
-**macOS:**
-```bash
-security find-certificate -c "mkcert" -a
-```
-
-**Windows:**
-```cmd
-certutil -store -user root | findstr mkcert
+wpstaging verify-cert
 ```
 
 **Verify certificate is signed by CA:**
 ```bash
-openssl verify -CAfile ~/wpstaging/stack/mkcert/ca/rootCA.pem \
+openssl verify -CAfile ~/wpstaging/stack/localcert/ca/rootCA.pem \
   ~/wpstaging/sites/<hostname>/docker/nginx/certs/<hostname>.crt
 
 # Should output: <hostname>.crt: OK
 ```
-
----
-
-<a name="q92"></a>
-**Q92: I get "mkcert binary not found" error. How do I fix it?**  
-**A92:**
-This happens if the mkcert binary wasn't downloaded or was deleted.
-
-**Solution 1: Add a new site (auto-downloads mkcert)**
-```bash
-wpstaging add site.local
-# Will copy from system or download from GitHub automatically
-```
-
-**Solution 2: Install mkcert system-wide first**
-
-**Linux (Homebrew):**
-```bash
-brew install mkcert
-```
-
-**Linux (manual):**
-```bash
-curl -LO https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64
-sudo mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert
-sudo chmod +x /usr/local/bin/mkcert
-```
-
-**macOS:**
-```bash
-brew install mkcert
-```
-
-**Windows (Chocolatey):**
-```powershell
-choco install mkcert
-```
-
-After installing system-wide, WP Staging CLI will copy it automatically when you add a new site.
 
 ---
 
@@ -2591,7 +2560,7 @@ rm ~/wpstaging/sites/<hostname>/docker/nginx/certs/<hostname>.key
 wpstaging restart <hostname>
 ```
 
-**Note:** Mkcert certificates are valid for 10 years, so expiration is rare unless system clock is wrong.
+**Note:** Site certificates are valid for 2 years and 3 months, and the CLI renews them before they expire (see [Q122](#q122)). An expired certificate usually means the system clock is wrong.
 
 ---
 
@@ -3123,7 +3092,7 @@ The shared network is created automatically when you run `wpstaging start`. No e
 <a name="q108"></a>
 **Q108: Why does `curl` inside the container fail with "unable to get local issuer certificate"?**  
 **A108:**
-This happens when the container does not trust the mkcert CA certificate. The fix is to regenerate the site's config files:
+This happens when the container does not trust the local CA certificate. The fix is to regenerate the site's config files:
 
 ```bash
 wpstaging generate-docker-file <hostname>   # single site
@@ -3131,7 +3100,7 @@ wpstaging generate-docker-file              # all sites
 wpstaging start <hostname>
 ```
 
-This creates a combined CA bundle that includes both system CAs (for public websites) and the mkcert CA (for local sites). The bundle is mounted at `/etc/ssl/certs/ca-certificates.crt` inside the container, so both PHP and shell `curl` trust it.
+This creates a combined CA bundle that includes both system CAs (for public websites) and the local CA (for local sites). The bundle is mounted at `/etc/ssl/certs/ca-certificates.crt` inside the container, so both PHP and shell `curl` trust it.
 
 If the issue still happens on a fresh site, make sure you are running the latest binary.
 
@@ -3245,7 +3214,7 @@ Removing and recreating as files...
 
 If you're on an older version, run:
 ```bash
-wpstaging remove example.local
+wpstaging del example.local
 wpstaging add example.local
 ```
 
@@ -3366,6 +3335,28 @@ wpstaging switch-wp mysite.local 6.7-beta1
 
 ---
 
+<a name="q116a"></a>
+**Q116a: How do I run a site on Apache instead of nginx?**  
+**A116a:**
+Pass `--use-apache` when you add the site. To move an existing site to Apache, or back to nginx, use `reconfigure`:
+
+```bash
+wpstaging add mysite.local --use-apache
+wpstaging reconfigure mysite.local --use-apache
+wpstaging reconfigure mysite.local --use-apache=false
+```
+
+Apache reads the `.htaccess` file, so rules from a live Apache host also work on the local site. PHP still runs in its own container.
+
+**Notes:**
+- The choice is saved in the site's `.env` file, so later commands keep the same web server
+- The CLI writes the standard WordPress rules to the WordPress block in `.htaccess`
+- Lines that Apache cannot use, such as `php_value`, become comments so the site does not show error 500. The file before the change is saved as `.htaccess.wpstg-backup`. All other lines stay as they are
+- Moving back to nginx does not change `.htaccess`
+- After a restore, the CLI warns about `.htaccess` lines that name the live domain, such as redirects
+
+---
+
 <a name="q117"></a>
 **Q117: Why should I use VirtioFS on macOS?**  
 
@@ -3417,9 +3408,9 @@ Run:
 wpstaging reconfigure <site>
 ```
 
-`reconfigure` updates the site's Docker setup (compose, nginx, PHP, SSL certificate) and relaunches the site. WordPress files and the database are preserved.
+`reconfigure` updates the site's Docker setup (compose, web server, PHP, SSL certificate) and relaunches the site. WordPress files and the database are preserved.
 
-Use this to apply new defaults introduced by a CLI release (for example, to refresh the SSL certificate after the hostname list changed, or to pick up updated PHP-FPM or Nginx config after a CLI upgrade). For Adminer specifically, you do not need `reconfigure` -- `start` and `restart` regenerate the missing Adminer files automatically on sites created before Adminer support.
+Use this to apply new defaults introduced by a CLI release (for example, to refresh the SSL certificate after the hostname list changed, or to pick up updated PHP-FPM or web server config after a CLI upgrade). For Adminer specifically, you do not need `reconfigure` -- `start` and `restart` regenerate the missing Adminer files automatically on sites created before Adminer support.
 
 If you omit the hostname, all sites are reconfigured:
 
@@ -3438,14 +3429,14 @@ wpstaging reconfigure
 The command is hidden by default. Use `--show-all` to see it in help. It accepts two flags:
 
 - `--dry-run` -- shows what would be removed without changing anything.
-- `--include-legacy` -- also removes legacy `mkcert development CA` entries left by older builds. Asks for confirmation before running.
+- `--include-legacy` -- also removes legacy CA entries left by older builds. Other local development tools can create the same kind of entry, so it asks for confirmation before running.
 
 Run it when you want to clean up trust store bloat:
 
 ```bash
 wpstaging sweep-ca-trust --dry-run            # preview only
 wpstaging sweep-ca-trust                      # remove stale WP Staging CLI entries
-wpstaging sweep-ca-trust --include-legacy     # also remove old mkcert-branded entries
+wpstaging sweep-ca-trust --include-legacy     # also remove legacy CA entries
 ```
 
 This command does not need Docker to be running.
@@ -3453,7 +3444,7 @@ This command does not need Docker to be running.
 ---
 
 <a name="q121"></a>
-**Q121: Why does my system trust store have so many `mkcert development CA` entries?**  
+**Q121: Why does my system trust store have so many old CA entries?**  
 
 **A121:**
 Older WP Staging CLI builds left a trust store entry behind every time you ran `reinstall-ca` (or its `reinstall-cert --reinstall-ca` alias) or `remove`. Each cycle generated a new CA but never deleted the old one. Over time these entries pile up.
@@ -3625,23 +3616,6 @@ The helper uses `sudo -n -v` in non-interactive mode (see [Q125a](#q125a)). That
 After you enter your password (or use Touch ID) on the next `sudo` command, the timestamp comes back on the same terminal. The helper's next refresh, within 4 minutes, sees the warm ticket and starts extending it again. You will not be asked again until the next idle sleep or the 12-hour lifetime cap (see [Q125](#q125)).
 
 This is a one-time prompt per idle-sleep cycle, not a bug. macOS clears the sudo timestamp on system sleep on purpose, and a non-interactive helper has no way to re-arm it without you typing the password.
-
----
-
-**Q125: How do I clear the WP-CLI download cache?**  
-
-**A125:**
-Run `wpstaging clean wpcli`. The command removes three directories shared across all your dockerized sites:
-
-- `<env-path>/wpstaging/stack/wp-cli/cache/plugin/`
-- `<env-path>/wpstaging/stack/wp-cli/cache/core/`
-- `<env-path>/wpstaging/stack/wp-cli/wp-staging-pro/`
-
-By default `<env-path>` is `~/wpstaging`. Pass `--env-path` to target a custom location.
-
-The cache holds downloaded plugin ZIP files, WordPress core archives, and the WP Staging Pro plugin used during site setup. Deleting it forces the next `add` or `reset` to download fresh copies. The directories are recreated on demand, so this is safe to run at any time.
-
-`wpstaging clean all` also clears these directories, on top of the general cache and the stored license key.
 
 ---
 
@@ -3838,4 +3812,22 @@ For an interactive session with many commands, use `wpstaging shell mysite.local
 
 ---
 
-**Last Updated:** 2026-08-24 17:09:25 UTC
+<a name="q134"></a>
+**Q134: How do I clear the WP-CLI download cache?**  
+
+**A134:**
+Run `wpstaging clean wpcli`. The command removes three directories shared across all your dockerized sites:
+
+- `<env-path>/wpstaging/stack/wp-cli/cache/plugin/`
+- `<env-path>/wpstaging/stack/wp-cli/cache/core/`
+- `<env-path>/wpstaging/stack/wp-cli/wp-staging-pro/`
+
+By default `<env-path>` is `~/wpstaging`. Pass `--env-path` to target a custom location.
+
+The cache holds downloaded plugin ZIP files, WordPress core archives, and the WP Staging Pro plugin used during site setup. Deleting it forces the next `add` or `reset` to download fresh copies. The directories are recreated on demand, so this is safe to run at any time.
+
+`wpstaging clean all` also clears these directories, on top of the general cache and the stored license key.
+
+---
+
+**Last Updated:** 2026-09-15 19:05:46 UTC

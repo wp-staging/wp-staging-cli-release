@@ -15,7 +15,7 @@ Built for developers and agencies who value their time.
 
 ## Highlights
 
-- **Dockerized Development Environments** — Spin up isolated WordPress environments with Docker Compose, including PHP-FPM, Nginx, MariaDB, and Mailpit.
+- **Dockerized Development Environments** — Spin up isolated WordPress environments with Docker Compose, including PHP-FPM, nginx or Apache, MariaDB, and Mailpit.
 - **Cross-Site Communication** — Dockerized sites can send HTTPS requests to each other for features like WP Staging Remote Sync.
 - **Offline Backup Restoration** — Restore WordPress sites and databases even when the original installation is broken or inaccessible.
 - **Stream-Based Extraction** — Memory-efficient extraction of large `.wpstg` backup files using chunked processing.
@@ -527,6 +527,16 @@ wpstaging add https://mysite.local --from=backup.wpstg
 wpstaging add https://mysite.local --from=https://example.com/backup.wpstg
 ```
 
+**Run a site on Apache instead of nginx:**
+
+Apache reads `.htaccess`, so rules from an Apache host work the same way on the local site. The CLI updates the WordPress block in `.htaccess`, and lines that Apache cannot use, such as `php_value`, become comments so the site does not show error 500.
+
+```bash
+wpstaging add https://mysite.local --use-apache
+wpstaging reconfigure mysite.local --use-apache        # Move an existing site to Apache
+wpstaging reconfigure mysite.local --use-apache=false  # Move it back to nginx
+```
+
 **Add a multisite WordPress site:**
 
 ```bash
@@ -551,7 +561,7 @@ When using `--from` with a multisite backup, both multisite and subdomain mode a
 wpstaging update-subdomains mysite.local
 ```
 
-This updates nginx, SSL certificates, and `/etc/hosts` with all subsite hostnames from WordPress.
+This updates the web server config, SSL certificates, and `/etc/hosts` with all subsite hostnames from WordPress.
 
 **Start containers:**
 

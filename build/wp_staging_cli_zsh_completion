@@ -230,6 +230,9 @@ _wpstaging() {
         '--compose-file[Docker Compose file]:file:_files -g "*.yml"'
         '--container-ip[Container IP address]:IP:'
         '--php[PHP version]:version:(7.4 8.1 8.2 8.3 8.4)'
+        '--use-apache[Use Apache instead of nginx as the web server (use =false to switch back to nginx)]'
+        '--use-mysql[Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)]'
+        '--db-version[Database version]:version:(10.11 11.4 11.8 5.7 8.4)'
         '--http-port[HTTP port]:port:'
         '--https-port[HTTPS port]:port:'
         '--db-port[Database port]:port:'
@@ -277,6 +280,8 @@ _wpstaging() {
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--force-download[Download the backup again instead of using the cached file]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
+        '--db-version[Rebuild the site on this database version]:version:(10.11 11.4 11.8 5.7 8.4)'
+        '--use-mysql[Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)]'
         '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
@@ -303,8 +308,9 @@ _wpstaging() {
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
     )
 
-    # reconfigure: generate_docker_file_opts plus --site-label (label-only fast
-    # path) and --install-wp-staging-pro (install Pro on an existing site)
+    # reconfigure: generate_docker_file_opts plus --use-apache, --site-label
+    # (label-only fast path), --install-wp-staging-pro (install Pro on an
+    # existing site) and --skip-warmup
     local -a reconfigure_opts
     reconfigure_opts=(
         '--env-path[Environment file path]:path:_files'
@@ -313,6 +319,7 @@ _wpstaging() {
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
         '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+        '--use-apache[Use Apache instead of nginx as the web server (use =false to switch back to nginx)]'
         '--site-label[Update the friendly site label (empty resets to the hostname)]:label:'
         '--install-wp-staging-pro[Download and install WP Staging Pro on the site]'
         '--skip-warmup[Skip warming up the site after it starts]'
@@ -421,6 +428,7 @@ _wpstaging() {
                     _arguments \
                         '--status[Report which required images are present without pulling]' \
                         '--php[PHP version to check or pull]:PHP version:(7.4 8.1 8.2 8.3 8.4)' \
+                        '--db-version[Database version to check or pull]:version:(10.11 11.4 11.8 5.7 8.4)' \
                         $general_opts
                     ;;
                 diagnostics)
