@@ -970,6 +970,10 @@ move it back to nginx. On Apache, the WordPress block in .htaccess is
 updated and lines Apache cannot use become comments. Other .htaccess
 rules stay in place.
 
+Pass --http-port, --https-port, --db-port or --mailpit-http-port to
+move the site to a new port. A port that is already in use is refused.
+When the HTTPS port changes, the WordPress site URL is updated too.
+
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
 
@@ -982,11 +986,16 @@ Aliases:
 Examples:
   wpstaging reconfigure mysite.local
   wpstaging reconfigure mysite.local --use-apache
+  wpstaging reconfigure mysite.local --https-port=443
   wpstaging reconfigure
 
 Env Flags:
       --env-path string             Path to store docker environments (default: ~/wpstaging)
+      --http-port int               Web server HTTP port (default "80")
+      --https-port int              Web server HTTPS port (default "443")
       --use-apache                  Use Apache instead of nginx as the web server (use =false to switch back to nginx)
+      --db-port int                 Database port (default "3306")
+      --mailpit-http-port int       Mailpit HTTP port (default "8025")
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
 
 Other Flags:
@@ -1534,4 +1543,4 @@ Flags:
 
 ---
 
-*Generated on 2026-09-14 17:31:54 UTC*
+*Generated on 2026-09-23 12:46:20 UTC*

@@ -57,7 +57,7 @@ ZSH_COMPLETION_DIR_USER="${HOME}/.local/share/zsh/completions"
 ZSH_COMPLETION_DIR_SYSTEM="/usr/local/share/zsh/completions"
 BINARY_NAME="wpstaging"
 COMPLETION_NAME="wpstaging"
-SCRIPT_VERSION="20260829-151332"
+SCRIPT_VERSION="20260921-162939"
 
 # Colors for output
 RED='\033[0;31m'
@@ -646,22 +646,23 @@ add_to_path() {
     info "  Run '$(get_source_command)' or restart your shell to apply changes"
 }
 
-# Fetch latest stable version from GitHub (excludes beta/alpha/rc)
+# Fetch latest stable version from GitHub. releases/latest already excludes
+# drafts and pre-releases, so the tag name needs no filtering. Do not go back
+# to the tags endpoint: it can still list the previous tag after a release.
 fetch_latest_stable_version() {
     info "Fetching latest stable version..."
 
     _flsv_version=""
 
-    # Try to fetch tags from GitHub API
     if command_exists curl; then
-        _flsv_tags_json=$(curl -fsSL "${GITHUB_API_URL}/tags" 2>/dev/null) || {
-            warning "Failed to fetch tags from GitHub API, falling back to 'main'"
+        _flsv_release_json=$(curl -fsSL "${GITHUB_API_URL}/releases/latest" 2>/dev/null) || {
+            warning "Failed to fetch the latest release from GitHub API, falling back to 'main'"
             echo "main"
             return 0
         }
     elif command_exists wget; then
-        _flsv_tags_json=$(wget -qO- "${GITHUB_API_URL}/tags" 2>/dev/null) || {
-            warning "Failed to fetch tags from GitHub API, falling back to 'main'"
+        _flsv_release_json=$(wget -qO- "${GITHUB_API_URL}/releases/latest" 2>/dev/null) || {
+            warning "Failed to fetch the latest release from GitHub API, falling back to 'main'"
             echo "main"
             return 0
         }
@@ -671,10 +672,7 @@ fetch_latest_stable_version() {
         return 0
     fi
 
-    # Parse tags and filter out pre-release versions (beta, alpha, rc)
-    # Extract tag names and filter
-    # Filter out pre-release versions using case-insensitive matching
-    _flsv_version=$(echo "$_flsv_tags_json" | grep '"name"' | sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | grep -v -i -E 'beta|alpha|rc' | head -1)
+    _flsv_version=$(parse_json "$_flsv_release_json" "tag_name" | head -1)
 
     if [ -z "$_flsv_version" ]; then
         warning "No stable version found, falling back to 'main'"
@@ -819,15 +817,15 @@ main() {
             *) VERSION_REF="v${REQUESTED_VERSION}" ;;
         esac
     else
-        # No version specified, fetch latest stable (no beta/alpha/rc)
+        # No version specified, use the latest published release
         VERSION_REF=$(fetch_latest_stable_version)
 
-        # When the tags API is unreachable, resolve the latest stable version
-        # from main/manifest.json instead. main is rewritten on every release,
-        # so its manifest's version field is the canonical latest. Pinning to
-        # that tag also keeps the binary download URL reproducible. The
-        # v1.10.0/v1.11.0 refusal block below still applies once we have a
-        # concrete tag. Issue #333.
+        # When the releases API is unreachable, resolve the latest stable
+        # version from main/manifest.json instead. main is rewritten on every
+        # release, so its manifest's version field is the canonical latest.
+        # Pinning to that tag also keeps the binary download URL reproducible.
+        # The v1.10.0/v1.11.0 refusal block below still applies once we have
+        # a concrete tag. Issue #333.
         if [ "$VERSION_REF" = "main" ]; then
             _main_manifest=""
             if command_exists curl; then

@@ -689,6 +689,12 @@ For common issues and troubleshooting guidance, refer to [FAQ.md](./docs/FAQ.md)
 
 ---
 
+## Automation and AI Agents
+
+To drive a site from a script, an AI coding assistant, or any other program, see [AI Agent Usage](./docs/AI-AGENT-USAGE.md). It covers the JSON output format, exit codes, answering prompts without a person present, and the flags that avoid a password prompt altogether.
+
+---
+
 ## Contributing
 
 We'd love to hear from you!

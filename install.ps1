@@ -80,7 +80,7 @@ $GitHubApiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https:/
 $GitHubRawUrl = if ($env:GITHUB_RAW_URL) { $env:GITHUB_RAW_URL } else { "https://raw.githubusercontent.com/wp-staging/wp-staging-cli-release" }
 $BinaryName = "wpstaging.exe"
 $InstallDir = "$env:LOCALAPPDATA\Programs\wpstaging"
-$ScriptVersion = "20260828-150951"
+$ScriptVersion = "20260921-162939"
 
 # Colors for output - Uses Write-Host for colored console output
 # Note: Write-Host is intentional here as we need console coloring,
@@ -314,7 +314,9 @@ function Test-CommandExists($command) {
     return $false
 }
 
-# Fetch latest stable version from GitHub (excludes beta/alpha/rc)
+# Fetch latest stable version from GitHub. releases/latest already excludes
+# drafts and pre-releases, so the tag name needs no filtering. Do not go back
+# to the tags endpoint: it can still list the previous tag after a release.
 function Get-LatestStableVersion {
     Write-Info "Fetching latest stable version..."
 
@@ -322,17 +324,11 @@ function Get-LatestStableVersion {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $webClient = New-Object System.Net.WebClient
         $webClient.Headers.Add("User-Agent", "wpstaging-installer")
-        $tagsJson = $webClient.DownloadString("$GitHubApiUrl/tags")
-        $tags = $tagsJson | ConvertFrom-Json
+        $releaseJson = $webClient.DownloadString("$GitHubApiUrl/releases/latest")
+        $release = $releaseJson | ConvertFrom-Json
 
-        # Filter out pre-release versions (beta, alpha, rc) using case-insensitive matching
-        $stableTags = $tags | Where-Object {
-            $_.name -notmatch '(?i)(beta|alpha|rc)'
-        }
-
-        if ($stableTags -and $stableTags.Count -gt 0) {
-            $latestVersion = $stableTags[0].name
-            return $latestVersion
+        if ($release.tag_name) {
+            return $release.tag_name
         }
         else {
             Write-Warning "No stable version found, falling back to 'main'"
@@ -340,7 +336,7 @@ function Get-LatestStableVersion {
         }
     }
     catch {
-        Write-Warning "Failed to fetch tags from GitHub API, falling back to 'main'"
+        Write-Warning "Failed to fetch the latest release from GitHub API, falling back to 'main'"
         return "main"
     }
 }
@@ -402,15 +398,15 @@ function Main {
         }
     }
     else {
-        # No version specified, fetch latest stable (no beta/alpha/rc)
+        # No version specified, use the latest published release
         $versionRef = Get-LatestStableVersion
 
-        # When the tags API is unreachable, resolve the latest stable version
-        # from main/manifest.json instead. main is rewritten on every release,
-        # so its manifest's version field is the canonical latest. Pinning to
-        # that tag also keeps the binary download URL reproducible. The
-        # v1.10.0/v1.11.0 refusal below still applies once we have a concrete
-        # tag. Issue #333.
+        # When the releases API is unreachable, resolve the latest stable
+        # version from main/manifest.json instead. main is rewritten on every
+        # release, so its manifest's version field is the canonical latest.
+        # Pinning to that tag also keeps the binary download URL reproducible.
+        # The v1.10.0/v1.11.0 refusal below still applies once we have a
+        # concrete tag. Issue #333.
         if ($versionRef -eq "main") {
             $mainVersion = $null
             try {

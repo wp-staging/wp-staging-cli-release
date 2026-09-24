@@ -1,3 +1,13 @@
+## v1.16.1 (2026-09-24)
+
+- **Enh:** The installer now reads the latest published release, so a new install gets the newest version right away (#480).
+- **Enh:** The `update` command now reads the latest published release, so it sees a new version right away (#480).
+- **Enh:** The security certificate question is now asked again next time when a command gets no answer (#489).
+- **Enh:** `reconfigure` can now change the HTTP, HTTPS, database and Mailpit ports of an existing site (#510).
+- **Fix:** `reinstall-ca`, `reinstall-cert` and `reconfigure` no longer leave stopped sites running (#505).
+- **Fix:** When the HTTPS port of a site changes, the WordPress site URL now gets the new port only once (#510).
+- **Fix:** The WordPress site address now follows an automatic HTTPS port change on `start` and `restart` (#509).
+
 ## v1.16.0 (2026-09-16)
 
 - **New:** Run a site on Apache instead of nginx with `--use-apache` (#495).
