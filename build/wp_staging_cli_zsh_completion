@@ -218,7 +218,7 @@ _wpstaging() {
 
     # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
     # Only flags VISIBLE in normal help output are listed. Hidden flags
-    # (--skip-update-hosts-file, --skip-macos-auto-ip, --external-db,
+    # (--skip-update-hosts-file, --skip-macos-auto-ip, --skip-install-ca, --external-db,
     # --compose-file on most commands, --container-ip on most commands,
     # and all alias flags) are intentionally excluded from completion.
 
@@ -308,9 +308,9 @@ _wpstaging() {
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
     )
 
-    # reconfigure: generate_docker_file_opts plus --use-apache, --site-label
-    # (label-only fast path), --install-wp-staging-pro (install Pro on an
-    # existing site) and --skip-warmup
+    # reconfigure: generate_docker_file_opts plus the port flags, --use-apache,
+    # --site-label (label-only fast path), --install-wp-staging-pro (install
+    # Pro on an existing site) and --skip-warmup
     local -a reconfigure_opts
     reconfigure_opts=(
         '--env-path[Environment file path]:path:_files'
@@ -319,6 +319,10 @@ _wpstaging() {
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
         '--disable-magic-link[Disable the magic-link auto-login (use =false to re-enable)]'
         '--magic-link-timeout[Default magic-link lifetime in minutes]:minutes:'
+        '--http-port[Web server HTTP port]:port:'
+        '--https-port[Web server HTTPS port]:port:'
+        '--db-port[Database port]:port:'
+        '--mailpit-http-port[Mailpit HTTP port]:port:'
         '--use-apache[Use Apache instead of nginx as the web server (use =false to switch back to nginx)]'
         '--site-label[Update the friendly site label (empty resets to the hostname)]:label:'
         '--install-wp-staging-pro[Download and install WP Staging Pro on the site]'

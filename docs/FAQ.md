@@ -1038,6 +1038,13 @@ wpstaging add mysite.local \
 
 **Note:** Each site maintains its own configuration in its `.env` file, so different sites can use different ports and settings.
 
+**Change the ports of an existing site:**
+```bash
+wpstaging reconfigure mysite.local --https-port=443
+```
+
+`reconfigure` takes `--http-port`, `--https-port`, `--db-port` and `--mailpit-http-port`. It refuses a port that is already in use and updates the WordPress site URL when the HTTPS port changes. WordPress files and the database are preserved.
+
 ### Checking Port Usage
 
 **Check which process is using a port:**
@@ -3828,6 +3835,14 @@ The cache holds downloaded plugin ZIP files, WordPress core archives, and the WP
 
 `wpstaging clean all` also clears these directories, on top of the general cache and the stored license key.
 
+<a name="q135"></a>
+**Q135: Can a script or an AI assistant run `wpstaging` without a person present?**  
+
+**A135:**
+Yes. Add `--json` to get machine-readable output, and set the `WPSTGPRO_LICENSE` environment variable so no license prompt appears.
+
+See [AI Agent Usage](./AI-AGENT-USAGE.md) for the full guide. It covers the JSON format, exit codes, how to answer a password or yes/no prompt from a program, and the flags that avoid a prompt in the first place.
+
 ---
 
-**Last Updated:** 2026-09-15 19:05:46 UTC
+**Last Updated:** 2026-09-23 12:45:46 UTC

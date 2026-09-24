@@ -76,7 +76,7 @@ set LICENSE_KEY=
 set CUSTOM_BIN_DIR=
 set EXTRACT_DIR=
 set CLI_ARGS=
-set SCRIPT_VERSION=20260829-151332
+set SCRIPT_VERSION=20260921-162939
 
 REM Parse arguments
 :parse_args
@@ -185,19 +185,19 @@ if defined REQUESTED_VERSION (
     set VERSION_REF=%REQUESTED_VERSION%
     if not "!VERSION_REF:~0,1!"=="v" set VERSION_REF=v!VERSION_REF!
 ) else (
-    REM No version specified, fetch latest stable (no beta/alpha/rc)
+    REM No version specified, use the latest published release
     echo %BLUE%Fetching latest stable version...%NC%
 
-    REM Fetch tags from GitHub API and filter out pre-release versions
-    curl -fsSL "%GITHUB_API_URL%/tags" -o "%TEMP%\tags.json" >nul 2>&1
+    REM releases/latest already excludes drafts and pre-releases, so the tag
+    REM name needs no filtering. Do not go back to the tags endpoint: it can
+    REM still list the previous tag after a release.
+    curl -fsSL "%GITHUB_API_URL%/releases/latest" -o "%TEMP%\latest-release.json" >nul 2>&1
     if errorlevel 1 (
-        echo %YELLOW%Warning: Failed to fetch tags from GitHub API, falling back to 'main'%NC%
+        echo %YELLOW%Warning: Failed to fetch the latest release from GitHub API, falling back to 'main'%NC%
         set VERSION_REF=main
     ) else (
-        REM Use PowerShell to parse JSON and filter out beta/alpha/rc
-        REM Note: Using (?i) for case-insensitive matching to avoid pipe escaping issues in CMD
-        for /f "delims=" %%i in ('powershell -NoProfile -Command "$tags = Get-Content -Raw '%TEMP%\tags.json' | ConvertFrom-Json; $stableTags = @($tags | Where-Object { $_.name -notmatch '(?i)(beta|alpha|rc)' }); if ($stableTags.Count -gt 0) { $stableTags[0].name } else { 'main' }"') do set VERSION_REF=%%i
-        del "%TEMP%\tags.json" >nul 2>&1
+        for /f "delims=" %%i in ('powershell -NoProfile -Command "$r = Get-Content -Raw '%TEMP%\latest-release.json' | ConvertFrom-Json; if ($r.tag_name) { $r.tag_name } else { 'main' }"') do set VERSION_REF=%%i
+        del "%TEMP%\latest-release.json" >nul 2>&1
 
         REM Validate that we got a version
         if "!VERSION_REF!"=="" (
@@ -206,7 +206,7 @@ if defined REQUESTED_VERSION (
         )
     )
 
-    REM When the tags API is unreachable, resolve the latest stable version
+    REM When the releases API is unreachable, resolve the latest stable version
     REM from main/manifest.json instead. main is rewritten on every release,
     REM so its manifest's version field is the canonical latest. Pinning to
     REM that tag also keeps the binary download URL reproducible. The
@@ -701,15 +701,15 @@ REM so that the script never falls into it during a normal install run.
 :do_print_version
 echo wpstaging installer
 echo   build:          %SCRIPT_VERSION%
-curl -fsSL "%GITHUB_API_URL%/tags" -o "%TEMP%\pv_tags.json" >nul 2>&1
+curl -fsSL "%GITHUB_API_URL%/releases/latest" -o "%TEMP%\pv-latest-release.json" >nul 2>&1
 if errorlevel 1 (
     echo   latest release: unknown ^(could not fetch from GitHub^)
     endlocal
     exit /b 0
 )
 set "PV_LATEST="
-for /f "delims=" %%i in ('powershell -NoProfile -Command "$tags = Get-Content -Raw '%TEMP%\pv_tags.json' | ConvertFrom-Json; $stable = @($tags | Where-Object { $_.name -notmatch '(?i)(beta|alpha|rc)' }); if ($stable.Count -gt 0) { $stable[0].name } else { '' }"') do set "PV_LATEST=%%i"
-del "%TEMP%\pv_tags.json" >nul 2>&1
+for /f "delims=" %%i in ('powershell -NoProfile -Command "$r = Get-Content -Raw '%TEMP%\pv-latest-release.json' | ConvertFrom-Json; if ($r.tag_name) { $r.tag_name } else { '' }"') do set "PV_LATEST=%%i"
+del "%TEMP%\pv-latest-release.json" >nul 2>&1
 if defined PV_LATEST (
     echo   latest release: !PV_LATEST!
 ) else (
