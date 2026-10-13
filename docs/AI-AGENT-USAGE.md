@@ -17,6 +17,7 @@ Nothing here is a full command reference. See [COMMANDS.md](./COMMANDS.md) for t
 - [Start here](#start-here)
 - [Reading JSON output](#reading-json-output)
 - [Run a WP-CLI command](#run-a-wp-cli-command)
+- [Sites without WordPress](#sites-without-wordpress)
 - [Read the site details](#read-the-site-details)
 - [Commands that ask for a password](#commands-that-ask-for-a-password)
 - [Calling Docker directly](#calling-docker-directly)
@@ -101,7 +102,7 @@ A failure keeps the same envelope, with `success` false and `command` set to `er
 }
 ```
 
-Most failures carry the plain code `error`, so branch on `success` first. Some cases carry a specific code worth matching, such as `docker_not_running`, `docker_not_installed`, `unsupported_php_version` and `unsupported_db_version`. A few errors also carry `hint`, an array of suggested next steps.
+Most failures carry the plain code `error`, so branch on `success` first. Some cases carry a specific code worth matching, such as `docker_not_running`, `docker_not_installed`, `unsupported_php_version`, `unsupported_db_version` and `site_has_no_wordpress`. See [Sites without WordPress](#sites-without-wordpress) for the last one. A few errors also carry `hint`, an array of suggested next steps.
 
 Treat `0` as success and any non-zero code as failure. In practice the failure code is `1`. `wpstaging wp` is the exception and returns whatever WP-CLI returned.
 
@@ -177,6 +178,14 @@ Pass WP-CLI's own `--url` to target a subsite:
 wpstaging wp mysite.local --url=sub.mysite.local plugin list
 ```
 
+## Sites without WordPress
+
+A site created with `wpstaging add <hostname> --skip-wordpress` is a plain PHP site. `list --json` reports it with `site_type` set to `php`. Check this field before you call `wpstaging wp`.
+
+On such a site, `wp`, `switch-wp`, `magic-link`, and `update-subdomains` stop with the error code `site_has_no_wordpress`. `restore` stops the same way when `--path` points into the site directory. `start`, `stop`, `restart`, `switch-php`, `reconfigure`, `reset`, and `del` work as usual.
+
+To work in the site, write files to the directory in `path`. PHP code reads the database settings with `getenv()`: `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. To run a command in the container, use `docker exec <container_php> <command>`.
+
 ## Read the site details
 
 `wpstaging list --json` answers with a `list` response whose `data.sites` is an array, one entry per site. Read the objects as described in [Reading JSON output](#reading-json-output) and pick the one whose `command` field is `list`.
@@ -195,6 +204,7 @@ Each entry in `data.sites` carries more than 30 fields. These are the ones a pro
 | `running` | Whether the site's containers are up |
 | `path` | WordPress directory on the host |
 | `url` | Site URL |
+| `site_type` | `single`, `multisite`, `multisite-subdomain`, or `php`. A `php` site has no WordPress |
 | `container_php` | Name of the PHP container |
 | `container_db` | Name of the database container |
 | `docroot` | WordPress path inside the container |
@@ -317,4 +327,4 @@ docker exec <container_php> php /wp-cli/wp-cli.phar --path=<docroot> plugin list
 
 ---
 
-**Last Updated:** 2026-09-18 15:46:27 UTC
+**Last Updated:** 2026-10-13 08:12:07 UTC

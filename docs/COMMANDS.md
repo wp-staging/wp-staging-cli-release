@@ -168,6 +168,7 @@ Environment Variables:
 Add a new WordPress site to the Docker environment.
 
 Use --from to restore from a WP STAGING backup file after creating the site.
+Use --skip-wordpress to create a plain PHP site without WordPress.
 Use --use-apache to run the site on Apache instead of nginx.
 Use --use-mysql to run the site on MySQL instead of MariaDB.
 Use --db-version to pick the database version (supported: MariaDB 10.11, 11.4, 11.8; MySQL 5.7, 8.4).
@@ -180,6 +181,7 @@ Examples:
   wpstaging add newsite.local
   wpstaging add newsite.local --from=backup.wpstg
   wpstaging add newsite.local --from=https://example.com/backup.wpstg
+  wpstaging add newsite.local --skip-wordpress
   wpstaging add newsite.local --use-apache
   wpstaging add newsite.local --use-mysql
   wpstaging add newsite.local --db-version=10.11
@@ -211,6 +213,7 @@ WordPress Flags:
       --admin-pass string           WordPress admin password (default "admin")
       --admin-email string          WordPress admin email (default "admin@dev.null")
       --secure-credentials          Use secure random credentials for database and WordPress admin
+      --skip-wordpress              Create a plain PHP site without WordPress
       --multisite                   Enable WordPress Multisite
       --subdomains string           Enable subdomain multisite. Optional: comma-separated hostnames
 
@@ -229,6 +232,7 @@ Other Flags:
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
       --force-download              Download the backup again instead of using the cached file
+      --insecure-download           Download the backup without checking the server TLS certificate (not secure)
 
 ```
 
@@ -363,6 +367,7 @@ Other Flags:
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
       --force-download              Download the backup again instead of using the cached file
+      --insecure-download           Download the backup without checking the server TLS certificate (not secure)
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
       --disable-adminer-autologin   Disable Adminer auto-login (use =false to re-enable)
       --disable-magic-link          Disable the magic-link auto-login (use =false to re-enable)
@@ -518,6 +523,7 @@ Flags:
       --download-dir string   Directory for downloaded backup files (default: ./wpstaging-download)
       --force-download        Download the backup again instead of using the cached file
       --from string           Backup file path or remote URL (http/https)
+      --insecure-download     Download the backup without checking the server TLS certificate (not secure)
 
 Only-Filters Flags:
   These flags can only be used once. Pair with `--only-file` to match specific file names.
@@ -600,6 +606,7 @@ Flags:
       --download-dir string       Directory for downloaded backup files (default: ./wpstaging-download)
       --force-download            Download the backup again instead of using the cached file
       --from string               Backup file path or remote URL (http/https)
+      --insecure-download         Download the backup without checking the server TLS certificate (not secure)
       --subsite-map stringArray   Set a subsite's destination host, repeatable (old.example.com=new.example.local)
 
 Wordpress DB-related Flags:
@@ -1543,4 +1550,4 @@ Flags:
 
 ---
 
-*Generated on 2026-09-23 12:46:20 UTC*
+*Generated on 2026-10-13 08:21:25 UTC*

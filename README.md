@@ -424,7 +424,11 @@ The CLI will:
 1. Validate the remote file (size and format)
 2. Display backup information
 3. Ask for confirmation before downloading
-4. Download with progress indicator (supports resume for interrupted downloads)
+4. Download with progress indicator. An interrupted download resumes when the server supports partial downloads (HTTP Range requests). Otherwise it starts again from the beginning
+
+The server must report the file size (`Content-Length` header).
+
+For an `https://` URL, the CLI checks the server TLS certificate. If you trust a server that has a self-signed or expired certificate, add `--insecure-download` to skip this check.
 
 ### Extract and Prepare Database for Import
 
@@ -535,6 +539,14 @@ Apache reads `.htaccess`, so rules from an Apache host work the same way on the 
 wpstaging add https://mysite.local --use-apache
 wpstaging reconfigure mysite.local --use-apache        # Move an existing site to Apache
 wpstaging reconfigure mysite.local --use-apache=false  # Move it back to nginx
+```
+
+**Add a plain PHP site without WordPress:**
+
+The site gets the same web server, PHP, database, and HTTPS setup. The database is empty and the site directory holds one placeholder `index.php`.
+
+```bash
+wpstaging add https://myapp.local --skip-wordpress
 ```
 
 **Add a multisite WordPress site:**
