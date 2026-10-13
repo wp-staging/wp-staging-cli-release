@@ -2012,6 +2012,27 @@ wpstaging add site.local --from=https://example.com/backup.wpstg --force-downloa
 ```
 The CLI normally reuses a backup it already downloaded. With `--force-download` it fetches the file again and replaces the local copy. Works on `extract`, `restore`, `add`, and `reset`.
 
+<a name="q84c"></a>
+**Q84c: Why does downloading a remote backup fail with a certificate error?**  
+**A84c:**
+The CLI checks the TLS certificate of every `https://` backup URL against the trusted certificates of your system. The download stops if the certificate is self-signed, expired, or made for another host name. The error then contains a message like `x509: certificate signed by unknown authority`.
+
+Ways to fix it:
+- Give the server a valid certificate. This is the best fix.
+- If the certificate comes from your own company CA, add that CA to the trusted certificates of your system.
+- On a minimal Linux system or in a container, install the `ca-certificates` package. Without it, every `https://` download fails.
+- If you trust the server, for example a test server in your own network, add `--insecure-download` to skip the check:
+```bash
+wpstaging restore --path=/var/www/site --from=https://staging.example.local/backup.wpstg --insecure-download
+```
+
+Only use `--insecure-download` for servers you trust. Without the check, someone on the network could send you a different file. The CLI keeps the downloaded file and can use it again in a later run. To get a fresh copy with the check turned on, add `--force-download`. Both flags work on `extract`, `restore`, `add`, and `reset`.
+
+<a name="q84d"></a>
+**Q84d: Why does a remote backup download stop with "refusing redirect from https to http"?**  
+**A84d:**
+The `https://` URL sent the download on to an `http://` URL. The file would then be sent without encryption, so the CLI stops. `--insecure-download` does not change this. Ask the server owner to fix the redirect.
+
 <a name="q85"></a>
 **Q85: How do I update the CLI to the latest version?**  
 **A85:**
@@ -3075,6 +3096,10 @@ wpstaging extract https://example.com/backups/backup.wpstg
 5. Downloads with progress indicator; resumes interrupted downloads when safe, otherwise restarts from scratch
 6. Caches downloaded files for reuse. Use `--force-download` to fetch the file again
 
+**Server requirements:**
+- The server must report the file size (`Content-Length` header).
+- Resume works only when the server supports partial downloads (HTTP Range requests). Without it, an interrupted download starts again from the beginning.
+
 **Supported backup formats:**
 - WP Staging Backup v1
 - WP Staging Backup v2
@@ -3364,6 +3389,37 @@ Apache reads the `.htaccess` file, so rules from a live Apache host also work on
 
 ---
 
+<a name="q116b"></a>
+**Q116b: Can I create a site without WordPress, for my own PHP app?**  
+**A116b:**
+Yes. Pass `--skip-wordpress` when you add the site:
+
+```bash
+wpstaging add myapp.local --skip-wordpress
+```
+
+The site gets the same web server, PHP, database, Mailpit, Adminer, and HTTPS setup as a WordPress site. The database is empty and the site directory holds one placeholder `index.php`. Replace it with your own files.
+
+Your PHP code can read the database settings with `getenv()`:
+
+```php
+$db = new mysqli(getenv('DB_HOST'), getenv('DB_USER'), getenv('DB_PASSWORD'), getenv('DB_NAME'));
+```
+
+`add` prints the same values when it finishes, and the placeholder page shows them without the password.
+
+**Notes:**
+- `start`, `stop`, `restart`, `switch-php`, `reconfigure`, `shell`, `shell-db`, and `del` work the same as on a WordPress site
+- WordPress-only commands stop with a message: `wp`, `switch-wp`, `magic-link`, and `update-subdomains`
+- `restore` stops with the same message when `--path` points into the site directory
+- WordPress-only flags cannot be used with `--skip-wordpress`: `--from`, `--wp`, `--multisite`, `--subdomains`, `--admin-user`, `--admin-pass`, `--admin-email`, `--db-prefix`, `--db-ssl`, and `--subsite-map`
+- `--skip-wordpress` works only for a new site. `add` stops when the site already has WordPress
+- `reset` deletes all files in the site directory and empties the database. Back up your files first
+- `list` shows the site with the type "PHP Site"
+- The web server serves the site directory itself. A sub-directory webroot such as `public/` is not supported
+
+---
+
 <a name="q117"></a>
 **Q117: Why should I use VirtioFS on macOS?**  
 
@@ -3649,7 +3705,7 @@ If `add` ran over a site directory that already existed, the second line is inst
 Rollback complete (kept existing site directory): <hostname>
 ```
 
-The same handler works for `SIGINT` (Ctrl-C) and `SIGTERM`. `SIGKILL` cannot be caught by any program, so it bypasses the rollback.
+The same handler works for `SIGINT` (Ctrl-C), `SIGTERM`, and `SIGHUP`. The system sends `SIGHUP` when you close the terminal or lose an interactive SSH session. `SIGKILL` cannot be caught by any program, so it bypasses the rollback. If you start `add` with `nohup`, closing the terminal does not stop it.
 
 You can safely re-run `wpstaging add <hostname>` afterwards. The CLI cleans up any leftover container from the prior cancelled run, so the next attempt starts clean.
 
@@ -3845,4 +3901,4 @@ See [AI Agent Usage](./AI-AGENT-USAGE.md) for the full guide. It covers the JSON
 
 ---
 
-**Last Updated:** 2026-09-23 12:45:46 UTC
+**Last Updated:** 2026-10-13 08:07:58 UTC

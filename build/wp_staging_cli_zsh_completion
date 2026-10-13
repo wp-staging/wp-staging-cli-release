@@ -179,6 +179,7 @@ _wpstaging() {
         '--verify[Verify extracted files]'
         '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
         '--force-download[Download the backup again instead of using the cached file]'
+        '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
     )
 
     local -a restore_opts
@@ -203,6 +204,7 @@ _wpstaging() {
         '--skip-extract[Skip extraction]'
         '--from[Backup file or URL]:backup:_files -g "*.wpstg"'
         '--force-download[Download the backup again instead of using the cached file]'
+        '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
         '--db-host[Database host]:host:'
         '--db-name[Database name]:name:'
         '--db-user[Database user]:user:'
@@ -255,6 +257,7 @@ _wpstaging() {
         '--admin-email[WordPress admin email]:email:'
         '--label[Friendly site label (defaults to the hostname)]:label:'
         '--secure-credentials[Generate secure random credentials]'
+        '--skip-wordpress[Create a plain PHP site without WordPress]'
         '--multisite[Enable WordPress Multisite]'
         '--subdomains=-[Enable subdomain multisite. Optional: comma-separated hostnames]::hostnames:'
         '--from[Restore from backup]:backup:_files -g "*.wpstg"'
@@ -264,6 +267,7 @@ _wpstaging() {
         '--db-count-queries[Count all queries first to show the total]'
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--force-download[Download the backup again instead of using the cached file]'
+        '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
         '--skip-warmup[Skip warming up the site after it starts]'
         '--fast-mode[Windows: fast Docker-volume webroot mirrored to a browsable folder (on by default on Windows; =false to opt out)]'
     )
@@ -279,6 +283,7 @@ _wpstaging() {
         '--db-count-queries[Count all queries first to show the total]'
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
         '--force-download[Download the backup again instead of using the cached file]'
+        '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--db-version[Rebuild the site on this database version]:version:(10.11 11.4 11.8 5.7 8.4)'
         '--use-mysql[Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)]'

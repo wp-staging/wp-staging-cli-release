@@ -182,6 +182,7 @@ _wp_staging_cli() {
         --from
         --download-dir
         --force-download
+        --insecure-download
     "
 
     # Restore-specific options
@@ -217,6 +218,7 @@ _wp_staging_cli() {
         --db-ssl-mode
         --download-dir
         --force-download
+        --insecure-download
     "
 
     # Per-command dockerize flag sets (matches addDockerizeFlags in cmd/dockerizeCmd.go).
@@ -257,6 +259,7 @@ _wp_staging_cli() {
         --admin-email
         --label
         --secure-credentials
+        --skip-wordpress
         --multisite
         --subdomains
         --from
@@ -266,6 +269,7 @@ _wp_staging_cli() {
         --db-count-queries
         --subsite-map
         --force-download
+        --insecure-download
         --skip-warmup
         --fast-mode
     "
@@ -280,6 +284,7 @@ _wp_staging_cli() {
         --db-count-queries
         --subsite-map
         --force-download
+        --insecure-download
         --wp
         --db-version
         --use-mysql

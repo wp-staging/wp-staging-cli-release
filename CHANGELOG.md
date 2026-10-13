@@ -1,3 +1,19 @@
+## v1.17.0 (2026-10-13)
+
+- **New:** `add --skip-wordpress` creates a plain PHP site without WordPress (#521).
+- **Enh:** A canceled command now ends within 5 minutes, or at once on a second Ctrl+C (#528).
+- **Enh:** `list --json` and `sync-status --json` now report the file sync state of a fast-mode site (#533).
+- **Fix:** A restore that fails or is canceled no longer leaves the WordPress site stuck in maintenance mode (#526).
+- **Fix:** Backup downloads from an `https://` URL now check the server certificate and stop on a redirect to `http://` (#526).
+- **Fix:** Closing the terminal or losing the SSH session now runs the same cleanup as a canceled command (#527).
+- **Fix:** Canceling a command now also cleans up when its output goes to a pipe, for example `| tee restore.log` (#527).
+- **Fix:** On Windows, `add --from` and `reset --from` now restore the backup into a fast-mode site (#523).
+- **Fix:** On Windows, fast-mode sync now keeps a file when the copy to the site directory fails (#530).
+- **Fix:** A site database password that contains `#` is now read in full by later commands (#521).
+- **Fix:** Backups with old latin1 MyISAM tables that have long indexes now restore (#535).
+- **Dev:** The User-Agent header now also reports the operating system version (#517).
+- **Dev:** The free-tier handshake tests now match the current scope message and run in the Go unit test workflow on Linux (#526).
+
 ## v1.16.1 (2026-09-24)
 
 - **Enh:** The installer now reads the latest published release, so a new install gets the newest version right away (#480).
