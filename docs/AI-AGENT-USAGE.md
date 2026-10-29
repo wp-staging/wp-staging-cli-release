@@ -19,6 +19,7 @@ Nothing here is a full command reference. See [COMMANDS.md](./COMMANDS.md) for t
 - [Run a WP-CLI command](#run-a-wp-cli-command)
 - [Sites without WordPress](#sites-without-wordpress)
 - [Read the site details](#read-the-site-details)
+- [Export a static copy](#export-a-static-copy)
 - [Commands that ask for a password](#commands-that-ask-for-a-password)
 - [Calling Docker directly](#calling-docker-directly)
 - [Things to know](#things-to-know)
@@ -194,7 +195,7 @@ To work in the site, write files to the directory in `path`. PHP code reads the 
 wpstaging list --json
 ```
 
-Pass one or more hostnames to limit the output to those sites: `wpstaging list mysite.local other.local --json`. An unknown hostname is not an error. It returns an empty `sites` array and exit code `0`, so check the array rather than the exit code.
+Pass one or more hostnames to limit the output to those sites: `wpstaging list mysite.local other.local --json`. An unknown hostname is not an error. It returns an empty `sites` array and exit code `0`, so check the array rather than the exit code. When no sites exist at all, `list --json` returns an error response with the code `no_sites` and exit code `1`.
 
 Each entry in `data.sites` carries more than 30 fields. These are the ones a program usually needs:
 
@@ -215,9 +216,33 @@ To read one group of sites instead of all of them, add `--filter=<term>`. A plai
 wpstaging list --json --filter=shop --filter=running:true
 ```
 
+## Export a static copy
+
+`export-static` saves a running site as a static website: plain HTML, CSS, JavaScript, and media files that need no PHP or database.
+
+```bash
+wpstaging export-static mysite.local --json
+```
+
+Like `wp`, it needs a running site and never starts one. A stopped site fails with an error that names the `start` command. It needs no root and no password.
+
+While the export runs, `message` responses with `"type": "progress"` arrive about once per second. The last response has `command` set to `export_static`:
+
+| Field | Meaning |
+|---|---|
+| `output_dir` | Absolute path of the export. The default is `~/wpstaging/sites/<hostname>/static` |
+| `pages` | Saved HTML pages |
+| `files` | Saved files of every other type |
+| `failed` | URLs that could not be saved, each with `url` and `reason`. Always an array |
+| `truncated` | `true` when the export stopped adding URLs at its limit |
+
+**Check `failed`, not only the exit code.** Broken links on the site do not change the exit code, which stays `0`. The exit code is `1` only when the export stops, for example because the site is stopped, the home page fails, an option or the output directory is refused, or a question is declined.
+
+`--output-dir` writes the export to another directory. When that directory already exists, the command first sends a `prompt` with `"type": "confirm"`. Pass `--yes` to answer it in advance. A directory that holds files an earlier export did not write is refused without a question, so the export never replaces unrelated files.
+
 ## Commands that ask for a password
 
-`wp` and `list` never need root, so the workflow above runs without a prompt. Site management is different. `add`, `start`, `del`, `remove` and the other site commands update the machine's hosts file. On macOS they also bind a loopback address, and on Linux they may start the Docker service. Each of those steps needs root.
+`wp`, `list`, and `export-static` never need root, so the workflow above runs without a password prompt. Site management is different. `add`, `start`, `del`, `remove` and the other site commands update the machine's hosts file. On macOS they also bind a loopback address, and on Linux they may start the Docker service. Each of those steps needs root.
 
 The hosts file is written only when its content changes, so the prompt is intermittent. One quiet run is not proof that the next one is quiet.
 
@@ -229,7 +254,7 @@ What a program sees depends on the mode:
 | `--json` on macOS and Linux | A `prompt` response with `"type": "sudo"` on standard output. Write `<password>\n` to standard input to answer it |
 | `--json` on Windows | No prompt response. Windows uses its own dialog, see below |
 
-The JSON prompt waits 180 seconds by default. Change it with `--prompt-timeout=<seconds>`, or set `0` to wait indefinitely.
+The JSON prompt has no timeout. It waits on standard input until it gets an answer. `--prompt-timeout` applies only to prompts in plain output mode.
 
 ### Answering a prompt in JSON mode
 
@@ -293,7 +318,7 @@ wpstaging start mysite.local --skip-update-hosts-file
 
 This is safe when the hostname already resolves, which is the normal case for a site that was added earlier. A new site created this way does not resolve until the entry exists, so an agent that creates sites still needs one of the options above.
 
-On macOS the flag does not cover the loopback address, which is bound separately. Add `--skip-macos-auto-ip` to avoid that prompt as well. Sites then separate by port instead of by address.
+On macOS the flag does not cover the loopback address, which is bound separately. `add`, `reconfigure`, `update-subdomains`, and `update-hosts-file` accept `--skip-macos-auto-ip` to avoid that prompt as well. Sites then separate by port instead of by address. `start` and `restart` do not accept this flag. They ask for the password only when the site's address is not bound yet, for example after a reboot.
 
 ### Leaving the security certificate alone
 
@@ -327,4 +352,4 @@ docker exec <container_php> php /wp-cli/wp-cli.phar --path=<docroot> plugin list
 
 ---
 
-**Last Updated:** 2026-10-13 08:12:07 UTC
+**Last Updated:** 2026-10-21 09:07:17 UTC

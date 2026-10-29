@@ -1,3 +1,15 @@
+## v1.18.0 (2026-10-29)
+
+- **New:** `export-static` saves a running site as a static website that any web host can serve (#522).
+- **New:** `--replace-host old=new` also replaces a host that is not the site or a subsite during a restore (#551).
+- **New:** `--keep-url` keeps URLs that start with a given value unchanged during a restore (#551).
+- **Fix:** Restore and extract now keep text that starts with `{WPSTG_BINARY}` as plain text (#540).
+- **Fix:** Backups from MariaDB 10.10 and newer now restore onto MySQL and older MariaDB versions (#542).
+- **Fix:** `--prompt-timeout=0` now turns off the prompt timeout, as the help text says (#545).
+- **Fix:** Restore and extract now change only the site, home, and subsite hosts, so a CDN host under the site domain keeps its URLs (#551).
+- **Fix:** A restore to a subdomain of the source domain, such as `staging.example.com`, now writes that subdomain once (#553).
+- **Dev:** The free-tier handshake tests now also cover `export-static` and `add --skip-wordpress` (#555).
+
 ## v1.17.0 (2026-10-13)
 
 - **New:** `add --skip-wordpress` creates a plain PHP site without WordPress (#521).

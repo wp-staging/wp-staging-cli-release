@@ -1907,6 +1907,35 @@ Use `--db-prefix`:
 wpstaging restore --path=/var/www/site --db-prefix=newwp_ backup.wpstg
 ```
 
+<a name="q76a"></a>
+**Q76a: Why does restore leave some URLs, such as my CDN, unchanged?**  
+**A76a:**
+Restore changes only the site's own hosts: the site URL, the home URL, and each subsite of a network. Any other host keeps its URLs, even when it starts or ends with your site's domain. For a backup of `example.com` restored to `example.local`, `https://cdn.example.com/logo.png` and `https://example.com.au/` stay as they are. This also applies to `www.example.com` when the site URL is `example.com`. To change such a host too, see [Q76b](#q76b).
+
+<a name="q76b"></a>
+**Q76b: How do I replace another host, or keep some URLs unchanged?**  
+**A76b:**
+Use `--replace-host` to change a host that is not the site or a subsite. Write the old host, an equals sign, then the new host:
+
+```bash
+wpstaging restore --path=/var/www/html \
+  --replace-host media.example.com=media.example.local \
+  backup.wpstg
+```
+
+Use `--keep-url` to keep every URL that starts with a value. For example, to load images from the live site instead of the local copy:
+
+```bash
+wpstaging restore --path=/var/www/html --skip-uploads \
+  --keep-url https://example.com/wp-content/uploads \
+  backup.wpstg
+```
+
+- Repeat each flag once per value. Both flags also work with `add --from` and `reset --from`.
+- `--replace-host` changes only that exact host, not hosts under it. It keeps the scheme of each URL. It cannot change the site's own host or a subsite host. For a subsite, use `--subsite-map`. See [Q74h](#q74h).
+- `--keep-url` also keeps the same URL with the other scheme or without a scheme. When the value names your site's own host, it needs a path, for example `https://example.com/wp-content/uploads`.
+- Only the URLs in the database change. Make sure the new host works on your machine.
+
 <a name="q77"></a>
 **Q77: Does restore support database SSL connections?**  
 **A77:**
@@ -3412,7 +3441,7 @@ $db = new mysqli(getenv('DB_HOST'), getenv('DB_USER'), getenv('DB_PASSWORD'), ge
 - `start`, `stop`, `restart`, `switch-php`, `reconfigure`, `shell`, `shell-db`, and `del` work the same as on a WordPress site
 - WordPress-only commands stop with a message: `wp`, `switch-wp`, `magic-link`, and `update-subdomains`
 - `restore` stops with the same message when `--path` points into the site directory
-- WordPress-only flags cannot be used with `--skip-wordpress`: `--from`, `--wp`, `--multisite`, `--subdomains`, `--admin-user`, `--admin-pass`, `--admin-email`, `--db-prefix`, `--db-ssl`, and `--subsite-map`
+- WordPress-only flags cannot be used with `--skip-wordpress`: `--from`, `--wp`, `--multisite`, `--subdomains`, `--admin-user`, `--admin-pass`, `--admin-email`, `--db-prefix`, `--db-ssl`, `--subsite-map`, `--replace-host`, and `--keep-url`
 - `--skip-wordpress` works only for a new site. `add` stops when the site already has WordPress
 - `reset` deletes all files in the site directory and empties the database. Back up your files first
 - `list` shows the site with the type "PHP Site"
@@ -3901,4 +3930,131 @@ See [AI Agent Usage](./AI-AGENT-USAGE.md) for the full guide. It covers the JSON
 
 ---
 
-**Last Updated:** 2026-10-13 08:07:58 UTC
+<a name="q136"></a>
+**Q136: How do I turn a site into a static website?**  
+
+**A136:**
+Run `export-static` while the site is running:
+
+```bash
+wpstaging export-static mysite.local
+```
+
+The command saves every page and file it can reach from the home page and the sitemaps as plain HTML, CSS, JavaScript, and media files. Any web host can serve them without PHP or a database. The files go to `~/wpstaging/sites/mysite.local/static`, or to the directory you pass with `--output-dir`.
+
+Links in the export are relative, so you can upload it to the web root or a subdirectory of any host, or open `index.html` from disk in a browser. If you know the final address, pass it with `--base-url`, and the links point to that address:
+
+```bash
+wpstaging export-static mysite.local --base-url=https://www.example.com
+```
+
+Use `--exclude` to skip URLs, for example `--exclude=/shop/` or `--exclude='*.zip'`, and `--include` to add a page that no link reaches. You can repeat both flags.
+
+At the end, the command shows how many pages and files it saved and which URLs failed. Comments, search, forms, login, and other dynamic features do not work in a static copy. A page with a query string, such as `?p=123`, cannot be saved as a file, so choose a permalink structure other than Plain in WordPress before you export.
+
+The export directory is replaced only when the export completes, so an earlier export stays as it was if the command fails or is terminated. If you pass `--output-dir` with a directory that already exists, the command asks before it replaces the directory. Add `--yes` to skip the question. The command does not write into a directory that holds other files, such as a `.git` directory or a `CNAME` file you added to an earlier export. Move them away first. The default directory is removed when you delete the site.
+
+---
+
+<a name="q137"></a>
+**Q137: How do I serve the static website with Apache, nginx, or `php -S`?**  
+
+**A137:**
+The export works as it is on any web host, because its links point to `index.html` files. The settings below are optional. They send `/about/index.html` and `/about` to `/about/`, show `404.html` for a missing page, and hide the `.static-export` file that the export uses to recognize an earlier export.
+
+**Apache:** save this as `.htaccess` in the directory on your web host where you uploaded the site, next to `index.html`. It needs `mod_rewrite`, like a WordPress site.
+
+```apache
+ErrorDocument 404 /404.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Hide dot files, such as the export marker .static-export
+    RewriteRule (^|/)\.(?!well-known(/|$)) - [F]
+
+    # Send /about/index.html to /about/
+    RewriteCond %{THE_REQUEST} ^[A-Z]+\s([^?\s]*/)index\.html[?\s]
+    RewriteRule (^|/)index\.html$ %1 [R=301,L]
+</IfModule>
+```
+
+If the site is in a subdirectory, add the subdirectory to the `ErrorDocument` path, for example `/blog/404.html`. Do not add the `.htaccess` file to the export directory on your computer. The next export does not replace a directory that holds files it did not write.
+
+**nginx:** add this server block to the nginx configuration. Set `server_name` to your domain and `root` to the directory that holds the export, then reload nginx.
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+    root /var/www/static;
+    index index.html;
+    absolute_redirect off;
+    error_page 404 /404.html;
+
+    # Send /about/index.html to /about/
+    if ($request_uri ~ "^(/(?:[^/?\x5c][^?]*/)?)index\.html(\?.*)?$") {
+        return 301 $1$2;
+    }
+
+    # Hide dot files, such as the export marker .static-export
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+}
+```
+
+**PHP built-in web server:** `php -S` alone does not send `/about` to `/about/`, so the links on that page break. It also shows the home page instead of `404.html` for a missing page. Save this file as `router.php` next to the export directory, not inside it:
+
+```php
+<?php
+// Router for: php -S 127.0.0.1:8000 -t static router.php
+$root = realpath($_SERVER['DOCUMENT_ROOT']);
+$path = (string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$query = (string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+$suffix = $query ? '?' . $query : '';
+
+// Send /about/index.html to /about/
+if (preg_match('#^(/(?:[^/\x5c][^?]*/)?)index\.html$#', $path, $match)) {
+    header('Location: ' . $match[1] . $suffix, true, 301);
+    return true;
+}
+
+$decoded = rawurldecode($path);
+$file = realpath($root . $decoded);
+$inside = $file !== false && ($file === $root || strpos($file, $root . DIRECTORY_SEPARATOR) === 0);
+$hidden = preg_match('#/\.(?!well-known(/|$))#', $decoded);
+
+if ($inside && !$hidden) {
+    if (is_file($file)) {
+        return false;
+    }
+    if (is_file($file . '/index.html')) {
+        // Send /about to /about/, so relative links on the page work
+        if (substr($path, -1) !== '/') {
+            header('Location: ' . $path . '/' . $suffix, true, 301);
+            return true;
+        }
+        return false;
+    }
+}
+
+http_response_code(404);
+if (is_file($root . '/404.html')) {
+    readfile($root . '/404.html');
+}
+return true;
+```
+
+For the default export directory, start the server like this:
+
+```bash
+cd ~/wpstaging/sites/mysite.local
+php -S 127.0.0.1:8000 -t static router.php
+```
+
+Open `http://127.0.0.1:8000/` in a browser, and press Ctrl+C to stop the server. The PHP built-in web server is for testing on your computer only. Do not use it on a public server.
+
+---
+
+**Last Updated:** 2026-10-26 18:42:59 UTC

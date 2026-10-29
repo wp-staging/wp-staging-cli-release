@@ -26,13 +26,16 @@ _wp_staging_cli_hint_text() {
         wp)
             printf 'Examples:\n  wpstaging wp newsite.local plugin list --format=json\n  wpstaging wp newsite.local option get siteurl'
             ;;
+        export-static)
+            printf 'Examples:\n  wpstaging export-static newsite.local\n  wpstaging export-static newsite.local --base-url=https://www.example.com'
+            ;;
         switch-php)
             printf 'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
         switch-wp)
             printf 'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
             ;;
-        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
+        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub|open|sync-status)
             printf 'Examples:\n  wpstaging %s newsite.local' "$1"
             ;;
     esac
@@ -80,6 +83,7 @@ _wp_staging_cli() {
         dump-index
         dump-metadata
         enable
+        export-static
         extract
         generate-compose-file
         generate-docker-file
@@ -201,6 +205,8 @@ _wp_staging_cli() {
         --db-insert-single
         --db-count-queries
         --subsite-map
+        --replace-host
+        --keep-url
         --db-timeout
         --verify
         --skip-extract
@@ -268,6 +274,8 @@ _wp_staging_cli() {
         --db-insert-single
         --db-count-queries
         --subsite-map
+        --replace-host
+        --keep-url
         --force-download
         --insecure-download
         --skip-warmup
@@ -283,6 +291,8 @@ _wp_staging_cli() {
         --db-insert-single
         --db-count-queries
         --subsite-map
+        --replace-host
+        --keep-url
         --force-download
         --insecure-download
         --wp
@@ -334,8 +344,18 @@ _wp_staging_cli() {
 
     # magic-link <hostname> [--timeout MINUTES] [--redirect PAGE]
     magic_link_opts="
+        --env-path
         --timeout
         --redirect
+    "
+
+    # export-static <hostname> [--output-dir DIR] [--base-url URL] [--exclude PATTERN] [--include URL]
+    export_static_opts="
+        --env-path
+        --output-dir
+        --base-url
+        --exclude
+        --include
     "
 
     # list/status [--filter TERM]
@@ -586,6 +606,24 @@ _wp_staging_cli() {
                 COMPREPLY=()
             else
                 COMPREPLY=( $(compgen -W "${general_opts} ${magic_link_opts}" -- "${cur}") )
+            fi
+            ;;
+        open|sync-status)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # Required first positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
+            fi
+            ;;
+        export-static)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # Required first positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${export_static_opts}" -- "${cur}") )
             fi
             ;;
         remove)
