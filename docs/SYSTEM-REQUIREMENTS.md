@@ -31,7 +31,7 @@ Extract backup files without any external dependencies.
 - Sufficient disk space (at least 2x backup file size)
 
 **Supported Platforms:**
-- Linux (x86_64, ARM64, ARM, i386)
+- Linux (x86_64)
 - macOS (ARM64, x86_64)
 - Windows 10+ / Server 2016+ (x86_64, i386)
 
@@ -107,7 +107,7 @@ wpstaging restore --path=/var/www/site \
   --db-host=localhost \
   --db-name=wordpress \
   --db-user=dbuser \
-  --db-pass=dbpass \
+  --db-password=dbpass \
   backup.wpstg
 ```
 
@@ -115,8 +115,8 @@ wpstaging restore --path=/var/www/site \
 ```bash
 wpstaging restore --path=/var/www/site \
   --db-ssl-ca-cert=/path/to/ca.pem \
-  --db-ssl-client-cert=/path/to/client-cert.pem \
-  --db-ssl-client-key=/path/to/client-key.pem \
+  --db-ssl-cert=/path/to/client-cert.pem \
+  --db-ssl-key=/path/to/client-key.pem \
   backup.wpstg
 ```
 
@@ -350,7 +350,7 @@ wpstaging extract --license=your-license-key backup.wpstg
 - Update Docker to latest version
 
 **"docker-compose: command not found"**
-- Docker Compose 2.0.0+ required
+- Docker Compose 2.19.0+ required
 - Modern Docker includes compose plugin: `docker compose`
 - Verify: `docker compose version`
 
@@ -385,13 +385,12 @@ wpstaging extract --license=your-license-key backup.wpstg
 | Platform | Architecture | Extract | Restore | Dockerize |
 |----------|-------------|---------|---------|-----------|
 | Linux | x86_64 | ✅ | ✅ | ✅ |
-| Linux | ARM64 | ✅ | ✅ | ✅ |
-| Linux | ARM | ✅ | ✅ | ✅ |
-| Linux | i386 | ✅ | ✅ | ✅ |
 | macOS | ARM64 (Apple Silicon) | ✅ | ✅ | ✅ |
 | macOS | x86_64 (Intel) | ✅ | ✅ | ✅ |
 | Windows 10+ / Server 2016+ | x86_64 | ✅ | ✅ | ✅ |
-| Windows 10+ / Server 2016+ | i386 | ✅ | ✅ | ✅ |
+| Windows 10+ / Server 2016+ | i386 | ✅ | ✅ | ❌ |
+
+Docker sites need Docker Desktop, which runs only on 64-bit Windows.
 
 ---
 
@@ -436,4 +435,4 @@ For more information about WP Staging CLI and getting help:
 
 ---
 
-**Last Updated:** 2026-09-14 15:09:24 UTC
+**Last Updated:** 2026-10-19 07:11:53 UTC

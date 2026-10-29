@@ -37,13 +37,16 @@ _wpstaging_hint() {
         wp)
             _message -r $'Examples:\n  wpstaging wp newsite.local plugin list --format=json\n  wpstaging wp newsite.local option get siteurl'
             ;;
+        export-static)
+            _message -r $'Examples:\n  wpstaging export-static newsite.local\n  wpstaging export-static newsite.local --base-url=https://www.example.com'
+            ;;
         switch-php)
             _message -r $'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
         switch-wp)
             _message -r $'Examples:\n  wpstaging switch-wp newsite.local latest\n  wpstaging switch-wp newsite.local nightly'
             ;;
-        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub)
+        enable|disable|reset|start|up|stop|down|restart|compose-info|update-subdomains|usub|open|sync-status)
             _message -r "Examples:
   wpstaging ${subcmd} newsite.local"
             ;;
@@ -74,6 +77,7 @@ _wpstaging() {
         'dump-index:Dump backup file index'
         'dump-metadata:Dump backup file metadata'
         'enable:Enable a disabled site'
+        'export-static:Export a running site as a static website'
         'extract:Extract files from a backup'
         'generate-compose-file:Generate Docker Compose file'
         'generate-docker-file:Generate Dockerfile'
@@ -199,6 +203,8 @@ _wpstaging() {
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
+        '*--replace-host[Replace a host that is not the site or a subsite, repeatable]:old=new:'
+        '*--keep-url[Keep URLs that start with this value unchanged, repeatable]:url:'
         '--db-timeout[Database timeout]:timeout:'
         '--verify[Verify extracted files]'
         '--skip-extract[Skip extraction]'
@@ -266,6 +272,8 @@ _wpstaging() {
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
+        '*--replace-host[Replace a host that is not the site or a subsite, repeatable]:old=new:'
+        '*--keep-url[Keep URLs that start with this value unchanged, repeatable]:url:'
         '--force-download[Download the backup again instead of using the cached file]'
         '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
         '--skip-warmup[Skip warming up the site after it starts]'
@@ -282,6 +290,8 @@ _wpstaging() {
         '--db-insert-single[Use single-row inserts]'
         '--db-count-queries[Count all queries first to show the total]'
         '*--subsite-map[Set a subsite destination host, repeatable]:old=new:'
+        '*--replace-host[Replace a host that is not the site or a subsite, repeatable]:old=new:'
+        '*--keep-url[Keep URLs that start with this value unchanged, repeatable]:url:'
         '--force-download[Download the backup again instead of using the cached file]'
         '--insecure-download[Download the backup without checking the server TLS certificate (not secure)]'
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
@@ -337,8 +347,19 @@ _wpstaging() {
     # magic-link <hostname> [--timeout MINUTES] [--redirect PAGE]
     local -a magic_link_opts
     magic_link_opts=(
+        '--env-path[Environment file path]:path:_files'
         '--timeout[One-shot token lifetime in minutes]:minutes:'
         '--redirect[Open a wp-admin page instead of the dashboard]:page:'
+    )
+
+    # export-static <hostname> [--output-dir DIR] [--base-url URL] [--exclude PATTERN] [--include URL]
+    local -a export_static_opts
+    export_static_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--output-dir[Directory for the static website]:directory:_files -/'
+        '--base-url[Public URL the static website is served from]:url:'
+        '*--exclude[Skip URLs matching a pattern]:pattern:'
+        '*--include[Also export a URL or path that no link reaches]:url:'
     )
 
     # list/status [--filter TERM]
@@ -572,6 +593,19 @@ _wpstaging() {
                         '1:hostname:' \
                         $general_opts \
                         $magic_link_opts
+                    ;;
+                open|sync-status)
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $env_path_only_opts
+                    ;;
+                export-static)
+                    # export-static <hostname> [--output-dir DIR] [--base-url URL]
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $export_static_opts
                     ;;
                 update-hosts-file|uhf)
                     _arguments \

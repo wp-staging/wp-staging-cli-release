@@ -10,6 +10,7 @@
 - [switch-php](#command-switch-php)
 - [switch-wp](#command-switch-wp)
 - [magic-link](#command-magic-link)
+- [export-static](#command-export-static)
 - [open](#command-open)
 - [sync-status](#command-sync-status)
 - [extract](#command-extract)
@@ -82,6 +83,7 @@ Site Commands:
   switch-php            Switch PHP version for a site
   switch-wp             Switch WordPress version for a site
   magic-link            Issue a fresh wp-admin auto-login URL for a site
+  export-static         Export a running site as a static website
   open                  Open a site's files in the file manager
   sync-status           Show a fast-mode site's file sync status
 
@@ -231,6 +233,8 @@ Other Flags:
       --db-insert-single            Use single-row INSERT statement per query
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
+      --replace-host stringArray    Replace a host that is not the site or a subsite, repeatable (media.example.com=media.example.local)
+      --keep-url stringArray        Keep URLs that start with this value unchanged, repeatable (https://example.com/wp-content/uploads)
       --force-download              Download the backup again instead of using the cached file
       --insecure-download           Download the backup without checking the server TLS certificate (not secure)
 
@@ -366,6 +370,8 @@ Other Flags:
       --db-insert-single            Use single-row INSERT statement per query
       --db-count-queries            Count all queries first to show the total in progress output (slower start)
       --subsite-map stringArray     Set a subsite's destination host, repeatable (old.example.com=new.example.local)
+      --replace-host stringArray    Replace a host that is not the site or a subsite, repeatable (media.example.com=media.example.local)
+      --keep-url stringArray        Keep URLs that start with this value unchanged, repeatable (https://example.com/wp-content/uploads)
       --force-download              Download the backup again instead of using the cached file
       --insecure-download           Download the backup without checking the server TLS certificate (not secure)
       --disable-adminer             Disable the Adminer database UI (use =false to re-enable)
@@ -450,6 +456,53 @@ Env Flags:
 Other Flags:
       --timeout int       One-shot token lifetime in minutes (default "15")
       --redirect string   Open a wp-admin page instead of the dashboard (e.g. admin.php?page=wpstg_backup)
+
+```
+
+<a name="command-export-static"></a>
+# Command: export-static
+
+```
+Export a running site as a static website: HTML, CSS, JavaScript, and media
+files that any web host can serve without PHP or a database.
+
+The export starts at the home page and the sitemaps, and follows the links
+to every page and file on the site. Without --base-url, links are relative,
+so the export works in the web root or a subdirectory of any host, and also
+when opened from disk in a browser. With --base-url, links point to that
+address.
+
+An existing --output-dir is replaced only after you confirm. A directory
+that holds files an earlier export did not write is never replaced.
+
+Login, admin pages, and PHP files are never exported. The REST API, feeds,
+and pages with a query string are skipped. Use --include for a URL the
+links do not reach, and --exclude to skip more. A pattern can use * for any
+text. A pattern without * matches every URL that starts with it.
+
+Comments, search, forms, login, and other dynamic features do not work in
+a static copy.
+
+The site must be running. Start it with `wpstaging start <hostname>`.
+
+Usage:
+  wpstaging export-static <hostname> [flags]
+
+Examples:
+  wpstaging export-static mysite.local
+  wpstaging export-static mysite.local --output-dir=/path/to/static
+  wpstaging export-static mysite.local --base-url=https://www.example.com
+  wpstaging export-static mysite.local --exclude=/shop/ --exclude='*.zip'
+  wpstaging export-static mysite.local --include=/landing-page/
+
+Env Flags:
+      --env-path string       Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --output-dir string     Directory for the static website (default: ~/wpstaging/sites/<hostname>/static)
+      --base-url string       Public URL the static website is served from (default: relative links)
+      --exclude stringArray   Skip URLs matching a pattern, e.g. /shop/ or *.zip (repeat to add more)
+      --include stringArray   Also export a URL or path that no link reaches (repeat to add more)
 
 ```
 
@@ -587,27 +640,29 @@ Examples:
   wpstaging restore site.local --from=https://example.com/backups/backup.wpstg
 
 Flags:
-  -o, --output-dir string         Directory for extracted files (default: ./wpstaging-output)
-  -p, --path string               WordPress installation path (required)
-      --site-url string           Target WordPress site URL (use if detection fails)
-      --overwrite string          Overwrite target directory (yes/no) (default "yes")
-      --overwrite-db string       Overwrite database (yes/no) (default "yes")
-      --overwrite-wproot string   Overwrite WP root files (yes/no) (default "no")
-      --db-prefix string          Target WordPress DB table prefix (use if detection fails)
-      --db-innodb-strict-mode     Enable InnoDB strict mode (off by default during restore)
-      --db-file string            Use the extracted backup SQL file to resume database restoration
-      --db-batch-size int         Database insert batch size (default "1000")
-      --db-commit-mb int          Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
-      --db-insert-single          Use single-row INSERT statement per query
-      --db-count-queries          Count all queries first to show the total in progress output (slower start)
-      --db-timeout string         Database connection timeout (default "15s")
-      --verify                    Verify integrity of extracted files
-      --skip-extract              Skip extraction if files already exist
-      --download-dir string       Directory for downloaded backup files (default: ./wpstaging-download)
-      --force-download            Download the backup again instead of using the cached file
-      --from string               Backup file path or remote URL (http/https)
-      --insecure-download         Download the backup without checking the server TLS certificate (not secure)
-      --subsite-map stringArray   Set a subsite's destination host, repeatable (old.example.com=new.example.local)
+  -o, --output-dir string          Directory for extracted files (default: ./wpstaging-output)
+  -p, --path string                WordPress installation path (required)
+      --site-url string            Target WordPress site URL (use if detection fails)
+      --overwrite string           Overwrite target directory (yes/no) (default "yes")
+      --overwrite-db string        Overwrite database (yes/no) (default "yes")
+      --overwrite-wproot string    Overwrite WP root files (yes/no) (default "no")
+      --db-prefix string           Target WordPress DB table prefix (use if detection fails)
+      --db-innodb-strict-mode      Enable InnoDB strict mode (off by default during restore)
+      --db-file string             Use the extracted backup SQL file to resume database restoration
+      --db-batch-size int          Database insert batch size (default "1000")
+      --db-commit-mb int           Commit after this many megabytes of statements (2, 8, 16, 32, 64) (default "16")
+      --db-insert-single           Use single-row INSERT statement per query
+      --db-count-queries           Count all queries first to show the total in progress output (slower start)
+      --db-timeout string          Database connection timeout (default "15s")
+      --verify                     Verify integrity of extracted files
+      --skip-extract               Skip extraction if files already exist
+      --download-dir string        Directory for downloaded backup files (default: ./wpstaging-download)
+      --force-download             Download the backup again instead of using the cached file
+      --from string                Backup file path or remote URL (http/https)
+      --insecure-download          Download the backup without checking the server TLS certificate (not secure)
+      --keep-url stringArray       Keep URLs that start with this value unchanged, repeatable (https://example.com/wp-content/uploads)
+      --replace-host stringArray   Replace a host that is not the site or a subsite, repeatable (media.example.com=media.example.local)
+      --subsite-map stringArray    Set a subsite's destination host, repeatable (old.example.com=new.example.local)
 
 Wordpress DB-related Flags:
   This flags overrides the DB-related configuration parsed from the wp-config.php file.
@@ -1550,4 +1605,4 @@ Flags:
 
 ---
 
-*Generated on 2026-10-13 08:21:25 UTC*
+*Generated on 2026-10-26 17:25:35 UTC*
