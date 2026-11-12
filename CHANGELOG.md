@@ -1,3 +1,9 @@
+## v1.19.0 (2026-11-12)
+
+- **New:** `--aliases` on `add` and `reconfigure` serves a site on extra hostnames, for every site type (#559).
+- **Fix:** `extract` and `restore` now read the correct file name for the last part of a large file in a multipart backup (#560).
+- **Fix:** `extract` and `restore` now stop with a clear message when a backup is encrypted, before any file is written (#560).
+
 ## v1.18.0 (2026-10-29)
 
 - **New:** `export-static` saves a running site as a static website that any web host can serve (#522).

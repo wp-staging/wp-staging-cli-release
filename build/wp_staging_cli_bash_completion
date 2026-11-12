@@ -266,6 +266,7 @@ _wp_staging_cli() {
         --label
         --secure-credentials
         --skip-wordpress
+        --aliases
         --multisite
         --subdomains
         --from
@@ -323,8 +324,8 @@ _wp_staging_cli() {
     "
 
     # reconfigure: generate_docker_file_opts plus the port flags, --use-apache,
-    # --site-label (label-only fast path), --install-wp-staging-pro (install
-    # Pro on an existing site) and --skip-warmup
+    # --site-label (label-only fast path), --aliases, --install-wp-staging-pro
+    # (install Pro on an existing site) and --skip-warmup
     reconfigure_opts="
         --env-path
         --disable-mailpit
@@ -338,6 +339,7 @@ _wp_staging_cli() {
         --mailpit-http-port
         --use-apache
         --site-label
+        --aliases
         --install-wp-staging-pro
         --skip-warmup
     "

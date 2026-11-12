@@ -210,7 +210,7 @@ Each entry in `data.sites` carries more than 30 fields. These are the ones a pro
 | `container_db` | Name of the database container |
 | `docroot` | WordPress path inside the container |
 
-To read one group of sites instead of all of them, add `--filter=<term>`. A plain term is searched in the name, label, address, status, PHP version, site type, and subsites. A term written as `field:value` searches one field only, such as `status:stopped` or `adminer:off`. Repeat the flag to narrow further. The `summary` and `pagination` blocks then describe the sites returned.
+To read one group of sites instead of all of them, add `--filter=<term>`. A plain term is searched in the name, label, address, status, PHP version, site type, subsites, and aliases. A term written as `field:value` searches one field only, such as `status:stopped` or `adminer:off`. Repeat the flag to narrow further. The `summary` and `pagination` blocks then describe the sites returned.
 
 ```bash
 wpstaging list --json --filter=shop --filter=running:true
@@ -352,4 +352,4 @@ docker exec <container_php> php /wp-cli/wp-cli.phar --path=<docroot> plugin list
 
 ---
 
-**Last Updated:** 2026-10-21 09:07:17 UTC
+**Last Updated:** 2026-11-10 15:06:51 UTC

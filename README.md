@@ -549,6 +549,16 @@ The site gets the same web server, PHP, database, and HTTPS setup. The database 
 wpstaging add https://myapp.local --skip-wordpress
 ```
 
+**Serve a site on extra hostnames:**
+
+Each alias serves the same site directory. It works for every site type.
+
+```bash
+wpstaging add myapp.local --skip-wordpress --aliases=a.myapp.local,b.myapp.local
+wpstaging reconfigure myapp.local --aliases=a.myapp.local   # Replace the list
+wpstaging reconfigure myapp.local --aliases=                # Remove all aliases
+```
+
 **Add a multisite WordPress site:**
 
 ```bash
