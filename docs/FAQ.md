@@ -1934,7 +1934,40 @@ wpstaging restore --path=/var/www/html --skip-uploads \
 - Repeat each flag once per value. Both flags also work with `add --from` and `reset --from`.
 - `--replace-host` changes only that exact host, not hosts under it. It keeps the scheme of each URL. It cannot change the site's own host or a subsite host. For a subsite, use `--subsite-map`. See [Q74h](#q74h).
 - `--keep-url` also keeps the same URL with the other scheme or without a scheme. When the value names your site's own host, it needs a path, for example `https://example.com/wp-content/uploads`.
-- Only the URLs in the database change. Make sure the new host works on your machine.
+- Only the URLs in the database change. Make sure the new host works on your machine. To serve the new host from the same site, use `--aliases`. See [Q76c](#q76c).
+
+<a name="q76c"></a>
+**Q76c: How do I serve a site on extra hostnames?**  
+**A76c:**
+Use `--aliases` with a comma-separated list of hostnames:
+
+```bash
+# A PHP app that picks the tenant from the host
+wpstaging add host.local --skip-wordpress --aliases=a.host.local,b.host.local
+
+# A WordPress site that loads media from another host
+wpstaging add example.local --from=backup.wpstg \
+  --replace-host media.example.com=media.example.local \
+  --aliases=media.example.local
+```
+
+Each alias serves the same site directory as the site. The web server answers on it, the site certificate covers it, and it goes in the hosts file. An alias does not have to be under the site hostname, for example `cdn.mycdn.local`.
+
+To change the list later, run `reconfigure` with a hostname and the new list. The new list replaces the old one. `--aliases=` with no value removes all aliases:
+
+```bash
+wpstaging reconfigure host.local --aliases=a.host.local,c.host.local
+wpstaging reconfigure host.local --aliases=
+```
+
+- The flag works for every site type: single site, multisite, subdomain multisite, and plain PHP site.
+- The list is saved for the site, so `start`, `reset`, and `reconfigure` keep it.
+- Each alias needs a local TLD such as `.local` or `.test`. A wildcard such as `*.host.local` is not allowed, because a hosts file cannot hold one. The `adminer` name is reserved.
+- An alias cannot be the site hostname or a name another site already uses: its hostname, a name under it, an alias, or a subsite.
+- On a WordPress site, files such as CSS, JS, and images load on every alias. On a single site, pages load too, but WordPress builds links with the site URL, so a click goes back to the site hostname.
+- On a multisite, an alias is not a subsite. Use `--subdomains` for subsites. See [Q74b](#q74b).
+- PHP code should read the requested host from `$_SERVER['HTTP_HOST']`.
+- `list` shows the aliases, and `list --json` has them in the `aliases` field.
 
 <a name="q77"></a>
 **Q77: Does restore support database SSL connections?**  
@@ -3445,6 +3478,7 @@ $db = new mysqli(getenv('DB_HOST'), getenv('DB_USER'), getenv('DB_PASSWORD'), ge
 - `--skip-wordpress` works only for a new site. `add` stops when the site already has WordPress
 - `reset` deletes all files in the site directory and empties the database. Back up your files first
 - `list` shows the site with the type "PHP Site"
+- Use `--aliases` to serve the site on more hostnames, for example one per tenant. See [Q76c](#q76c)
 - The web server serves the site directory itself. A sub-directory webroot such as `public/` is not supported
 
 ---
@@ -4057,4 +4091,4 @@ Open `http://127.0.0.1:8000/` in a browser, and press Ctrl+C to stop the server.
 
 ---
 
-**Last Updated:** 2026-10-26 18:42:59 UTC
+**Last Updated:** 2026-11-10 15:17:30 UTC

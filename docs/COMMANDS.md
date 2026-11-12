@@ -174,6 +174,7 @@ Use --skip-wordpress to create a plain PHP site without WordPress.
 Use --use-apache to run the site on Apache instead of nginx.
 Use --use-mysql to run the site on MySQL instead of MariaDB.
 Use --db-version to pick the database version (supported: MariaDB 10.11, 11.4, 11.8; MySQL 5.7, 8.4).
+Use --aliases to serve the site on extra hostnames, for example a.newsite.local.
 
 Usage:
   wpstaging add <site-url> [flags]
@@ -187,6 +188,7 @@ Examples:
   wpstaging add newsite.local --use-apache
   wpstaging add newsite.local --use-mysql
   wpstaging add newsite.local --db-version=10.11
+  wpstaging add newsite.local --skip-wordpress --aliases=a.newsite.local,b.newsite.local
 
 Env Flags:
       --php string                  PHP version to use (default "8.1")
@@ -216,6 +218,7 @@ WordPress Flags:
       --admin-email string          WordPress admin email (default "admin@dev.null")
       --secure-credentials          Use secure random credentials for database and WordPress admin
       --skip-wordpress              Create a plain PHP site without WordPress
+      --aliases string              Extra hostnames that serve the site, comma-separated
       --multisite                   Enable WordPress Multisite
       --subdomains string           Enable subdomain multisite. Optional: comma-separated hostnames
 
@@ -251,9 +254,10 @@ If no hostname is provided, lists all sites with their status.
 
 --filter keeps the sites matching a term, ignoring case. A plain term is
 searched in the host name, label, address, status, PHP version, site type,
-and subsites. A term written as field:value searches one field only: name,
-label, url, path, status, php, type, and the on/off fields enabled,
-running, adminer, mailpit, and magic-link. Repeat --filter to narrow further.
+subsites, and aliases. A term written as field:value searches one field
+only: name, label, url, path, status, php, type, and the on/off fields
+enabled, running, adminer, mailpit, and magic-link. Repeat --filter to
+narrow further.
 
 Usage:
   wpstaging list [hostname...] [flags]
@@ -1036,6 +1040,9 @@ Pass --http-port, --https-port, --db-port or --mailpit-http-port to
 move the site to a new port. A port that is already in use is refused.
 When the HTTPS port changes, the WordPress site URL is updated too.
 
+Pass --aliases to replace the extra hostnames that serve the site, or
+--aliases= to remove them all. This needs a hostname.
+
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
 
@@ -1049,6 +1056,7 @@ Examples:
   wpstaging reconfigure mysite.local
   wpstaging reconfigure mysite.local --use-apache
   wpstaging reconfigure mysite.local --https-port=443
+  wpstaging reconfigure mysite.local --aliases=a.mysite.local,cdn.mycdn.local
   wpstaging reconfigure
 
 Env Flags:
@@ -1059,6 +1067,9 @@ Env Flags:
       --db-port int                 Database port (default "3306")
       --mailpit-http-port int       Mailpit HTTP port (default "8025")
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
+
+WordPress Flags:
+      --aliases string              Replace the extra hostnames that serve the site, comma-separated (empty removes all)
 
 Other Flags:
       --install-wp-staging-pro      Download and install WP Staging Pro on the site
@@ -1605,4 +1616,4 @@ Flags:
 
 ---
 
-*Generated on 2026-10-26 17:25:35 UTC*
+*Generated on 2026-11-10 15:32:17 UTC*
