@@ -4091,4 +4091,26 @@ Open `http://127.0.0.1:8000/` in a browser, and press Ctrl+C to stop the server.
 
 ---
 
-**Last Updated:** 2026-11-10 15:17:30 UTC
+<a name="q138"></a>
+**Q138: How do I restore a backup of a live site without sending mail to real people?**  
+
+**A138:**
+Add `--safe-mode` when you create the site from the backup:
+
+```bash
+wpstaging add mysite.local --from=backup.wpstg --safe-mode
+```
+
+In safe mode the site cannot reach the internet or your other local sites, and all mail goes to Mailpit, even when a plugin sends mail through its own SMTP server. If Mailpit is turned off, the mail is dropped. Scheduled tasks, including Action Scheduler jobs from WooCommerce and other plugins, do not run on their own. Safe mode is on before the restored site runs for the first time.
+
+While safe mode is on, WordPress on the site cannot contact any other server. It cannot check for updates, so new plugin and theme versions never show up. The news from WordPress.org in the dashboard does not load, and Site Health reports that WordPress.org cannot be reached. This is the expected result of safe mode, not a broken site.
+
+There is no list of allowed hosts. `WP_ACCESSIBLE_HOSTS` does not open one service, because the site has no network route to it either. Turn safe mode off when you need a remote service, such as a license check or a payment sandbox.
+
+The site stays in safe mode after `wpstaging reset`. Run `wpstaging reconfigure mysite.local --safe-mode=false` to turn it off, or `--safe-mode` to turn it on for an existing site. `switch-wp` and plugin installs from WordPress.org do not work in safe mode, because they need the internet.
+
+`WP_HTTP_BLOCK_EXTERNAL` stays in `wp-config.php` when you move the site to another server. The safe-mode must-use plugin stops itself there, the constant does not. Remove that line on the moved site, or it keeps blocking requests to other servers.
+
+---
+
+**Last Updated:** 2026-11-26 12:12:00 UTC

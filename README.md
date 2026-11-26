@@ -531,6 +531,15 @@ wpstaging add https://mysite.local --from=backup.wpstg
 wpstaging add https://mysite.local --from=https://example.com/backup.wpstg
 ```
 
+**Restore a production backup in safe mode:**
+
+In safe mode the site cannot reach the internet or your other local sites, and all mail goes to Mailpit. It is on before the restored site runs for the first time, so a copy of a live site cannot email real customers or call live services.
+
+```bash
+wpstaging add https://mysite.local --from=backup.wpstg --safe-mode
+wpstaging reconfigure mysite.local --safe-mode=false   # Turn safe mode off
+```
+
 **Run a site on Apache instead of nginx:**
 
 Apache reads `.htaccess`, so rules from an Apache host work the same way on the local site. The CLI updates the WordPress block in `.htaccess`, and lines that Apache cannot use, such as `php_value`, become comments so the site does not show error 500.

@@ -103,7 +103,7 @@ A failure keeps the same envelope, with `success` false and `command` set to `er
 }
 ```
 
-Most failures carry the plain code `error`, so branch on `success` first. Some cases carry a specific code worth matching, such as `docker_not_running`, `docker_not_installed`, `unsupported_php_version`, `unsupported_db_version` and `site_has_no_wordpress`. See [Sites without WordPress](#sites-without-wordpress) for the last one. A few errors also carry `hint`, an array of suggested next steps.
+Most failures carry the plain code `error`, so branch on `success` first. Some cases carry a specific code worth matching, such as `docker_not_running`, `docker_not_installed`, `unsupported_php_version`, `unsupported_db_version`, `site_has_no_wordpress` and `site_in_safe_mode`. See [Sites without WordPress](#sites-without-wordpress) and [Things to know](#things-to-know) for the last two. A few errors also carry `hint`, an array of suggested next steps.
 
 Treat `0` as success and any non-zero code as failure. In practice the failure code is `1`. `wpstaging wp` is the exception and returns whatever WP-CLI returned.
 
@@ -206,6 +206,7 @@ Each entry in `data.sites` carries more than 30 fields. These are the ones a pro
 | `path` | WordPress directory on the host |
 | `url` | Site URL |
 | `site_type` | `single`, `multisite`, `multisite-subdomain`, or `php`. A `php` site has no WordPress |
+| `safe_mode` | Whether the site runs in safe mode. Its PHP container then has no internet access |
 | `container_php` | Name of the PHP container |
 | `container_db` | Name of the database container |
 | `docroot` | WordPress path inside the container |
@@ -349,7 +350,8 @@ docker exec <container_php> php /wp-cli/wp-cli.phar --path=<docroot> plugin list
 - `wpstaging shell <hostname>` is for interactive use. Use `wpstaging wp` for a single command instead.
 - `wpstaging wp` places no restriction on which WP-CLI commands may run. It has the same reach as an interactive shell on the site, so a destructive command such as `db drop` will do exactly what it says.
 - Site commands need a valid WP Staging Pro license, the same as interactive use.
+- A site in safe mode (`safe_mode` is `true`) has no internet access, and all mail goes to Mailpit. WP-CLI commands that download, such as `wp plugin install`, fail there. `switch-wp` stops with the code `site_in_safe_mode`.
 
 ---
 
-**Last Updated:** 2026-11-10 15:06:51 UTC
+**Last Updated:** 2026-11-23 08:12:39 UTC

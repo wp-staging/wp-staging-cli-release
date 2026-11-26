@@ -1,3 +1,11 @@
+## v1.20.0 (2026-11-26)
+
+- **New:** `--safe-mode` on `add`, `reset` and `reconfigure` cuts a site off the internet and sends all mail to Mailpit (#569).
+- **New:** Add `link` to share a running site on a public HTTPS URL (#550).
+- **Fix:** `add --from` and `reset --from` now refuse an encrypted backup before WordPress is installed or reset (#567).
+- **Fix:** `add` now stops and removes the unfinished site when Docker has no free IP address pool (#570).
+- **Fix:** On Windows, `docker-start --status` is now faster with Docker Desktop (#573).
+
 ## v1.19.0 (2026-11-12)
 
 - **New:** `--aliases` on `add` and `reconfigure` serves a site on extra hostnames, for every site type (#559).

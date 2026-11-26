@@ -11,6 +11,7 @@
 - [switch-wp](#command-switch-wp)
 - [magic-link](#command-magic-link)
 - [export-static](#command-export-static)
+- [link](#command-link)
 - [open](#command-open)
 - [sync-status](#command-sync-status)
 - [extract](#command-extract)
@@ -84,6 +85,7 @@ Site Commands:
   switch-wp             Switch WordPress version for a site
   magic-link            Issue a fresh wp-admin auto-login URL for a site
   export-static         Export a running site as a static website
+  link                  Share a running site on a public HTTPS URL
   open                  Open a site's files in the file manager
   sync-status           Show a fast-mode site's file sync status
 
@@ -175,6 +177,9 @@ Use --use-apache to run the site on Apache instead of nginx.
 Use --use-mysql to run the site on MySQL instead of MariaDB.
 Use --db-version to pick the database version (supported: MariaDB 10.11, 11.4, 11.8; MySQL 5.7, 8.4).
 Use --aliases to serve the site on extra hostnames, for example a.newsite.local.
+Use --safe-mode to cut the site off the internet and send all mail to Mailpit,
+for example to restore a production backup. It applies before the restored site
+runs for the first time.
 
 Usage:
   wpstaging add <site-url> [flags]
@@ -184,6 +189,7 @@ Examples:
   wpstaging add newsite.local
   wpstaging add newsite.local --from=backup.wpstg
   wpstaging add newsite.local --from=https://example.com/backup.wpstg
+  wpstaging add newsite.local --from=backup.wpstg --safe-mode
   wpstaging add newsite.local --skip-wordpress
   wpstaging add newsite.local --use-apache
   wpstaging add newsite.local --use-mysql
@@ -204,6 +210,7 @@ Env Flags:
       --use-mysql                   Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)
       --mailpit-http-port int       Mailpit HTTP port (default "8025")
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
+      --safe-mode                   Cut the site off the internet and send all mail to Mailpit (use =false to turn off)
 
 WordPress Flags:
       --wp string                   WordPress version to install (default "latest")
@@ -345,6 +352,8 @@ Use --wp to specify a different WordPress version to install.
 Use --db-version or --use-mysql to rebuild the site on a different database
 server. The current database files are removed, because the two servers cannot
 read each other's files.
+Use --safe-mode to cut the site off the internet and send all mail to Mailpit.
+A site in safe mode stays in safe mode after a reset.
 
 Usage:
   wpstaging reset <hostname> [flags]
@@ -354,6 +363,7 @@ Examples:
   wpstaging reset mysite.local --wp=6.5
   wpstaging reset mysite.local --from=backup.wpstg
   wpstaging reset mysite.local --from=https://example.com/backup.wpstg
+  wpstaging reset mysite.local --from=backup.wpstg --safe-mode
   wpstaging reset mysite.local --db-version=11.4
   wpstaging reset mysite.local --use-mysql --from=backup.wpstg
 
@@ -362,6 +372,7 @@ Env Flags:
       --db-version string           Rebuild the site on this database version (discards the current database files)
       --use-mysql                   Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
+      --safe-mode                   Cut the site off the internet and send all mail to Mailpit (use =false to turn off)
 
 WordPress Flags:
       --wp string                   WordPress version to install (e.g., 6.5, latest)
@@ -507,6 +518,50 @@ Other Flags:
       --base-url string       Public URL the static website is served from (default: relative links)
       --exclude stringArray   Skip URLs matching a pattern, e.g. /shop/ or *.zip (repeat to add more)
       --include stringArray   Also export a URL or path that no link reaches (repeat to add more)
+
+```
+
+<a name="command-link"></a>
+# Command: link
+
+```
+Share a running site on a public HTTPS URL through WP Staging Link, for
+example to show it to a client or to test a webhook.
+
+The URL is https://<name>-<code>.<region>.wp-staging.link. The name is the
+hostname without the TLD, with dots changed to dashes. Use --name for
+another name.
+
+The first link of a site needs --region eu or --region us. The region and a
+name from --name are saved for the site, so the next link gets the same URL.
+
+The link runs until it is terminated, for example with Ctrl+C. When the
+site stops, the link stays open and works again when the site starts.
+
+Anyone with the URL can open the site. Adminer and Mailpit stay private.
+
+Use --inspect to see each request in a browser on this computer. Give a
+port as --inspect=4040, not --inspect 4040.
+
+The site must be running. Start it with `wpstaging start <hostname>`.
+
+Usage:
+  wpstaging link <hostname> [flags]
+
+Examples:
+  wpstaging link mysite.local --region eu
+  wpstaging link mysite.local
+  wpstaging link mysite.local --name acme-preview
+  wpstaging link mysite.local --inspect
+  wpstaging link mysite.local --inspect=4040
+
+Env Flags:
+      --env-path string   Path to store docker environments (default: ~/wpstaging)
+
+Other Flags:
+      --region string     Link server region: eu or us (required the first time, then saved for the site)
+      --name string       Name in the public URL (default: the hostname without the TLD, saved for the site)
+      --inspect string    Start the request inspector on 127.0.0.1, on a free port or on --inspect=<port>
 
 ```
 
@@ -1043,6 +1098,9 @@ When the HTTPS port changes, the WordPress site URL is updated too.
 Pass --aliases to replace the extra hostnames that serve the site, or
 --aliases= to remove them all. This needs a hostname.
 
+Pass --safe-mode to cut the site off the internet and send all mail to
+Mailpit, or --safe-mode=false to turn it off. This needs a hostname.
+
 If no hostname is given, all sites are reconfigured using each
 site's existing settings from its .env.
 
@@ -1055,6 +1113,7 @@ Aliases:
 Examples:
   wpstaging reconfigure mysite.local
   wpstaging reconfigure mysite.local --use-apache
+  wpstaging reconfigure mysite.local --safe-mode
   wpstaging reconfigure mysite.local --https-port=443
   wpstaging reconfigure mysite.local --aliases=a.mysite.local,cdn.mycdn.local
   wpstaging reconfigure
@@ -1067,6 +1126,7 @@ Env Flags:
       --db-port int                 Database port (default "3306")
       --mailpit-http-port int       Mailpit HTTP port (default "8025")
       --disable-mailpit             Disable the Mailpit container (use =false to re-enable)
+      --safe-mode                   Cut the site off the internet and send all mail to Mailpit (use =false to turn off)
 
 WordPress Flags:
       --aliases string              Replace the extra hostnames that serve the site, comma-separated (empty removes all)
@@ -1616,4 +1676,4 @@ Flags:
 
 ---
 
-*Generated on 2026-11-10 15:32:17 UTC*
+*Generated on 2026-11-23 08:13:38 UTC*

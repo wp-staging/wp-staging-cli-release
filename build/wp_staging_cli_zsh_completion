@@ -40,6 +40,9 @@ _wpstaging_hint() {
         export-static)
             _message -r $'Examples:\n  wpstaging export-static newsite.local\n  wpstaging export-static newsite.local --base-url=https://www.example.com'
             ;;
+        link)
+            _message -r $'Examples:\n  wpstaging link newsite.local --region eu\n  wpstaging link newsite.local --name acme-preview'
+            ;;
         switch-php)
             _message -r $'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
@@ -82,6 +85,7 @@ _wpstaging() {
         'generate-compose-file:Generate Docker Compose file'
         'generate-docker-file:Generate Dockerfile'
         'help:Show help for a command'
+        'link:Share a running site on a public HTTPS URL'
         'list:List all dockerized sites'
         'magic-link:Issue a fresh wp-admin auto-login URL for a site'
         'open:Open a site'\''s files in the file manager'
@@ -240,6 +244,7 @@ _wpstaging() {
         '--php[PHP version]:version:(7.4 8.1 8.2 8.3 8.4)'
         '--use-apache[Use Apache instead of nginx as the web server (use =false to switch back to nginx)]'
         '--use-mysql[Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)]'
+        '--safe-mode[Cut the site off the internet and send all mail to Mailpit (use =false to turn off)]'
         '--db-version[Database version]:version:(10.11 11.4 11.8 5.7 8.4)'
         '--http-port[HTTP port]:port:'
         '--https-port[HTTPS port]:port:'
@@ -298,6 +303,7 @@ _wpstaging() {
         '--wp[WordPress version]:version:{compadd -S "" -- latest nightly}'
         '--db-version[Rebuild the site on this database version]:version:(10.11 11.4 11.8 5.7 8.4)'
         '--use-mysql[Use MySQL instead of MariaDB as the database server (use =false to switch back to MariaDB)]'
+        '--safe-mode[Cut the site off the internet and send all mail to Mailpit (use =false to turn off)]'
         '--disable-mailpit[Disable the Mailpit container (use =false to re-enable)]'
         '--disable-adminer[Disable the Adminer database UI (use =false to re-enable)]'
         '--disable-adminer-autologin[Disable Adminer auto-login (use =false to re-enable)]'
@@ -325,8 +331,8 @@ _wpstaging() {
     )
 
     # reconfigure: generate_docker_file_opts plus the port flags, --use-apache,
-    # --site-label (label-only fast path), --aliases, --install-wp-staging-pro
-    # (install Pro on an existing site) and --skip-warmup
+    # --safe-mode, --site-label (label-only fast path), --aliases,
+    # --install-wp-staging-pro (install Pro on an existing site) and --skip-warmup
     local -a reconfigure_opts
     reconfigure_opts=(
         '--env-path[Environment file path]:path:_files'
@@ -340,6 +346,7 @@ _wpstaging() {
         '--db-port[Database port]:port:'
         '--mailpit-http-port[Mailpit HTTP port]:port:'
         '--use-apache[Use Apache instead of nginx as the web server (use =false to switch back to nginx)]'
+        '--safe-mode[Cut the site off the internet and send all mail to Mailpit (use =false to turn off)]'
         '--site-label[Update the friendly site label (empty resets to the hostname)]:label:'
         '--aliases[Replace the extra hostnames that serve the site, comma-separated (empty removes all)]:hostnames:'
         '--install-wp-staging-pro[Download and install WP Staging Pro on the site]'
@@ -362,6 +369,15 @@ _wpstaging() {
         '--base-url[Public URL the static website is served from]:url:'
         '*--exclude[Skip URLs matching a pattern]:pattern:'
         '*--include[Also export a URL or path that no link reaches]:url:'
+    )
+
+    # link <hostname> [--region eu|us] [--name NAME] [--inspect[=PORT]]
+    local -a link_opts
+    link_opts=(
+        '--env-path[Environment file path]:path:_files'
+        '--region[Link server region]:region:(eu us)'
+        '--name[Name in the public URL]:name:'
+        '--inspect=-[Start the request inspector on 127.0.0.1]::port:'
     )
 
     # list/status [--filter TERM]
@@ -608,6 +624,13 @@ _wpstaging() {
                         '1:hostname:_wpstaging_hint' \
                         $general_opts \
                         $export_static_opts
+                    ;;
+                link)
+                    # link <hostname> [--region eu|us] [--name NAME] [--inspect[=PORT]]
+                    _arguments \
+                        '1:hostname:_wpstaging_hint' \
+                        $general_opts \
+                        $link_opts
                     ;;
                 update-hosts-file|uhf)
                     _arguments \

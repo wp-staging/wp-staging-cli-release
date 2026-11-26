@@ -29,6 +29,9 @@ _wp_staging_cli_hint_text() {
         export-static)
             printf 'Examples:\n  wpstaging export-static newsite.local\n  wpstaging export-static newsite.local --base-url=https://www.example.com'
             ;;
+        link)
+            printf 'Examples:\n  wpstaging link newsite.local --region eu\n  wpstaging link newsite.local --name acme-preview'
+            ;;
         switch-php)
             printf 'Examples:\n  wpstaging switch-php newsite.local 8.3\n  wpstaging switch-php newsite.local 7.4'
             ;;
@@ -88,6 +91,7 @@ _wp_staging_cli() {
         generate-compose-file
         generate-docker-file
         help
+        link
         list
         magic-link
         open
@@ -242,6 +246,7 @@ _wp_staging_cli() {
         --php
         --use-apache
         --use-mysql
+        --safe-mode
         --db-version
         --http-port
         --https-port
@@ -283,7 +288,7 @@ _wp_staging_cli() {
         --fast-mode
     "
 
-    # reset: addPathOnlyFlag + --from + --wp + --db-version + --use-mysql + --disable-*
+    # reset: addPathOnlyFlag + --from + --wp + --db-version + --use-mysql + --safe-mode + --disable-*
     reset_opts="
         --env-path
         --from
@@ -299,6 +304,7 @@ _wp_staging_cli() {
         --wp
         --db-version
         --use-mysql
+        --safe-mode
         --disable-mailpit
         --disable-adminer
         --disable-adminer-autologin
@@ -324,8 +330,8 @@ _wp_staging_cli() {
     "
 
     # reconfigure: generate_docker_file_opts plus the port flags, --use-apache,
-    # --site-label (label-only fast path), --aliases, --install-wp-staging-pro
-    # (install Pro on an existing site) and --skip-warmup
+    # --safe-mode, --site-label (label-only fast path), --aliases,
+    # --install-wp-staging-pro (install Pro on an existing site) and --skip-warmup
     reconfigure_opts="
         --env-path
         --disable-mailpit
@@ -338,6 +344,7 @@ _wp_staging_cli() {
         --db-port
         --mailpit-http-port
         --use-apache
+        --safe-mode
         --site-label
         --aliases
         --install-wp-staging-pro
@@ -358,6 +365,14 @@ _wp_staging_cli() {
         --base-url
         --exclude
         --include
+    "
+
+    # link <hostname> [--region eu|us] [--name NAME] [--inspect[=PORT]]
+    link_opts="
+        --env-path
+        --region
+        --name
+        --inspect
     "
 
     # list/status [--filter TERM]
@@ -628,6 +643,15 @@ _wp_staging_cli() {
                 COMPREPLY=( $(compgen -W "${general_opts} ${export_static_opts}" -- "${cur}") )
             fi
             ;;
+        link)
+            _wp_staging_cli_maybe_hint "${COMP_WORDS[1]}" && return
+            if [[ ${COMP_CWORD} -eq 2 && "${cur}" != -* ]]; then
+                # Required first positional: hostname
+                COMPREPLY=()
+            else
+                COMPREPLY=( $(compgen -W "${general_opts} ${link_opts}" -- "${cur}") )
+            fi
+            ;;
         remove)
             COMPREPLY=( $(compgen -W "${general_opts} ${env_path_only_opts}" -- "${cur}") )
             ;;
@@ -715,6 +739,10 @@ _wp_staging_cli() {
             ;;
         --wp)
             COMPREPLY=( $(compgen -W "latest nightly" -- "${cur}") )
+            return
+            ;;
+        --region)
+            COMPREPLY=( $(compgen -W "eu us" -- "${cur}") )
             return
             ;;
     esac
